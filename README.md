@@ -18,18 +18,22 @@
     <img src="images/logo.png" alt="Logo" width="80" height="80">
   </a>
 
-<h3 align="center">project_title</h3>
+<h3 align="center">GoBlog</h3>
 
   <p align="center">
-    project_description
+    Create a blog feed from posts written in Markdown!
     <br />
+    <!-- TODO: Update docs url -->
     <a href="https://github.com/harrydayexe/GoBlog"><strong>Explore the docs »</strong></a>
     <br />
     <br />
+    <!-- TODO: Update demo url -->
     <a href="https://github.com/harrydayexe/GoBlog">View Demo</a>
     &middot;
+    <!-- TODO: Create bug template -->
     <a href="https://github.com/harrydayexe/GoBlog/issues/new?labels=bug&template=bug-report---.md">Report Bug</a>
     &middot;
+    <!-- TODO: Create feature request template -->
     <a href="https://github.com/harrydayexe/GoBlog/issues/new?labels=enhancement&template=feature-request---.md">Request Feature</a>
   </p>
 </div>
@@ -67,8 +71,6 @@
 <!-- ABOUT THE PROJECT -->
 ## About The Project
 
-[![Product Name Screen Shot][product-screenshot]](https://example.com)
-
 Here's a blank template to get started. To avoid retyping too much info, do a search and replace with your text editor for the following: `harrydayexe`, `GoBlog`, `twitter_handle`, `linkedin_username`, `email_client`, `email`, `project_title`, `project_description`, `project_license`
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
@@ -77,14 +79,7 @@ Here's a blank template to get started. To avoid retyping too much info, do a se
 
 ### Built With
 
-* [![Next][Next.js]][Next-url]
-* [![React][React.js]][React-url]
-* [![Vue][Vue.js]][Vue-url]
-* [![Angular][Angular.io]][Angular-url]
-* [![Svelte][Svelte.dev]][Svelte-url]
-* [![Laravel][Laravel.com]][Laravel-url]
-* [![Bootstrap][Bootstrap.com]][Bootstrap-url]
-* [![JQuery][JQuery.com]][JQuery-url]
+* [![GoLang][GoModVer]][Go-url]
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -226,5 +221,5 @@ Project Link: [https://github.com/harrydayexe/GoBlog](https://github.com/harryda
 [product-screenshot]: images/screenshot.png
 [JQuery.com]: https://img.shields.io/badge/jQuery-0769AD?style=for-the-badge&logo=jquery&logoColor=white
 [JQuery-url]: https://jquery.com
-[GoModVer]: https://img.shields.io/github/go-mod/go-version/harrydayexe/GoBlog
+[GoModVer]: https://img.shields.io/github/go-mod/go-version/harrydayexe/GoBlog?style=for-the-badge
 [Go-URL]: https://go.dev
