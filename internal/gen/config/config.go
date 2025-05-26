@@ -12,6 +12,9 @@ var logger log.CLILogger = *log.NewCLILogger("CONFIG", false)
 
 // Config represents the configuration structure for the application.
 type Config struct {
+	// Verbose defines if debug logs should be shown
+	Verbose bool `yaml:"verbose"`
+
 	// InputFolder is the directory where input posts are located.
 	InputFolder string `yaml:"input_folder"`
 
