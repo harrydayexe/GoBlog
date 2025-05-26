@@ -185,7 +185,7 @@ Distributed under the MIT License. See `LICENSE` for more information.
 <!-- CONTACT -->
 ## Contact
 
-Your Name - [@harrydayexe](https://twitter.com/harrydayexe) - contact@harryday.xyz
+Harry Day - [@harrydayexe](https://twitter.com/harrydayexe) - contact@harryday.xyz
 
 Project Link: [https://github.com/harrydayexe/GoBlog](https://github.com/harrydayexe/GoBlog)
 
