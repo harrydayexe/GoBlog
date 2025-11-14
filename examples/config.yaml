@@ -1,0 +1,32 @@
+# GoBlog Configuration Example
+
+# Enable verbose logging
+verbose: true
+
+# Input folder containing markdown posts
+input_folder: "./examples/posts"
+
+# Output folder for generated static site
+output_folder: "./examples/site"
+
+# Static assets folder (CSS, JS, images)
+static_folder: "./examples/static"
+
+# Site metadata
+site:
+  title: "My Tech Blog"
+  description: "A blog about Go, web development, and technology"
+  author: "Your Name"
+  url: "https://example.com"
+
+# Template paths (optional - leave empty to use defaults)
+templates:
+  post: ""
+  index: ""
+  tag: ""
+
+# Pagination settings
+posts_per_page: 5
+
+# Blog URL path
+blog_path: "/blog"
