@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="{{.Post.Description}}">
+    <meta name="author" content="{{.Site.Author}}">
+    <title>{{.Post.Title}} - {{.Site.Title}}</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <header>
+        <nav>
+            <a href="/" class="site-title">{{.Site.Title}}</a>
+            <a href="{{.BlogPath}}">Blog</a>
+        </nav>
+    </header>
+
+    <main class="post-page">
+        <article class="post">
+            <header class="post-header">
+                <h1>{{.Post.Title}}</h1>
+                <div class="post-meta">
+                    <time datetime="{{.Post.ShortDate}}">{{.Post.FormattedDate}}</time>
+                    {{if .Post.Tags}}
+                    <div class="tags">
+                        {{range .Post.Tags}}
+                        <a href="{{$.BlogPath}}/tags/{{.}}.html" class="tag">{{.}}</a>
+                        {{end}}
+                    </div>
+                    {{end}}
+                </div>
+            </header>
+
+            <div class="post-content">
+                {{.Post.HTMLContent}}
+            </div>
+        </article>
+
+        <footer class="post-footer">
+            <a href="{{.BlogPath}}">&larr; Back to Blog</a>
+        </footer>
+    </main>
+
+    <footer class="site-footer">
+        <p>&copy; {{.Site.Author}} | Built with GoBlog</p>
+    </footer>
+</body>
+</html>

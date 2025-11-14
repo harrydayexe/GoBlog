@@ -36,54 +36,52 @@ func New(cfg config.Config) (*Engine, error) {
 	return engine, nil
 }
 
-// loadTemplates loads templates from custom paths or uses defaults
+// loadTemplates loads templates from the template directory
 func (e *Engine) loadTemplates() error {
-	var err error
+	templateDir := e.cfg.TemplateDir
+
+	// Check if template directory exists
+	if _, err := os.Stat(templateDir); os.IsNotExist(err) {
+		return fmt.Errorf("template directory does not exist: %s", templateDir)
+	}
+
+	e.logger.Info("Loading templates from: %s", templateDir)
 
 	// Load post template
-	if e.cfg.Templates.PostTemplate != "" {
-		e.logger.Info("Loading custom post template: %s", e.cfg.Templates.PostTemplate)
-		e.postTemplate, err = template.ParseFiles(e.cfg.Templates.PostTemplate)
-		if err != nil {
-			return fmt.Errorf("failed to parse post template: %w", err)
-		}
-	} else {
-		e.logger.Debug("Using default post template")
-		e.postTemplate, err = template.New("post").Parse(defaultPostTemplate)
-		if err != nil {
-			return fmt.Errorf("failed to parse default post template: %w", err)
-		}
+	postPath := filepath.Join(templateDir, "post.html")
+	if _, err := os.Stat(postPath); err != nil {
+		return fmt.Errorf("post template not found: %s", postPath)
 	}
+	e.logger.Debug("Loading post template: %s", postPath)
+	postTmpl, err := template.ParseFiles(postPath)
+	if err != nil {
+		return fmt.Errorf("failed to parse post template: %w", err)
+	}
+	e.postTemplate = postTmpl
 
-	// Load index template
-	if e.cfg.Templates.IndexTemplate != "" {
-		e.logger.Info("Loading custom index template: %s", e.cfg.Templates.IndexTemplate)
-		e.indexTemplate, err = template.ParseFiles(e.cfg.Templates.IndexTemplate)
-		if err != nil {
-			return fmt.Errorf("failed to parse index template: %w", err)
-		}
-	} else {
-		e.logger.Debug("Using default index template")
-		e.indexTemplate, err = template.New("index").Funcs(templateFuncs).Parse(defaultIndexTemplate)
-		if err != nil {
-			return fmt.Errorf("failed to parse default index template: %w", err)
-		}
+	// Load index template (with custom functions)
+	indexPath := filepath.Join(templateDir, "index.html")
+	if _, err := os.Stat(indexPath); err != nil {
+		return fmt.Errorf("index template not found: %s", indexPath)
 	}
+	e.logger.Debug("Loading index template: %s", indexPath)
+	indexTmpl, err := template.New("index.html").Funcs(templateFuncs).ParseFiles(indexPath)
+	if err != nil {
+		return fmt.Errorf("failed to parse index template: %w", err)
+	}
+	e.indexTemplate = indexTmpl
 
 	// Load tag template
-	if e.cfg.Templates.TagTemplate != "" {
-		e.logger.Info("Loading custom tag template: %s", e.cfg.Templates.TagTemplate)
-		e.tagTemplate, err = template.ParseFiles(e.cfg.Templates.TagTemplate)
-		if err != nil {
-			return fmt.Errorf("failed to parse tag template: %w", err)
-		}
-	} else {
-		e.logger.Debug("Using default tag template")
-		e.tagTemplate, err = template.New("tag").Parse(defaultTagTemplate)
-		if err != nil {
-			return fmt.Errorf("failed to parse default tag template: %w", err)
-		}
+	tagPath := filepath.Join(templateDir, "tag.html")
+	if _, err := os.Stat(tagPath); err != nil {
+		return fmt.Errorf("tag template not found: %s", tagPath)
 	}
+	e.logger.Debug("Loading tag template: %s", tagPath)
+	tagTmpl, err := template.ParseFiles(tagPath)
+	if err != nil {
+		return fmt.Errorf("failed to parse tag template: %w", err)
+	}
+	e.tagTemplate = tagTmpl
 
 	e.logger.Info("Templates loaded successfully")
 	return nil

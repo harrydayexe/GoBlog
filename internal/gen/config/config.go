@@ -18,13 +18,6 @@ type SiteMetadata struct {
 	URL         string `yaml:"url"`
 }
 
-// TemplateConfig contains paths to custom templates
-type TemplateConfig struct {
-	PostTemplate  string `yaml:"post"`
-	IndexTemplate string `yaml:"index"`
-	TagTemplate   string `yaml:"tag"`
-}
-
 // Config represents the configuration structure for the application.
 type Config struct {
 	// Verbose defines if debug logs should be shown
@@ -39,11 +32,12 @@ type Config struct {
 	// StaticFolder is the directory containing static assets (CSS, JS, images)
 	StaticFolder string `yaml:"static_folder"`
 
+	// TemplateDir is the directory containing custom templates (optional)
+	// If not specified, default templates will be used from templates/defaults/
+	TemplateDir string `yaml:"template_dir"`
+
 	// Site contains metadata about the website
 	Site SiteMetadata `yaml:"site"`
-
-	// Templates contains paths to custom template files
-	Templates TemplateConfig `yaml:"templates"`
 
 	// PostsPerPage defines how many posts to show per page (pagination)
 	PostsPerPage int `yaml:"posts_per_page"`
@@ -90,6 +84,9 @@ func (cfg *Config) validateConfig() error {
 	if cfg.StaticFolder == "" {
 		cfg.StaticFolder = "./static"
 	}
+	if cfg.TemplateDir == "" {
+		cfg.TemplateDir = "./templates/defaults"
+	}
 
 	// Validate input and output are different
 	if cfg.InputFolder == cfg.OutputFolder {
@@ -110,6 +107,8 @@ func (cfg *Config) validateConfig() error {
 	// Set defaults for pagination
 	if cfg.PostsPerPage <= 0 {
 		cfg.PostsPerPage = 10
+	} else if cfg.PostsPerPage > 100 {
+		cfg.PostsPerPage = 100
 	}
 
 	// Set default blog path

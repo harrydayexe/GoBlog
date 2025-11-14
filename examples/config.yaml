@@ -12,18 +12,16 @@ output_folder: "./examples/site"
 # Static assets folder (CSS, JS, images)
 static_folder: "./examples/static"
 
+# Template directory (optional - defaults to ./templates/defaults)
+# Specify a custom directory with post.html, index.html, and tag.html
+# template_dir: "./my-custom-templates"
+
 # Site metadata
 site:
   title: "My Tech Blog"
   description: "A blog about Go, web development, and technology"
   author: "Your Name"
   url: "https://example.com"
-
-# Template paths (optional - leave empty to use defaults)
-templates:
-  post: ""
-  index: ""
-  tag: ""
 
 # Pagination settings
 posts_per_page: 5

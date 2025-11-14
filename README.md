@@ -128,6 +128,80 @@ To get a local copy up and running follow these simple example steps.
    go run ./cmd/GoBlogGen
    ```
 
+### Customizing Templates
+
+GoBlog uses HTML templates for rendering your blog. You can customize the look and feel by creating your own templates.
+
+#### Using Default Templates
+
+By default, GoBlog uses templates from `./templates/defaults/`. These include:
+- `post.html` - Individual blog post page
+- `index.html` - Blog index/list page
+- `tag.html` - Tag filter page
+
+#### Creating Custom Templates
+
+1. Create a new directory for your templates:
+   ```sh
+   mkdir ./my-templates
+   ```
+
+2. Copy the default templates as a starting point:
+   ```sh
+   cp templates/defaults/* ./my-templates/
+   ```
+
+3. Edit the templates to match your design. Each template must exist:
+   - `post.html`
+   - `index.html`
+   - `tag.html`
+
+4. Update your `config.yaml`:
+   ```yaml
+   template_dir: "./my-templates"
+   ```
+
+#### Template Data
+
+Templates have access to the following data:
+
+**post.html:**
+- `.Post.Title` - Post title
+- `.Post.Description` - Post description
+- `.Post.FormattedDate` - Human-readable date
+- `.Post.ShortDate` - ISO date (YYYY-MM-DD)
+- `.Post.Tags` - Array of tags
+- `.Post.HTMLContent` - Rendered HTML content
+- `.Site.Title` - Site title
+- `.Site.Description` - Site description
+- `.Site.Author` - Site author
+- `.BlogPath` - Blog URL path
+
+**index.html:**
+- `.Posts` - Array of posts for this page
+- `.AllTags` - Array of all tags across all posts
+- `.Page` - Current page number
+- `.TotalPages` - Total number of pages
+- `.HasNext` - Boolean, true if there's a next page
+- `.HasPrev` - Boolean, true if there's a previous page
+- `.Site.*` - Site metadata (same as post.html)
+- `.BlogPath` - Blog URL path
+
+**tag.html:**
+- `.Tag` - Current tag being filtered
+- `.Posts` - Array of posts with this tag
+- `.AllTags` - Array of all tags across all posts
+- `.Site.*` - Site metadata
+- `.BlogPath` - Blog URL path
+
+#### Template Functions
+
+The following functions are available in templates:
+- `{{add .Page 1}}` - Add two numbers
+- `{{sub .Page 1}}` - Subtract two numbers
+
+See `templates/defaults/` for complete examples.
+
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 <!-- CONTRIBUTING -->
