@@ -1,0 +1,120 @@
+version: 2
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: gobloggen
+    binary: gobloggen
+    main: ./cmd/GoBlogGen
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ignore:
+      - goos: windows
+        goarch: arm64
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
+    mod_timestamp: '{{ .CommitTimestamp }}'
+
+archives:
+  - id: default
+    format: tar.gz
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- .Version }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+    format_overrides:
+      - goos: windows
+        format: zip
+    files:
+      - README.md
+      - LICENSE
+      - CLAUDE.md
+
+checksum:
+  name_template: 'checksums.txt'
+  algorithm: sha256
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  sort: asc
+  use: github
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^chore:'
+      - typo
+  groups:
+    - title: Features
+      regexp: '^.*?feat(\([[:word:]]+\))??!?:.+$'
+      order: 0
+    - title: 'Bug fixes'
+      regexp: '^.*?fix(\([[:word:]]+\))??!?:.+$'
+      order: 1
+    - title: 'Enhancements'
+      regexp: '^.*?enhance(\([[:word:]]+\))??!?:.+$'
+      order: 2
+    - title: Others
+      order: 999
+
+release:
+  github:
+    owner: harrydayexe
+    name: GoBlog
+  draft: false
+  prerelease: auto
+  mode: append
+  header: |
+    ## GoBlog {{ .Tag }} ({{ .Date }})
+
+    Welcome to this new release of GoBlog!
+
+    ### Installation
+
+    Download the appropriate binary for your platform below, extract it, and add it to your PATH.
+
+    **Linux/macOS:**
+    ```bash
+    # Download and extract
+    tar -xzf gobloggen_{{ .Version }}_<your-platform>.tar.gz
+
+    # Move to PATH
+    sudo mv gobloggen /usr/local/bin/
+
+    # Verify
+    gobloggen -help
+    ```
+
+    **Windows:**
+    ```powershell
+    # Extract the .zip file
+    # Add the directory to your PATH or move gobloggen.exe to a directory in PATH
+
+    # Verify
+    gobloggen.exe -help
+    ```
+
+  footer: |
+    **Full Changelog**: https://github.com/harrydayexe/GoBlog/compare/{{ .PreviousTag }}...{{ .Tag }}
+
+    ---
+
+    Generated with ❤️ using [GoReleaser](https://goreleaser.com)
