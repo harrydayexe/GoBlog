@@ -36,7 +36,14 @@ jobs:
           # fix: -> patch bump
           # feat!: or BREAKING CHANGE: -> major bump
           tag_prefix: v
-          dry_run: false
+          dry_run: true  # Calculate version but don't create tag yet
+
+      - name: Create and push tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a ${{ steps.version.outputs.new_tag }} -m "Release ${{ steps.version.outputs.new_tag }}"
+          git push origin ${{ steps.version.outputs.new_tag }}
 
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
