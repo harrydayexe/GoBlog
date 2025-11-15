@@ -43,18 +43,18 @@ func New() *Parser {
 	// Create goldmark instance with extensions
 	md := goldmark.New(
 		goldmark.WithExtensions(
-			extension.GFM,         // GitHub Flavored Markdown
-			extension.Typographer, // Smart quotes, dashes, etc.
-			highlighter,           // Syntax highlighting
+			extension.GFM,           // GitHub Flavored Markdown
+			extension.Typographer,   // Smart quotes, dashes, etc.
+			highlighter,             // Syntax highlighting
 			&frontmatter.Extender{}, // Frontmatter support
 		),
 		goldmark.WithParserOptions(
 			parser.WithAutoHeadingID(), // Auto-generate heading IDs
 		),
 		goldmark.WithRendererOptions(
-			gmhtml.WithHardWraps(),     // Convert line breaks to <br>
-			gmhtml.WithXHTML(),         // Use XHTML-style self-closing tags
-			gmhtml.WithUnsafe(),        // Allow raw HTML in markdown
+			gmhtml.WithHardWraps(), // Convert line breaks to <br>
+			gmhtml.WithXHTML(),     // Use XHTML-style self-closing tags
+			gmhtml.WithUnsafe(),    // Allow raw HTML in markdown
 		),
 	)
 

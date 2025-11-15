@@ -74,8 +74,8 @@ func slugify(s string) string {
 	var result strings.Builder
 	for _, char := range s {
 		if (char >= 'a' && char <= 'z') ||
-		   (char >= '0' && char <= '9') ||
-		   char == '-' {
+			(char >= '0' && char <= '9') ||
+			char == '-' {
 			result.WriteRune(char)
 		}
 	}
