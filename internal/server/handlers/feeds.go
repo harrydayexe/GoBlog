@@ -54,7 +54,10 @@ func (h *FeedHandlers) HandleRSS(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/rss+xml; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(rssContent))
+	if _, err := w.Write([]byte(rssContent)); err != nil {
+		http.Error(w, "Failed to write RSS feed", http.StatusInternalServerError)
+		return
+	}
 }
 
 // HandleAtom serves the Atom feed
@@ -78,7 +81,10 @@ func (h *FeedHandlers) HandleAtom(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/atom+xml; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(atomContent))
+	if _, err := w.Write([]byte(atomContent)); err != nil {
+		http.Error(w, "Failed to write Atom feed", http.StatusInternalServerError)
+		return
+	}
 }
 
 // HandleSitemap serves the XML sitemap
@@ -98,5 +104,8 @@ func (h *FeedHandlers) HandleSitemap(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/xml; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(sitemapContent))
+	if _, err := w.Write([]byte(sitemapContent)); err != nil {
+		http.Error(w, "Failed to write sitemap", http.StatusInternalServerError)
+		return
+	}
 }

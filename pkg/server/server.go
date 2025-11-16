@@ -340,14 +340,14 @@ func (s *Server) GetIndex() *search.Index {
 // RenderPost renders a single post as HTML (for custom layouts)
 // Returns the HTML content that can be embedded in your own templates
 func (s *Server) RenderPost(slug string) (string, error) {
-	post := s.loader.GetBySlug(slug)
-	if post == nil {
+	post, err := s.loader.GetBySlug(slug)
+	if err != nil {
 		return "", ErrPostNotFound
 	}
 
 	// Render using templ component
 	var buf bytes.Buffer
-	err := components.Post(post).Render(context.Background(), &buf)
+	err = components.Post(post).Render(context.Background(), &buf)
 	if err != nil {
 		return "", NewBlogError(ErrCodeContentLoad, "failed to render post", err)
 	}
@@ -373,7 +373,11 @@ func (s *Server) RenderPostList(tags []string, page int) (string, error) {
 			}
 		}
 	} else {
-		posts = s.loader.GetPaginated(page, s.options.PostsPerPage)
+		var err error
+		posts, _, err = s.loader.GetPaginated(page, s.options.PostsPerPage)
+		if err != nil {
+			return "", NewBlogError(ErrCodeContentLoad, "failed to get paginated posts", err)
+		}
 	}
 
 	var buf bytes.Buffer
