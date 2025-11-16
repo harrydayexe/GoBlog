@@ -77,11 +77,11 @@ func TestNew(t *testing.T) {
 	createTestTemplates(t, tmpDir)
 
 	tests := []struct {
-		name       string
-		cfg        config.Config
-		logger     log.Logger
-		expectErr  bool
-		errText    string
+		name      string
+		cfg       config.Config
+		logger    log.Logger
+		expectErr bool
+		errText   string
 	}{
 		{
 			name: "valid config with templates",

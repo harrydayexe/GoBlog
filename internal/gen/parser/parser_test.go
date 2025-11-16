@@ -47,9 +47,9 @@ func TestNew(t *testing.T) {
 // TestParser_ParseMarkdown tests parsing markdown content
 func TestParser_ParseMarkdown(t *testing.T) {
 	tests := []struct {
-		name        string
-		content     string
-		expectErr   bool
+		name         string
+		content      string
+		expectErr    bool
 		validatePost func(*testing.T, *models.Post)
 	}{
 		{
