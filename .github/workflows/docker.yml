@@ -96,16 +96,6 @@ jobs:
             COMMIT=${{ github.sha }}
             BUILD_DATE=${{ github.event.repository.updated_at }}
 
-      - name: Update Docker Hub description
-        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
-        uses: peter-evans/dockerhub-description@v4
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-          repository: ${{ secrets.DOCKERHUB_USERNAME }}/goblogserv
-          short-description: "GoBlogServ - Opinionated web server for markdown-based blogs with HTMX"
-          readme-filepath: ./DOCKER.md
-
       - name: Summary (Release)
         if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
         run: |
