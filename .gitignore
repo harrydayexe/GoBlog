@@ -8,6 +8,12 @@
 *.so
 *.dylib
 
+# Project binaries
+GoBlogGen
+GoBlogServ
+gobloggen
+goblogserv
+
 # Test binary, built with `go test -c`
 *.test
 
