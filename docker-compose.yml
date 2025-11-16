@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  goblog:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    volumes:
+      # Mount your blog posts directory
+      - ./examples/posts:/app/posts:ro
+      # Persist search index
+      - goblog-data:/app/data
+    environment:
+      # Content configuration
+      GOBLOG_CONTENT_PATH: /app/posts
+
+      # Cache configuration
+      GOBLOG_CACHE_ENABLED: "true"
+      GOBLOG_CACHE_MAX_MB: "100"
+      GOBLOG_CACHE_TTL: "60m"
+
+      # Search configuration
+      GOBLOG_SEARCH_ENABLED: "true"
+      GOBLOG_SEARCH_INDEX_PATH: /app/data/blog.bleve
+      GOBLOG_REBUILD_INDEX: "false"
+
+      # Blog settings
+      GOBLOG_POSTS_PER_PAGE: "10"
+
+      # Logging
+      GOBLOG_VERBOSE: "true"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
+volumes:
+  goblog-data:
+    driver: local

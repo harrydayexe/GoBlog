@@ -20,16 +20,24 @@ var (
 )
 
 func main() {
+	// Load from environment variables first
+	opts, err := server.LoadFromEnv()
+	if err != nil {
+		log.Fatalf("Failed to load environment variables: %v", err)
+	}
+
+	// Define flags with current values from env as defaults
 	var (
-		port         = flag.Int("port", 8080, "Port to listen on")
-		host         = flag.String("host", "localhost", "Host to bind to")
-		content      = flag.String("content", "./posts", "Path to markdown posts")
+		port         = flag.Int("port", 8080, "Port to listen on (env: GOBLOG_PORT)")
+		host         = flag.String("host", "localhost", "Host to bind to (env: GOBLOG_HOST)")
+		content      = flag.String("content", opts.ContentPath, "Path to markdown posts (env: GOBLOG_CONTENT_PATH)")
 		config       = flag.String("config", "", "Path to config file (not implemented yet)")
-		basePath     = flag.String("base-path", "/blog", "Base URL path for blog routes")
-		noCache      = flag.Bool("no-cache", false, "Disable caching")
-		noSearch     = flag.Bool("no-search", false, "Disable search index")
-		rebuildIndex = flag.Bool("rebuild-index", false, "Rebuild search index on startup")
-		verbose      = flag.Bool("verbose", false, "Enable verbose logging")
+		basePath     = flag.String("base-path", "/blog", "Base URL path for blog routes (env: GOBLOG_BASE_PATH)")
+		cacheMaxMB   = flag.Int64("cache-max-mb", opts.CacheMaxMB, "Max cache size in MB (env: GOBLOG_CACHE_MAX_MB)")
+		noCache      = flag.Bool("no-cache", !opts.EnableCache, "Disable caching")
+		noSearch     = flag.Bool("no-search", !opts.EnableSearch, "Disable search index")
+		rebuildIndex = flag.Bool("rebuild-index", opts.RebuildIndex, "Rebuild search index on startup (env: GOBLOG_REBUILD_INDEX)")
+		verbose      = flag.Bool("verbose", opts.Verbose, "Enable verbose logging (env: GOBLOG_VERBOSE)")
 		versionFlag  = flag.Bool("version", false, "Show version information")
 		help         = flag.Bool("help", false, "Show help message")
 	)
@@ -50,12 +58,12 @@ func main() {
 
 	// Warn if config is specified (not yet implemented)
 	if *config != "" {
-		log.Printf("Warning: -config flag is not yet implemented, using command-line flags")
+		log.Printf("Warning: -config flag is not yet implemented, using environment variables and command-line flags")
 	}
 
-	// Create server options
-	opts := server.DefaultOptions()
+	// Override with command-line flags (flags take precedence)
 	opts.ContentPath = *content
+	opts.CacheMaxMB = *cacheMaxMB
 	opts.EnableCache = !*noCache
 	opts.EnableSearch = !*noSearch
 	opts.RebuildIndex = *rebuildIndex
@@ -140,13 +148,29 @@ func printHelp() {
 	fmt.Fprintf(os.Stdout, "Built:   %s\n\n", date)
 	fmt.Fprintf(os.Stdout, "Usage:\n")
 	flag.PrintDefaults()
+	fmt.Fprintf(os.Stdout, "\nEnvironment Variables:\n")
+	fmt.Fprintf(os.Stdout, "  GOBLOG_CONTENT_PATH       Path to markdown posts (default: ./posts)\n")
+	fmt.Fprintf(os.Stdout, "  GOBLOG_CACHE_ENABLED      Enable caching (default: true)\n")
+	fmt.Fprintf(os.Stdout, "  GOBLOG_CACHE_MAX_MB       Max cache size in MB (default: 100)\n")
+	fmt.Fprintf(os.Stdout, "  GOBLOG_CACHE_TTL          Cache TTL duration (default: 60m)\n")
+	fmt.Fprintf(os.Stdout, "  GOBLOG_SEARCH_ENABLED     Enable search (default: true)\n")
+	fmt.Fprintf(os.Stdout, "  GOBLOG_SEARCH_INDEX_PATH  Search index path (default: ./blog.bleve)\n")
+	fmt.Fprintf(os.Stdout, "  GOBLOG_REBUILD_INDEX      Rebuild search index on startup (default: false)\n")
+	fmt.Fprintf(os.Stdout, "  GOBLOG_POSTS_PER_PAGE     Posts per page (default: 10)\n")
+	fmt.Fprintf(os.Stdout, "  GOBLOG_VERBOSE            Enable verbose logging (default: false)\n")
+	fmt.Fprintf(os.Stdout, "\nConfiguration Priority:\n")
+	fmt.Fprintf(os.Stdout, "  1. Command-line flags (highest priority)\n")
+	fmt.Fprintf(os.Stdout, "  2. Environment variables\n")
+	fmt.Fprintf(os.Stdout, "  3. Default values (lowest priority)\n")
 	fmt.Fprintf(os.Stdout, "\nExamples:\n")
 	fmt.Fprintf(os.Stdout, "  # Start server with default settings\n")
 	fmt.Fprintf(os.Stdout, "  goblogserv\n\n")
 	fmt.Fprintf(os.Stdout, "  # Start on port 3000 with verbose logging\n")
 	fmt.Fprintf(os.Stdout, "  goblogserv -port 3000 -verbose\n\n")
-	fmt.Fprintf(os.Stdout, "  # Disable caching and search\n")
-	fmt.Fprintf(os.Stdout, "  goblogserv -no-cache -no-search\n\n")
-	fmt.Fprintf(os.Stdout, "  # Rebuild search index on startup\n")
-	fmt.Fprintf(os.Stdout, "  goblogserv -rebuild-index\n\n")
+	fmt.Fprintf(os.Stdout, "  # Configure via environment variables\n")
+	fmt.Fprintf(os.Stdout, "  export GOBLOG_CONTENT_PATH=/var/blog/posts\n")
+	fmt.Fprintf(os.Stdout, "  export GOBLOG_VERBOSE=true\n")
+	fmt.Fprintf(os.Stdout, "  goblogserv\n\n")
+	fmt.Fprintf(os.Stdout, "  # Docker: Use environment variables\n")
+	fmt.Fprintf(os.Stdout, "  docker run -e GOBLOG_CONTENT_PATH=/posts -v ./posts:/posts goblog\n\n")
 }

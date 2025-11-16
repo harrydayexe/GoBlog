@@ -36,6 +36,64 @@ func main() {
 }
 ```
 
+## Environment Variables
+
+GoBlogServ supports configuration via environment variables, making it perfect for Docker and cloud deployments.
+
+### Loading from Environment
+
+```go
+// Load configuration from environment variables
+opts, err := server.LoadFromEnv()
+if err != nil {
+    log.Fatal(err)
+}
+
+// Or panic if configuration is invalid
+opts := server.MustLoadFromEnv()
+
+blogServer, _ := server.New(opts)
+```
+
+### Available Variables
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `GOBLOG_CONTENT_PATH` | string | `./posts` | Path to markdown posts |
+| `GOBLOG_CACHE_ENABLED` | bool | `true` | Enable Ristretto cache |
+| `GOBLOG_CACHE_MAX_MB` | int64 | `100` | Max cache size in MB |
+| `GOBLOG_CACHE_TTL` | duration | `60m` | Cache TTL (e.g., 30m, 1h) |
+| `GOBLOG_SEARCH_ENABLED` | bool | `true` | Enable Bleve search |
+| `GOBLOG_SEARCH_INDEX_PATH` | string | `./blog.bleve` | Search index path |
+| `GOBLOG_REBUILD_INDEX` | bool | `false` | Rebuild index on startup |
+| `GOBLOG_POSTS_PER_PAGE` | int | `10` | Posts per page |
+| `GOBLOG_VERBOSE` | bool | `false` | Verbose logging |
+
+### Docker Example
+
+```dockerfile
+FROM your-app-base
+
+ENV GOBLOG_CONTENT_PATH=/app/posts \
+    GOBLOG_CACHE_MAX_MB=200 \
+    GOBLOG_VERBOSE=true
+
+CMD ["/app/yourapp"]
+```
+
+```yaml
+# docker-compose.yml
+services:
+  blog:
+    image: your-blog-app
+    environment:
+      GOBLOG_CONTENT_PATH: /app/posts
+      GOBLOG_CACHE_ENABLED: "true"
+      GOBLOG_VERBOSE: "true"
+    volumes:
+      - ./posts:/app/posts:ro
+```
+
 ## API Reference
 
 ### Creating a Server
