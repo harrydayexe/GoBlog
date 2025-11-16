@@ -11,6 +11,21 @@
 
 [![CI](https://github.com/harrydayexe/GoBlog/actions/workflows/ci.yml/badge.svg?event=branch_protection_rule)](https://github.com/harrydayexe/GoBlog/actions/workflows/ci.yml)
 
+---
+
+### Code Quality & Testing
+
+**Test Coverage (main branch):** 88.6%
+![Tests](https://github.com/harrydayexe/GoBlog/actions/workflows/test-coverage.yml/badge.svg)
+
+> **Note:** The coverage percentage above reflects the `main` branch. For branch-specific coverage, see the automated comment on any pull request or check the [workflow artifacts](https://github.com/harrydayexe/GoBlog/actions/workflows/test-coverage.yml).
+
+- 📊 Coverage reports generated using Go's built-in `go tool cover`
+- 🎯 80% minimum coverage enforced via CI
+- 📝 Detailed testing guide: [TESTING.md](TESTING.md)
+- 💬 PR comments show branch-specific coverage with package breakdown
+
+---
 
 <!-- PROJECT LOGO -->
 <br />
