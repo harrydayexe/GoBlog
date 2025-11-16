@@ -27,7 +27,7 @@ type Loader struct {
 
 // NewLoader creates a new content loader
 func NewLoader(contentPath string, cache *Cache) (*Loader, error) {
-	p := parser.New()
+	p := parser.New(nil)
 
 	loader := &Loader{
 		contentPath: contentPath,

@@ -4,11 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/harrydayexe/GoBlog/internal/gen/log"
 	"gopkg.in/yaml.v3"
 )
-
-var logger log.CLILogger = *log.NewCLILogger("CONFIG", false)
 
 // SiteMetadata contains information about the website
 type SiteMetadata struct {
@@ -50,30 +47,37 @@ type Config struct {
 func ParseConfig(name string) (Config, error) {
 	data, err := os.ReadFile(name)
 	if err != nil {
-		werr := fmt.Errorf("failed to read config file %s: %w", name, err)
-		logger.Error(werr)
-		return Config{}, err
+		return Config{}, fmt.Errorf("failed to read config file %s: %w", name, err)
 	}
 
 	var cfg Config
 	if err := yaml.Unmarshal(data, &cfg); err != nil {
-		werr := fmt.Errorf("failed to unmarshal config file %s: %w", name, err)
-		logger.Error(werr)
-		return Config{}, err
+		return Config{}, fmt.Errorf("failed to unmarshal config file %s: %w", name, err)
 	}
 
-	valErr := cfg.validateConfig()
-	if valErr != nil {
-		werr := fmt.Errorf("config validation failed: %w", valErr)
-		logger.Error(werr)
-		return Config{}, valErr
+	if err := cfg.Validate(); err != nil {
+		return Config{}, fmt.Errorf("config validation failed: %w", err)
 	}
 
-	logger.Info("Config file parsed successfully: %+v", name)
 	return cfg, nil
 }
 
-func (cfg *Config) validateConfig() error {
+// ParseConfigFromBytes parses configuration from byte slice (useful for testing)
+func ParseConfigFromBytes(data []byte) (Config, error) {
+	var cfg Config
+	if err := yaml.Unmarshal(data, &cfg); err != nil {
+		return Config{}, fmt.Errorf("failed to unmarshal config: %w", err)
+	}
+
+	if err := cfg.Validate(); err != nil {
+		return Config{}, fmt.Errorf("config validation failed: %w", err)
+	}
+
+	return cfg, nil
+}
+
+// Validate validates and sets defaults for the configuration
+func (cfg *Config) Validate() error {
 	// Set defaults for folders
 	if cfg.InputFolder == "" {
 		cfg.InputFolder = "./posts"

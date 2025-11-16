@@ -18,14 +18,18 @@ type Engine struct {
 	indexTemplate *template.Template
 	tagTemplate   *template.Template
 	cfg           config.Config
-	logger        log.CLILogger
+	logger        log.Logger
 }
 
 // New creates a new template engine
-func New(cfg config.Config) (*Engine, error) {
+func New(cfg config.Config, logger log.Logger) (*Engine, error) {
+	if logger == nil {
+		logger = log.NewCLILogger("TEMPLATE", cfg.Verbose)
+	}
+
 	engine := &Engine{
 		cfg:    cfg,
-		logger: *log.NewCLILogger("TEMPLATE", cfg.Verbose),
+		logger: logger,
 	}
 
 	// Load templates

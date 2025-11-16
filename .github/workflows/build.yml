@@ -1,0 +1,172 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: ['*']
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache: true
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Verify dependencies
+        run: go mod verify
+
+      - name: Run go vet
+        run: go vet ./...
+
+      - name: Run go fmt check
+        run: |
+          if [ -n "$(gofmt -s -l .)" ]; then
+            echo "Go code is not formatted:"
+            gofmt -s -d .
+            exit 1
+          fi
+
+      - name: Run tests with coverage
+        run: |
+          # Note: Currently testing only ./internal/gen/... and ./pkg/models/...
+          # Server packages (./internal/server/... and ./pkg/server/...) are excluded
+          # because they require integration testing with external dependencies
+          # (Bleve search index, Ristretto cache, HTMX components, etc.)
+          # TODO: Add server-side tests in a future PR with proper mocking/integration test setup
+          go test -v -race -coverprofile=coverage.out -covermode=atomic \
+            ./internal/gen/... ./pkg/models/...
+
+      - name: Generate coverage report
+        id: coverage
+        run: |
+          echo "## Test Coverage Report" > coverage_report.md
+          echo "" >> coverage_report.md
+
+          # Get total coverage
+          TOTAL_COV=$(go tool cover -func=coverage.out | grep total | awk '{print $3}')
+          echo "**Total Coverage:** $TOTAL_COV" >> coverage_report.md
+          echo "" >> coverage_report.md
+
+          # Get per-package coverage
+          echo "### Coverage by Package" >> coverage_report.md
+          echo "" >> coverage_report.md
+          echo "| Package | Coverage |" >> coverage_report.md
+          echo "|---------|----------|" >> coverage_report.md
+
+          go tool cover -func=coverage.out | grep -v "total:" | awk '{
+            pkg = $1
+            gsub(/.*\//, "", pkg)
+            gsub(/:.*/, "", pkg)
+            if (pkg != last_pkg && pkg != "") {
+              if (last_pkg != "") print last_line
+              last_pkg = pkg
+              last_line = "| " pkg " | " $NF " |"
+            }
+          } END {
+            if (last_line != "") print last_line
+          }' >> coverage_report.md
+
+          echo "" >> coverage_report.md
+
+          # Check threshold
+          COVERAGE_NUM=$(echo $TOTAL_COV | sed 's/%//')
+          THRESHOLD=80
+
+          # Use awk for portable float comparison (more reliable than bc)
+          BELOW_THRESHOLD=$(awk -v cov="$COVERAGE_NUM" -v thresh="$THRESHOLD" 'BEGIN { print (cov < thresh) ? 1 : 0 }')
+
+          if [ "$BELOW_THRESHOLD" -eq 1 ]; then
+            echo "status=❌ Coverage $TOTAL_COV is below threshold ${THRESHOLD}%" >> $GITHUB_OUTPUT
+            echo "" >> coverage_report.md
+            echo "⚠️ **Warning:** Coverage is below the ${THRESHOLD}% threshold!" >> coverage_report.md
+            exit 1
+          else
+            echo "status=✅ Coverage $TOTAL_COV meets threshold ${THRESHOLD}%" >> $GITHUB_OUTPUT
+            echo "" >> coverage_report.md
+            echo "✅ Coverage meets the ${THRESHOLD}% threshold" >> coverage_report.md
+          fi
+
+      - name: Comment PR with coverage
+        if: github.event_name == 'pull_request'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: coverage
+          path: coverage_report.md
+
+      - name: Generate coverage HTML report
+        if: always()
+        run: go tool cover -html=coverage.out -o coverage.html
+
+      - name: Upload coverage HTML as artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage.html
+          retention-days: 30
+
+      - name: Upload coverage data
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-data
+          path: coverage.out
+          retention-days: 30
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache: true
+
+      - name: Build GoBlogGen
+        run: go build -v -o gobloggen ./cmd/GoBlogGen
+
+      - name: Test GoBlogGen binary
+        run: ./gobloggen -h || true
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache: true
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+          args: --timeout=5m
+          skip-cache: false
