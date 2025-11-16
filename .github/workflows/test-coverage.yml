@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [ main, master, develop ]
 
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
   test:
     name: Test
@@ -34,29 +38,82 @@ jobs:
       run: go vet ./...
 
     - name: Run tests with coverage
-      run: go test -v -race -coverprofile=coverage.out -covermode=atomic ./internal/gen/... ./pkg/models/...
+      run: |
+        go test -v -race -coverprofile=coverage.out -covermode=atomic \
+          ./internal/gen/... ./pkg/models/...
 
-    - name: Display coverage
-      run: go tool cover -func=coverage.out
+    - name: Generate coverage report
+      id: coverage
+      run: |
+        echo "## Test Coverage Report" > coverage_report.md
+        echo "" >> coverage_report.md
 
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v5
+        # Get total coverage
+        TOTAL_COV=$(go tool cover -func=coverage.out | grep total | awk '{print $3}')
+        echo "**Total Coverage:** $TOTAL_COV" >> coverage_report.md
+        echo "" >> coverage_report.md
+
+        # Get per-package coverage
+        echo "### Coverage by Package" >> coverage_report.md
+        echo "" >> coverage_report.md
+        echo "| Package | Coverage |" >> coverage_report.md
+        echo "|---------|----------|" >> coverage_report.md
+
+        go tool cover -func=coverage.out | grep -v "total:" | awk '{
+          pkg = $1
+          gsub(/.*\//, "", pkg)
+          gsub(/:.*/, "", pkg)
+          if (pkg != last_pkg && pkg != "") {
+            if (last_pkg != "") print last_line
+            last_pkg = pkg
+            last_line = "| " pkg " | " $NF " |"
+          }
+        } END {
+          if (last_line != "") print last_line
+        }' >> coverage_report.md
+
+        echo "" >> coverage_report.md
+
+        # Check threshold
+        COVERAGE_NUM=$(echo $TOTAL_COV | sed 's/%//')
+        THRESHOLD=80
+
+        if (( $(echo "$COVERAGE_NUM < $THRESHOLD" | bc -l) )); then
+          echo "status=❌ Coverage $TOTAL_COV is below threshold ${THRESHOLD}%" >> $GITHUB_OUTPUT
+          echo "" >> coverage_report.md
+          echo "⚠️ **Warning:** Coverage is below the ${THRESHOLD}% threshold!" >> coverage_report.md
+          exit 1
+        else
+          echo "status=✅ Coverage $TOTAL_COV meets threshold ${THRESHOLD}%" >> $GITHUB_OUTPUT
+          echo "" >> coverage_report.md
+          echo "✅ Coverage meets the ${THRESHOLD}% threshold" >> coverage_report.md
+        fi
+
+    - name: Comment PR with coverage
+      if: github.event_name == 'pull_request'
+      uses: marocchino/sticky-pull-request-comment@v2
       with:
-        files: ./coverage.out
-        flags: unittests
-        name: codecov-umbrella
-        fail_ci_if_error: true
-        verbose: true
-        token: ${{ secrets.CODECOV_TOKEN }}
+        header: coverage
+        path: coverage_report.md
 
     - name: Generate coverage HTML report
+      if: always()
       run: go tool cover -html=coverage.out -o coverage.html
 
     - name: Upload coverage HTML as artifact
+      if: always()
       uses: actions/upload-artifact@v4
       with:
         name: coverage-report
         path: coverage.html
+        retention-days: 30
+
+    - name: Upload coverage data
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-data
+        path: coverage.out
         retention-days: 30
 
   build:

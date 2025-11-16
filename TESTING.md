@@ -17,7 +17,7 @@ Current test coverage: **88.6%**
 - `internal/gen/template`: 83.1%
 - `internal/gen/generator`: 78.8%
 
-Coverage reports are automatically generated and uploaded to Codecov on every push and pull request.
+Coverage reports are automatically generated using Go's built-in tools and posted as PR comments on every pull request. HTML reports are also uploaded as artifacts for detailed analysis.
 
 ## Testing Philosophy
 
@@ -275,16 +275,45 @@ Tests run automatically on:
 
 The CI pipeline:
 1. Runs all tests with race detection
-2. Generates coverage reports
-3. Uploads coverage to Codecov
-4. Runs linting (golangci-lint)
-5. Builds the binaries
+2. Generates coverage reports using `go tool cover`
+3. Posts coverage summary as PR comments
+4. Uploads HTML coverage reports as artifacts
+5. Runs linting (golangci-lint)
+6. Builds the binaries
+
+### Coverage in Pull Requests
+
+Pull requests automatically receive a coverage report comment showing:
+- Total coverage percentage
+- Per-package coverage breakdown
+- Pass/fail status based on 80% threshold
+- Coverage trend compared to base branch
+
+Example PR comment:
+```markdown
+## Test Coverage Report
+
+**Total Coverage:** 88.6%
+
+### Coverage by Package
+
+| Package | Coverage |
+|---------|----------|
+| config | 100.0% |
+| log | 100.0% |
+| models | 100.0% |
+| parser | 94.3% |
+| template | 83.1% |
+| generator | 78.8% |
+
+✅ Coverage meets the 80% threshold
+```
 
 ## Coverage Requirements
 
 - **Project minimum**: 80%
-- **Patch minimum**: 80%
-- **Pull requests** that decrease coverage by more than 2% will fail CI
+- **Pull requests** that drop below 80% coverage will fail CI
+- Coverage reports are generated using Go's standard `go tool cover`
 
 ## Writing New Tests
 
@@ -390,9 +419,10 @@ func TestWithDatabase(t *testing.T) {
 ## Resources
 
 - [Go Testing Package](https://pkg.go.dev/testing)
+- [Go Coverage Tool](https://pkg.go.dev/cmd/cover)
 - [Testcontainers for Go](https://golang.testcontainers.org/)
-- [Codecov Documentation](https://docs.codecov.com/)
 - [Go Best Practices for Testing](https://go.dev/doc/tutorial/add-a-test)
+- [GitHub Actions](https://docs.github.com/en/actions)
 
 ## Feedback and Improvements
 
