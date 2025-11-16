@@ -1,0 +1,213 @@
+package components
+
+import "github.com/harrydayexe/GoBlog/pkg/models"
+
+templ Layout(title string, content templ.Component) {
+	<!DOCTYPE html>
+	<html lang="en">
+	<head>
+		<meta charset="UTF-8"/>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+		<title>{ title }</title>
+		<script src="https://unpkg.com/htmx.org@1.9.10"></script>
+		<style>
+			body {
+				font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+				line-height: 1.6;
+				max-width: 800px;
+				margin: 0 auto;
+				padding: 20px;
+				color: #333;
+			}
+			nav {
+				margin-bottom: 40px;
+				padding-bottom: 20px;
+				border-bottom: 2px solid #eee;
+			}
+			nav a {
+				margin-right: 20px;
+				text-decoration: none;
+				color: #0066cc;
+			}
+			nav a:hover {
+				text-decoration: underline;
+			}
+			.post {
+				margin-bottom: 40px;
+				padding-bottom: 40px;
+				border-bottom: 1px solid #eee;
+			}
+			.post h2 {
+				margin-bottom: 10px;
+			}
+			.post-meta {
+				color: #666;
+				font-size: 0.9em;
+				margin-bottom: 15px;
+			}
+			.tags {
+				margin-top: 15px;
+			}
+			.tag {
+				display: inline-block;
+				background: #f0f0f0;
+				padding: 4px 10px;
+				border-radius: 3px;
+				margin-right: 8px;
+				font-size: 0.85em;
+				text-decoration: none;
+				color: #666;
+			}
+			.tag:hover {
+				background: #e0e0e0;
+			}
+			.search-box {
+				margin-bottom: 30px;
+			}
+			.search-box input {
+				width: 100%;
+				padding: 12px;
+				font-size: 16px;
+				border: 2px solid #ddd;
+				border-radius: 4px;
+			}
+			.search-box input:focus {
+				outline: none;
+				border-color: #0066cc;
+			}
+			.pagination {
+				margin-top: 40px;
+				text-align: center;
+			}
+			.pagination button {
+				padding: 10px 20px;
+				font-size: 16px;
+				border: 2px solid #0066cc;
+				background: white;
+				color: #0066cc;
+				border-radius: 4px;
+				cursor: pointer;
+			}
+			.pagination button:hover {
+				background: #0066cc;
+				color: white;
+			}
+			.htmx-indicator {
+				opacity: 0;
+				transition: opacity 200ms ease-in;
+			}
+			.htmx-request .htmx-indicator {
+				opacity: 1;
+			}
+		</style>
+	</head>
+	<body>
+		<nav>
+			<a href="/">Home</a>
+			<a href="/blog">Blog</a>
+			<a href="/blog/tags">Tags</a>
+		</nav>
+		<main>
+			@content
+		</main>
+	</body>
+	</html>
+}
+
+templ PostList(posts []*models.Post) {
+	<div id="post-list">
+		for _, post := range posts {
+			@PostCard(post)
+		}
+	</div>
+}
+
+templ PostCard(post *models.Post) {
+	<article class="post">
+		<h2><a href={ templ.SafeURL("/blog/posts/" + post.Slug) }>{ post.Title }</a></h2>
+		<div class="post-meta">
+			<time>{ post.FormattedDate() }</time>
+		</div>
+		<p>{ post.Description }</p>
+		if len(post.Tags) > 0 {
+			<div class="tags">
+				for _, tag := range post.Tags {
+					<a href={ templ.SafeURL("/blog/tags/" + tag) } class="tag">{ tag }</a>
+				}
+			</div>
+		}
+	</article>
+}
+
+templ Post(post *models.Post) {
+	@Layout(post.Title, postContent(post))
+}
+
+templ postContent(post *models.Post) {
+	<article>
+		<h1>{ post.Title }</h1>
+		<div class="post-meta">
+			<time>{ post.FormattedDate() }</time>
+		</div>
+		if len(post.Tags) > 0 {
+			<div class="tags">
+				for _, tag := range post.Tags {
+					<a href={ templ.SafeURL("/blog/tags/" + tag) } class="tag">{ tag }</a>
+				}
+			</div>
+		}
+		<div class="content">
+			@templ.Raw(post.HTMLContent)
+		</div>
+	</article>
+}
+
+templ Index(posts []*models.Post, page int, hasMore bool) {
+	@Layout("Blog", indexContent(posts, page, hasMore))
+}
+
+templ indexContent(posts []*models.Post, page int, hasMore bool) {
+	<div class="search-box">
+		<input
+			type="text"
+			name="q"
+			placeholder="Search posts..."
+			hx-get="/blog/search"
+			hx-trigger="keyup changed delay:300ms"
+			hx-target="#post-list"
+			hx-indicator=".htmx-indicator"
+		/>
+		<span class="htmx-indicator">Searching...</span>
+	</div>
+	@PostList(posts)
+	if hasMore {
+		<div class="pagination">
+			<button
+				hx-get={ "/blog?page=" + templ.EscapeString(string(rune(page + 1))) }
+				hx-target="#post-list"
+				hx-swap="beforeend"
+			>
+				Load More
+			</button>
+		</div>
+	}
+}
+
+templ TagPage(tag string, posts []*models.Post) {
+	@Layout("Tag: " + tag, tagPageContent(tag, posts))
+}
+
+templ tagPageContent(tag string, posts []*models.Post) {
+	<h1>Posts tagged with "{ tag }"</h1>
+	@PostList(posts)
+}
+
+templ SearchResults(posts []*models.Post, query string) {
+	if len(posts) == 0 {
+		<div id="post-list">
+			<p>No results found for "{ query }"</p>
+		</div>
+	} else {
+		@PostList(posts)
+	}
+}
