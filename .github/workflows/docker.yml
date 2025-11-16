@@ -4,6 +4,8 @@ on:
   push:
     tags:
       - 'v*'
+  pull_request:
+    branches: ['*']
   workflow_dispatch:
     inputs:
       tag:
@@ -13,6 +15,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: read
 
 jobs:
   docker:
@@ -35,8 +38,18 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Extract metadata
+      - name: Generate PR tag
+        id: pr_tag
+        if: github.event_name == 'pull_request'
+        run: |
+          PR_NUMBER=${{ github.event.pull_request.number }}
+          SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
+          echo "tag=pr-${PR_NUMBER}-${SHORT_SHA}" >> $GITHUB_OUTPUT
+          echo "full_tag=${{ secrets.DOCKERHUB_USERNAME }}/goblogserv:pr-${PR_NUMBER}-${SHORT_SHA}" >> $GITHUB_OUTPUT
+
+      - name: Extract metadata (for version tags)
         id: meta
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
         uses: docker/metadata-action@v5
         with:
           images: ${{ secrets.DOCKERHUB_USERNAME }}/goblogserv
@@ -46,7 +59,28 @@ jobs:
             type=semver,pattern={{major}}
             type=raw,value=latest,enable={{is_default_branch}}
 
-      - name: Build and push
+      - name: Build and push (PR)
+        if: github.event_name == 'pull_request'
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.pr_tag.outputs.full_tag }}
+          labels: |
+            org.opencontainers.image.source=${{ github.event.repository.html_url }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.created=${{ github.event.repository.updated_at }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            VERSION=${{ steps.pr_tag.outputs.tag }}
+            COMMIT=${{ github.sha }}
+            BUILD_DATE=${{ github.event.repository.updated_at }}
+
+      - name: Build and push (Release)
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -63,6 +97,7 @@ jobs:
             BUILD_DATE=${{ github.event.repository.updated_at }}
 
       - name: Update Docker Hub description
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
         uses: peter-evans/dockerhub-description@v4
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -71,7 +106,8 @@ jobs:
           short-description: "GoBlogServ - Opinionated web server for markdown-based blogs with HTMX"
           readme-filepath: ./DOCKER.md
 
-      - name: Summary
+      - name: Summary (Release)
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
         run: |
           echo "### Docker Image Published! 🐳" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -87,3 +123,21 @@ jobs:
           echo '```bash' >> $GITHUB_STEP_SUMMARY
           echo "docker pull ${{ secrets.DOCKERHUB_USERNAME }}/goblogserv:${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
+
+      - name: Summary (PR)
+        if: github.event_name == 'pull_request'
+        run: |
+          echo "### Docker PR Snapshot Built! 🐳" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**PR**: #${{ github.event.pull_request.number }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Tag**: \`${{ steps.pr_tag.outputs.tag }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Platforms**: linux/amd64, linux/arm64" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Pull command**:" >> $GITHUB_STEP_SUMMARY
+          echo '```bash' >> $GITHUB_STEP_SUMMARY
+          echo "docker pull ${{ steps.pr_tag.outputs.full_tag }}" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "> **Note**: This is a snapshot build for testing. It will not be tagged as \`latest\` and may be removed in the future." >> $GITHUB_STEP_SUMMARY

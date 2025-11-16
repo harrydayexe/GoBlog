@@ -21,6 +21,17 @@ docker run -v ./posts:/posts -p 8080:8080 harrydayexe/goblogserv:latest
 
 Visit http://localhost:8080 to view your blog.
 
+### Testing PR Snapshots
+
+Pull request builds are automatically published with unique tags for testing:
+
+```bash
+# Pull a specific PR snapshot (replace with actual PR number and commit)
+docker run -v ./posts:/posts -p 8080:8080 harrydayexe/goblogserv:pr-42-a1b2c3d
+```
+
+PR snapshots are temporary builds for testing changes before they're merged.
+
 ### With Custom Configuration
 
 ```bash

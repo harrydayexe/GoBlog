@@ -235,7 +235,8 @@ spec:
 The Docker build workflow (`.github/workflows/docker.yml`) automatically builds and pushes images to Docker Hub when a version tag is pushed.
 
 **Triggers:**
-- Push of version tags (`v*`)
+- Push of version tags (`v*`) - Builds release images
+- Pull requests - Builds PR snapshot images for testing
 - Manual workflow dispatch
 
 **Required Secrets:**
@@ -247,10 +248,19 @@ The Docker build workflow (`.github/workflows/docker.yml`) automatically builds 
 - `linux/arm64`
 
 **Generated Tags:**
+
+*Release builds (from version tags):*
 - `harrydayexe/goblogserv:v1.2.3` (specific version)
 - `harrydayexe/goblogserv:v1.2` (minor version)
 - `harrydayexe/goblogserv:v1` (major version)
 - `harrydayexe/goblogserv:latest` (latest release)
+
+*PR snapshot builds (from pull requests):*
+- `harrydayexe/goblogserv:pr-123-abc1234` (PR number + short commit SHA)
+  - Example: `docker pull harrydayexe/goblogserv:pr-42-a1b2c3d`
+  - These are temporary builds for testing PRs
+  - Not tagged as `latest`
+  - May be removed after PR is merged/closed
 
 ## Combined Distribution Strategy
 
