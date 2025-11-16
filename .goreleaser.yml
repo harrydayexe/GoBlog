@@ -105,7 +105,7 @@ brews:
       name: homebrew-goblog
       branch: main
       token: "{{ .Env.GITHUB_TOKEN }}"
-    folder: Formula
+    directory: Formula
     homepage: https://github.com/harrydayexe/GoBlog
     description: Unopinionated static site generator for markdown-based blogs
     license: MIT
