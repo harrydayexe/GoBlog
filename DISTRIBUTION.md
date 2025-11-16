@@ -147,12 +147,12 @@ goblogserv -content ./posts -port 8080
 
 #### Docker Container
 
-**Registry:** GitHub Container Registry (ghcr.io)
+**Registry:** Docker Hub
 
 **Images:**
-- `ghcr.io/harrydayexe/goblogserv:latest`
-- `ghcr.io/harrydayexe/goblogserv:v1.2.3`
-- `ghcr.io/harrydayexe/goblogserv:v1-alpine` (smaller image)
+- `harrydayexe/goblogserv:latest`
+- `harrydayexe/goblogserv:v1.2.3`
+- `harrydayexe/goblogserv:v1` (major version tag)
 
 **Dockerfile:**
 ```dockerfile
@@ -171,13 +171,13 @@ ENTRYPOINT ["goblogserv"]
 **Usage:**
 ```bash
 # Basic usage
-docker run -v ./posts:/posts -p 8080:8080 ghcr.io/harrydayexe/goblogserv
+docker run -v ./posts:/posts -p 8080:8080 harrydayexe/goblogserv
 
 # With config
 docker run -v ./config.yaml:/config.yaml \
            -v ./posts:/posts \
            -p 8080:8080 \
-           ghcr.io/harrydayexe/goblogserv -config /config.yaml
+           harrydayexe/goblogserv -config /config.yaml
 
 # Docker Compose (sidecar pattern)
 version: '3.8'
@@ -188,7 +188,7 @@ services:
       - "3000:3000"
 
   blog:
-    image: ghcr.io/harrydayexe/goblogserv:latest
+    image: harrydayexe/goblogserv:latest
     volumes:
       - ./posts:/posts
     environment:
@@ -212,7 +212,7 @@ spec:
     - containerPort: 3000
 
   - name: blog
-    image: ghcr.io/harrydayexe/goblogserv:latest
+    image: harrydayexe/goblogserv:latest
     ports:
     - containerPort: 8080
     volumeMounts:
@@ -232,51 +232,25 @@ spec:
 
 **Automated via GitHub Actions:**
 
-```yaml
-name: Build Docker Images
+The Docker build workflow (`.github/workflows/docker.yml`) automatically builds and pushes images to Docker Hub when a version tag is pushed.
 
-on:
-  push:
-    tags:
-      - 'v*'
+**Triggers:**
+- Push of version tags (`v*`)
+- Manual workflow dispatch
 
-jobs:
-  docker:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+**Required Secrets:**
+- `DOCKERHUB_USERNAME` - Your Docker Hub username
+- `DOCKERHUB_TOKEN` - Docker Hub access token (create at https://hub.docker.com/settings/security)
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+**Platforms:**
+- `linux/amd64`
+- `linux/arm64`
 
-      - name: Login to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ghcr.io/harrydayexe/goblogserv
-          tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}
-            type=raw,value=latest
-
-      - name: Build and push
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          platforms: linux/amd64,linux/arm64
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-```
+**Generated Tags:**
+- `harrydayexe/goblogserv:v1.2.3` (specific version)
+- `harrydayexe/goblogserv:v1.2` (minor version)
+- `harrydayexe/goblogserv:v1` (major version)
+- `harrydayexe/goblogserv:latest` (latest release)
 
 ## Combined Distribution Strategy
 

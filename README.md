@@ -349,13 +349,13 @@ Run GoBlogServ in a container:
 
 ```bash
 # Pull and run
-docker run -v ./posts:/posts -p 8080:8080 ghcr.io/harrydayexe/goblogserv:latest
+docker run -v ./posts:/posts -p 8080:8080 harrydayexe/goblogserv:latest
 
 # With custom configuration
 docker run -v ./config.yaml:/config.yaml \
            -v ./posts:/posts \
            -p 8080:8080 \
-           ghcr.io/harrydayexe/goblogserv:latest -config /config.yaml
+           harrydayexe/goblogserv:latest -config /config.yaml
 ```
 
 #### Docker Compose (Sidecar Pattern)
@@ -369,7 +369,7 @@ services:
       - "3000:3000"
 
   blog:
-    image: ghcr.io/harrydayexe/goblogserv:latest
+    image: harrydayexe/goblogserv:latest
     volumes:
       - ./posts:/posts
     environment:
