@@ -1,0 +1,47 @@
+# Git
+.git
+.gitignore
+.github
+
+# Documentation
+README.md
+CLAUDE.md
+DISTRIBUTION.md
+LICENSE
+*.md
+
+# Build artifacts
+bin/
+dist/
+*.exe
+*.dll
+*.so
+*.dylib
+gobloggen
+goblogserv
+
+# Test files
+*_test.go
+testdata/
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Examples and posts
+examples/
+posts/
+site/
+
+# Config files (users will mount their own)
+config.yaml
+server.yaml
+*.yaml
+!.goreleaser.yml

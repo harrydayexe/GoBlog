@@ -27,6 +27,29 @@ builds:
       - -X main.date={{.Date}}
     mod_timestamp: '{{ .CommitTimestamp }}'
 
+  # GoBlogServ - Uncomment when implemented
+  # - id: goblogserv
+  #   binary: goblogserv
+  #   main: ./cmd/GoBlogServ
+  #   env:
+  #     - CGO_ENABLED=0
+  #   goos:
+  #     - linux
+  #     - darwin
+  #     - windows
+  #   goarch:
+  #     - amd64
+  #     - arm64
+  #   ignore:
+  #     - goos: windows
+  #       goarch: arm64
+  #   ldflags:
+  #     - -s -w
+  #     - -X main.version={{.Version}}
+  #     - -X main.commit={{.Commit}}
+  #     - -X main.date={{.Date}}
+  #   mod_timestamp: '{{ .CommitTimestamp }}'
+
 archives:
   - id: default
     formats: [tar.gz]
@@ -75,6 +98,25 @@ changelog:
     - title: Others
       order: 999
 
+brews:
+  - name: gobloggen
+    repository:
+      owner: harrydayexe
+      name: homebrew-goblog
+      branch: main
+      token: "{{ .Env.GITHUB_TOKEN }}"
+    folder: Formula
+    homepage: https://github.com/harrydayexe/GoBlog
+    description: Unopinionated static site generator for markdown-based blogs
+    license: MIT
+    commit_author:
+      name: goreleaserbot
+      email: bot@goreleaser.com
+    install: |
+      bin.install "gobloggen"
+    test: |
+      system "#{bin}/gobloggen", "-help"
+
 release:
   github:
     owner: harrydayexe
@@ -88,6 +130,13 @@ release:
     Welcome to this new release of GoBlog!
 
     ### Installation
+
+    **Homebrew (macOS/Linux):**
+    ```bash
+    brew install harrydayexe/goblog/gobloggen
+    ```
+
+    **Direct Download:**
 
     Download the appropriate binary for your platform below, extract it, and add it to your PATH.
 
@@ -112,9 +161,14 @@ release:
     gobloggen.exe -help
     ```
 
+    **Go Install:**
+    ```bash
+    go install github.com/harrydayexe/GoBlog/cmd/GoBlogGen@{{ .Tag }}
+    ```
+
   footer: |
     **Full Changelog**: https://github.com/harrydayexe/GoBlog/compare/{{ .PreviousTag }}...{{ .Tag }}
 
     ---
 
-    Generated with ❤️ using [GoReleaser](https://goreleaser.com)
+    Generated with GoReleaser
