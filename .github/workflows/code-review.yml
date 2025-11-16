@@ -1,0 +1,48 @@
+name: Claude Code Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: ['*']
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+  id-token: write
+
+jobs:
+  review:
+    name: AI Code Review
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Claude Code Review
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: |
+            Please provide a comprehensive code review of this pull request.
+
+            Focus on the following areas:
+            - Code quality and adherence to Go best practices and idioms
+            - Potential security vulnerabilities (SQL injection, XSS, authentication issues, exposed secrets)
+            - Performance issues and optimization opportunities
+            - Code maintainability and readability
+            - Documentation clarity and completeness
+            - Test coverage and quality
+            - Error handling patterns
+            - Proper use of Go concurrency patterns (if applicable)
+
+            For each issue found, please:
+            1. Explain the problem clearly
+            2. Suggest a specific improvement or fix
+            3. Rate the severity (critical/high/medium/low)
+
+            Also highlight any particularly well-written code or good practices you notice.
+          claude_args: --model claude-sonnet-4-5-20250929
