@@ -9,6 +9,7 @@
 [![MIT License][license-shield]][license-url]
 [![LinkedIn][linkedin-shield]][linkedin-url]
 
+[![CI](https://github.com/harrydayexe/GoBlog/actions/workflows/ci.yml/badge.svg?event=branch_protection_rule)](https://github.com/harrydayexe/GoBlog/actions/workflows/ci.yml)
 
 
 <!-- PROJECT LOGO -->
