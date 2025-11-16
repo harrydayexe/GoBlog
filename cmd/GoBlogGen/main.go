@@ -28,8 +28,8 @@ func main() {
 	logger.Info("Configuration loaded from: %s", *cfgFileNamePtr)
 	logger.Debug("Config: %+v", cfg)
 
-	// Create generator
-	gen, err := generator.New(cfg)
+	// Create generator with logger
+	gen, err := generator.New(cfg, logger)
 	if err != nil {
 		logger.Error(fmt.Errorf("failed to create generator: %w", err))
 		os.Exit(1)

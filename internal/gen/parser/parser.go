@@ -24,12 +24,14 @@ import (
 // Parser handles markdown parsing and HTML conversion
 type Parser struct {
 	md     goldmark.Markdown
-	logger log.CLILogger
+	logger log.Logger
 }
 
 // New creates a new parser with goldmark configured for blog posts
-func New() *Parser {
-	logger := *log.NewCLILogger("PARSER", false)
+func New(logger log.Logger) *Parser {
+	if logger == nil {
+		logger = log.NewCLILogger("PARSER", false)
+	}
 
 	// Configure syntax highlighting
 	highlighter := highlighting.NewHighlighting(

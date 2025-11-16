@@ -20,19 +20,20 @@ type Generator struct {
 	cfg      config.Config
 	parser   *parser.Parser
 	template *template.Engine
-	logger   log.CLILogger
+	logger   log.Logger
 }
 
 // New creates a new generator
-func New(cfg config.Config) (*Generator, error) {
-	// Create logger
-	logger := *log.NewCLILogger("GENERATOR", cfg.Verbose)
+func New(cfg config.Config, logger log.Logger) (*Generator, error) {
+	if logger == nil {
+		logger = log.NewCLILogger("GENERATOR", cfg.Verbose)
+	}
 
-	// Create parser
-	p := parser.New()
+	// Create parser with logger
+	p := parser.New(logger)
 
-	// Create template engine
-	tmpl, err := template.New(cfg)
+	// Create template engine with logger
+	tmpl, err := template.New(cfg, logger)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize template engine: %w", err)
 	}
