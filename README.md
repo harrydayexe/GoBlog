@@ -419,6 +419,10 @@ Don't forget to give the project a star! Thanks again!
 4. Push to the Branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
 
+### For Maintainers
+
+If you're setting up the repository for the first time or managing GitHub Actions workflows, see [.github/SETUP.md](.github/SETUP.md) for information on required secrets and workflow configuration.
+
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ### Top contributors:
