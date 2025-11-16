@@ -418,7 +418,7 @@ Violations may result in:
 2. Temporary ban from participation
 3. Permanent ban from the project
 
-Report violations to: contact@harryday.xyz
+Report violations to: contact (at) harryday (dot) xyz
 
 ## License
 
@@ -428,8 +428,8 @@ By contributing to GoBlog, you agree that your contributions will be licensed un
 
 - **General questions**: Open a [GitHub Discussion](https://github.com/harrydayexe/GoBlog/discussions)
 - **Bug reports**: Open a [GitHub Issue](https://github.com/harrydayexe/GoBlog/issues)
-- **Security issues**: Email contact@harryday.xyz (see SECURITY.md)
-- **Other inquiries**: contact@harryday.xyz
+- **Security issues**: Email contact (at) harryday (dot) xyz (see SECURITY.md)
+- **Other inquiries**: contact (at) harryday (dot) xyz
 
 ## Recognition
 

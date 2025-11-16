@@ -23,7 +23,7 @@ This means:
 
 **Please do not report security vulnerabilities through public GitHub issues.**
 
-Instead, please report them via email to: **contact@harryday.xyz**
+Instead, please report them via email to: **contact (at) harryday (dot) xyz**
 
 Please include:
 - Description of the vulnerability
@@ -175,7 +175,7 @@ We appreciate security researchers who help make GoBlog safer:
 
 ## Contact
 
-- **Security issues:** contact@harryday.xyz
+- **Security issues:** contact (at) harryday (dot) xyz
 - **General questions:** [Open a GitHub issue](https://github.com/harrydayexe/GoBlog/issues)
 - **Project maintainer:** [@harrydayexe](https://github.com/harrydayexe)
 
