@@ -8,6 +8,7 @@ import (
 
 // TestPost_Validate tests the post validation logic
 func TestPost_Validate(t *testing.T) {
+	t.Parallel()
 	now := time.Now()
 
 	tests := []struct {
@@ -62,6 +63,7 @@ func TestPost_Validate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			err := tt.post.Validate()
 			if tt.expectErr {
 				if err == nil {
@@ -80,6 +82,7 @@ func TestPost_Validate(t *testing.T) {
 
 // TestPost_GenerateSlug tests the slug generation logic
 func TestPost_GenerateSlug(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name         string
 		post         Post
@@ -147,6 +150,7 @@ func TestPost_GenerateSlug(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			tt.post.GenerateSlug()
 			if tt.post.Slug != tt.expectedSlug {
 				t.Errorf("expected slug %q, got %q", tt.expectedSlug, tt.post.Slug)
@@ -157,6 +161,7 @@ func TestPost_GenerateSlug(t *testing.T) {
 
 // TestSlugify tests the slugify helper function
 func TestSlugify(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		input    string
 		expected string
@@ -177,6 +182,7 @@ func TestSlugify(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.input, func(t *testing.T) {
+			t.Parallel()
 			result := slugify(tt.input)
 			if result != tt.expected {
 				t.Errorf("slugify(%q) = %q, want %q", tt.input, result, tt.expected)
@@ -187,6 +193,7 @@ func TestSlugify(t *testing.T) {
 
 // TestPost_IsPublished tests the published status logic
 func TestPost_IsPublished(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		draft    bool
@@ -198,6 +205,7 @@ func TestPost_IsPublished(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			post := Post{Draft: tt.draft}
 			if got := post.IsPublished(); got != tt.expected {
 				t.Errorf("IsPublished() = %v, want %v", got, tt.expected)
@@ -208,6 +216,7 @@ func TestPost_IsPublished(t *testing.T) {
 
 // TestPost_HasTag tests the tag checking logic
 func TestPost_HasTag(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		tags     []string
@@ -248,6 +257,7 @@ func TestPost_HasTag(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			post := Post{Tags: tt.tags}
 			if got := post.HasTag(tt.checkTag); got != tt.expected {
 				t.Errorf("HasTag(%q) = %v, want %v", tt.checkTag, got, tt.expected)
@@ -258,6 +268,7 @@ func TestPost_HasTag(t *testing.T) {
 
 // TestPost_FormattedDate tests date formatting
 func TestPost_FormattedDate(t *testing.T) {
+	t.Parallel()
 	date := time.Date(2024, 3, 15, 10, 30, 0, 0, time.UTC)
 	post := Post{Date: date}
 
@@ -269,6 +280,7 @@ func TestPost_FormattedDate(t *testing.T) {
 
 // TestPost_ShortDate tests short date formatting
 func TestPost_ShortDate(t *testing.T) {
+	t.Parallel()
 	date := time.Date(2024, 3, 15, 10, 30, 0, 0, time.UTC)
 	post := Post{Date: date}
 
@@ -280,6 +292,7 @@ func TestPost_ShortDate(t *testing.T) {
 
 // TestPostList_FilterPublished tests filtering published posts
 func TestPostList_FilterPublished(t *testing.T) {
+	t.Parallel()
 	now := time.Now()
 	posts := PostList{
 		{Title: "Post 1", Date: now, Description: "desc1", Draft: false},
@@ -303,6 +316,7 @@ func TestPostList_FilterPublished(t *testing.T) {
 
 // TestPostList_FilterByTag tests filtering posts by tag
 func TestPostList_FilterByTag(t *testing.T) {
+	t.Parallel()
 	now := time.Now()
 	posts := PostList{
 		{Title: "Post 1", Date: now, Description: "desc1", Tags: []string{"go", "web"}},
@@ -324,6 +338,7 @@ func TestPostList_FilterByTag(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.tag, func(t *testing.T) {
+			t.Parallel()
 			filtered := posts.FilterByTag(tt.tag)
 			if len(filtered) != tt.expected {
 				t.Errorf("expected %d posts with tag %q, got %d", tt.expected, tt.tag, len(filtered))
@@ -340,6 +355,7 @@ func TestPostList_FilterByTag(t *testing.T) {
 
 // TestPostList_SortByDate tests sorting posts by date
 func TestPostList_SortByDate(t *testing.T) {
+	t.Parallel()
 	date1 := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
 	date2 := time.Date(2024, 2, 1, 0, 0, 0, 0, time.UTC)
 	date3 := time.Date(2024, 3, 1, 0, 0, 0, 0, time.UTC)
@@ -366,6 +382,7 @@ func TestPostList_SortByDate(t *testing.T) {
 
 // TestPostList_GetAllTags tests getting unique tags
 func TestPostList_GetAllTags(t *testing.T) {
+	t.Parallel()
 	now := time.Now()
 	posts := PostList{
 		{Title: "Post 1", Date: now, Description: "desc1", Tags: []string{"go", "web"}},
@@ -398,6 +415,7 @@ func TestPostList_GetAllTags(t *testing.T) {
 
 // TestPostList_GetAllTags_Empty tests getting tags from empty list
 func TestPostList_GetAllTags_Empty(t *testing.T) {
+	t.Parallel()
 	var posts PostList
 	tags := posts.GetAllTags()
 
@@ -408,6 +426,7 @@ func TestPostList_GetAllTags_Empty(t *testing.T) {
 
 // TestPost_HTMLContent tests HTML content handling
 func TestPost_HTMLContent(t *testing.T) {
+	t.Parallel()
 	htmlStr := "<p>Hello <strong>World</strong></p>"
 	post := Post{
 		Content:     htmlStr,

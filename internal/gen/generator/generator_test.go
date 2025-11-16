@@ -114,6 +114,7 @@ This is a draft.`,
 
 // TestNew tests generator creation
 func TestNew(t *testing.T) {
+	t.Parallel()
 	_, templatesDir, outputDir := setupTestEnvironment(t)
 
 	tests := []struct {
@@ -161,6 +162,7 @@ func TestNew(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			gen, err := New(tt.cfg, tt.logger)
 
 			if tt.expectErr {
@@ -192,6 +194,7 @@ func TestNew(t *testing.T) {
 
 // TestGenerator_Generate tests the full generation process
 func TestGenerator_Generate(t *testing.T) {
+	t.Parallel()
 	postsDir, templatesDir, outputDir := setupTestEnvironment(t)
 
 	cfg := config.Config{
@@ -276,6 +279,7 @@ func TestGenerator_Generate(t *testing.T) {
 
 // TestGenerator_Generate_NoPublishedPosts tests error handling when no published posts
 func TestGenerator_Generate_NoPublishedPosts(t *testing.T) {
+	t.Parallel()
 	baseDir := t.TempDir()
 	postsDir := filepath.Join(baseDir, "posts")
 	templatesDir := filepath.Join(baseDir, "templates")
@@ -335,6 +339,7 @@ Content`
 
 // TestGenerator_Generate_NoPosts tests error handling when no posts at all
 func TestGenerator_Generate_NoPosts(t *testing.T) {
+	t.Parallel()
 	baseDir := t.TempDir()
 	postsDir := filepath.Join(baseDir, "posts")
 	templatesDir := filepath.Join(baseDir, "templates")
@@ -382,6 +387,7 @@ func TestGenerator_Generate_NoPosts(t *testing.T) {
 
 // TestCopyFile tests the file copying helper
 func TestCopyFile(t *testing.T) {
+	t.Parallel()
 	tmpDir := t.TempDir()
 
 	tests := []struct {
@@ -408,6 +414,7 @@ func TestCopyFile(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			src := filepath.Join(tmpDir, "src.txt")
 			dst := filepath.Join(tmpDir, "dst.txt")
 
@@ -448,6 +455,7 @@ func TestCopyFile(t *testing.T) {
 
 // TestGenerator_CopyStaticFiles tests copying static assets
 func TestGenerator_CopyStaticFiles(t *testing.T) {
+	t.Parallel()
 	postsDir, templatesDir, outputDir := setupTestEnvironment(t)
 	staticDir := filepath.Join(filepath.Dir(postsDir), "static")
 

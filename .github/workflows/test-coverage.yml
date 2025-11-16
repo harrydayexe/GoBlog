@@ -39,6 +39,11 @@ jobs:
 
     - name: Run tests with coverage
       run: |
+        # Note: Currently testing only ./internal/gen/... and ./pkg/models/...
+        # Server packages (./internal/server/... and ./pkg/server/...) are excluded
+        # because they require integration testing with external dependencies
+        # (Bleve search index, Ristretto cache, HTMX components, etc.)
+        # TODO: Add server-side tests in a future PR with proper mocking/integration test setup
         go test -v -race -coverprofile=coverage.out -covermode=atomic \
           ./internal/gen/... ./pkg/models/...
 
@@ -78,7 +83,10 @@ jobs:
         COVERAGE_NUM=$(echo $TOTAL_COV | sed 's/%//')
         THRESHOLD=80
 
-        if (( $(echo "$COVERAGE_NUM < $THRESHOLD" | bc -l) )); then
+        # Use awk for portable float comparison (more reliable than bc)
+        BELOW_THRESHOLD=$(awk -v cov="$COVERAGE_NUM" -v thresh="$THRESHOLD" 'BEGIN { print (cov < thresh) ? 1 : 0 }')
+
+        if [ "$BELOW_THRESHOLD" -eq 1 ]; then
           echo "status=❌ Coverage $TOTAL_COV is below threshold ${THRESHOLD}%" >> $GITHUB_OUTPUT
           echo "" >> coverage_report.md
           echo "⚠️ **Warning:** Coverage is below the ${THRESHOLD}% threshold!" >> coverage_report.md

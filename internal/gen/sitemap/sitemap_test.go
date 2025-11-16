@@ -10,7 +10,9 @@ import (
 )
 
 func TestGenerateSitemap(t *testing.T) {
+	t.Parallel()
 	t.Run("valid sitemap with posts", func(t *testing.T) {
+		t.Parallel()
 		posts := []*models.Post{
 			{
 				Title:       "Test Post 1",
@@ -99,6 +101,7 @@ func TestGenerateSitemap(t *testing.T) {
 	})
 
 	t.Run("sitemap with empty posts", func(t *testing.T) {
+		t.Parallel()
 		posts := []*models.Post{}
 
 		config := SitemapConfig{
@@ -123,6 +126,7 @@ func TestGenerateSitemap(t *testing.T) {
 	})
 
 	t.Run("sitemap with root blog path", func(t *testing.T) {
+		t.Parallel()
 		posts := []*models.Post{
 			{
 				Title:       "Test Post",
@@ -165,6 +169,7 @@ func TestGenerateSitemap(t *testing.T) {
 	})
 
 	t.Run("sitemap with empty blog path", func(t *testing.T) {
+		t.Parallel()
 		posts := []*models.Post{
 			{
 				Title:       "Test Post",
@@ -196,6 +201,7 @@ func TestGenerateSitemap(t *testing.T) {
 	})
 
 	t.Run("sitemap with custom blog path", func(t *testing.T) {
+		t.Parallel()
 		posts := []*models.Post{
 			{
 				Title:       "Test Post",
@@ -228,6 +234,7 @@ func TestGenerateSitemap(t *testing.T) {
 	})
 
 	t.Run("sitemap with multiple posts", func(t *testing.T) {
+		t.Parallel()
 		posts := []*models.Post{
 			{
 				Title:       "Post 1",
@@ -291,7 +298,9 @@ func TestGenerateSitemap(t *testing.T) {
 }
 
 func TestGenerateSitemapIndex(t *testing.T) {
+	t.Parallel()
 	t.Run("valid sitemap index", func(t *testing.T) {
+		t.Parallel()
 		sitemapURLs := []string{
 			"https://example.com/sitemap-posts.xml",
 			"https://example.com/sitemap-pages.xml",
@@ -359,6 +368,7 @@ func TestGenerateSitemapIndex(t *testing.T) {
 	})
 
 	t.Run("sitemap index with single sitemap", func(t *testing.T) {
+		t.Parallel()
 		sitemapURLs := []string{
 			"https://example.com/sitemap.xml",
 		}
@@ -379,6 +389,7 @@ func TestGenerateSitemapIndex(t *testing.T) {
 	})
 
 	t.Run("sitemap index with empty urls", func(t *testing.T) {
+		t.Parallel()
 		sitemapURLs := []string{}
 
 		config := SitemapConfig{
@@ -413,6 +424,7 @@ func TestGenerateSitemapIndex(t *testing.T) {
 	})
 
 	t.Run("sitemap index with multiple sitemaps", func(t *testing.T) {
+		t.Parallel()
 		sitemapURLs := []string{
 			"https://example.com/sitemap-1.xml",
 			"https://example.com/sitemap-2.xml",
@@ -440,6 +452,7 @@ func TestGenerateSitemapIndex(t *testing.T) {
 	})
 
 	t.Run("sitemap index lastmod uses current date", func(t *testing.T) {
+		t.Parallel()
 		sitemapURLs := []string{
 			"https://example.com/sitemap.xml",
 		}

@@ -73,6 +73,7 @@ func createTestTemplates(t *testing.T, dir string) {
 
 // TestNew tests template engine creation
 func TestNew(t *testing.T) {
+	t.Parallel()
 	tmpDir := t.TempDir()
 	createTestTemplates(t, tmpDir)
 
@@ -115,6 +116,7 @@ func TestNew(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			engine, err := New(tt.cfg, tt.logger)
 
 			if tt.expectErr {
@@ -146,6 +148,7 @@ func TestNew(t *testing.T) {
 
 // TestEngine_RenderPost tests rendering a single post
 func TestEngine_RenderPost(t *testing.T) {
+	t.Parallel()
 	tmpDir := t.TempDir()
 	createTestTemplates(t, tmpDir)
 
@@ -193,6 +196,7 @@ func TestEngine_RenderPost(t *testing.T) {
 
 // TestEngine_RenderIndex tests rendering an index page
 func TestEngine_RenderIndex(t *testing.T) {
+	t.Parallel()
 	tmpDir := t.TempDir()
 	createTestTemplates(t, tmpDir)
 
@@ -263,6 +267,7 @@ func TestEngine_RenderIndex(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			html, err := engine.RenderIndex(posts, tt.page, tt.totalPages)
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
@@ -279,6 +284,7 @@ func TestEngine_RenderIndex(t *testing.T) {
 
 // TestEngine_RenderTag tests rendering a tag page
 func TestEngine_RenderTag(t *testing.T) {
+	t.Parallel()
 	tmpDir := t.TempDir()
 	createTestTemplates(t, tmpDir)
 
@@ -339,6 +345,7 @@ func TestEngine_RenderTag(t *testing.T) {
 
 // TestWriteHTML tests writing HTML to a file
 func TestWriteHTML(t *testing.T) {
+	t.Parallel()
 	tmpDir := t.TempDir()
 
 	tests := []struct {
@@ -369,6 +376,7 @@ func TestWriteHTML(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			// For overwrite test, create the file first
 			if tt.name == "overwrite existing file" {
 				if err := os.WriteFile(tt.path, []byte("Old Content"), 0644); err != nil {
@@ -403,6 +411,7 @@ func TestWriteHTML(t *testing.T) {
 
 // TestEngine_MissingTemplates tests error handling for missing templates
 func TestEngine_MissingTemplates(t *testing.T) {
+	t.Parallel()
 	tmpDir := t.TempDir()
 
 	// Only create post template, not index or tag
@@ -429,6 +438,7 @@ func TestEngine_MissingTemplates(t *testing.T) {
 
 // TestTemplateFuncs tests custom template functions
 func TestTemplateFuncs(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		funcName string
@@ -451,6 +461,7 @@ func TestTemplateFuncs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			fn, ok := templateFuncs[tt.funcName]
 			if !ok {
 				t.Fatalf("function %s not found in templateFuncs", tt.funcName)

@@ -4,11 +4,13 @@ import (
 	"bytes"
 	"errors"
 	"strings"
+	"sync"
 	"testing"
 )
 
 // TestLogger_Info tests the Info logging method
 func TestLogger_Info(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name           string
 		key            string
@@ -45,6 +47,7 @@ func TestLogger_Info(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			var stdout bytes.Buffer
 			var stderr bytes.Buffer
 			logger := NewTestLogger(tt.key, tt.verbose, &stdout, &stderr)
@@ -66,6 +69,7 @@ func TestLogger_Info(t *testing.T) {
 
 // TestLogger_Debug tests the Debug logging method
 func TestLogger_Debug(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name           string
 		key            string
@@ -105,6 +109,7 @@ func TestLogger_Debug(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			var stdout bytes.Buffer
 			var stderr bytes.Buffer
 			logger := NewTestLogger(tt.key, tt.verbose, &stdout, &stderr)
@@ -132,6 +137,7 @@ func TestLogger_Debug(t *testing.T) {
 
 // TestLogger_Warn tests the Warn logging method
 func TestLogger_Warn(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name           string
 		key            string
@@ -157,6 +163,7 @@ func TestLogger_Warn(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			var stdout bytes.Buffer
 			var stderr bytes.Buffer
 			logger := NewTestLogger(tt.key, false, &stdout, &stderr)
@@ -178,6 +185,7 @@ func TestLogger_Warn(t *testing.T) {
 
 // TestLogger_Error tests the Error logging method
 func TestLogger_Error(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name           string
 		key            string
@@ -200,6 +208,7 @@ func TestLogger_Error(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			var stdout bytes.Buffer
 			var stderr bytes.Buffer
 			logger := NewTestLogger(tt.key, false, &stdout, &stderr)
@@ -225,6 +234,7 @@ func TestLogger_Error(t *testing.T) {
 
 // TestNewCLILogger tests the CLI logger constructor
 func TestNewCLILogger(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name    string
 		key     string
@@ -249,6 +259,7 @@ func TestNewCLILogger(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			logger := NewCLILogger(tt.key, tt.verbose)
 
 			if logger == nil {
@@ -280,6 +291,7 @@ func TestNewCLILogger(t *testing.T) {
 
 // TestNewTestLogger tests the test logger constructor
 func TestNewTestLogger(t *testing.T) {
+	t.Parallel()
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 
@@ -308,5 +320,161 @@ func TestNewTestLogger(t *testing.T) {
 
 // TestLogger_Interface verifies CLILogger implements Logger interface
 func TestLogger_Interface(t *testing.T) {
+	t.Parallel()
 	var _ Logger = (*CLILogger)(nil)
+}
+
+// safeBuffer is a thread-safe buffer for concurrent write testing
+type safeBuffer struct {
+	mu  sync.Mutex
+	buf bytes.Buffer
+}
+
+func (sb *safeBuffer) Write(p []byte) (n int, err error) {
+	sb.mu.Lock()
+	defer sb.mu.Unlock()
+	return sb.buf.Write(p)
+}
+
+func (sb *safeBuffer) String() string {
+	sb.mu.Lock()
+	defer sb.mu.Unlock()
+	return sb.buf.String()
+}
+
+func (sb *safeBuffer) Len() int {
+	sb.mu.Lock()
+	defer sb.mu.Unlock()
+	return sb.buf.Len()
+}
+
+// TestLogger_ConcurrentAccess tests that the logger can handle concurrent access
+func TestLogger_ConcurrentAccess(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name        string
+		goroutines  int
+		iterations  int
+		logFunc     func(Logger, int)
+		checkOutput func(*testing.T, string)
+	}{
+		{
+			name:       "concurrent Info calls",
+			goroutines: 10,
+			iterations: 100,
+			logFunc: func(logger Logger, i int) {
+				logger.Info("message %d", i)
+			},
+			checkOutput: func(t *testing.T, output string) {
+				// Should have 1000 total messages (10 goroutines * 100 iterations)
+				count := strings.Count(output, "INFO (TEST)")
+				if count != 1000 {
+					t.Errorf("expected 1000 INFO messages, got %d", count)
+				}
+			},
+		},
+		{
+			name:       "concurrent Debug calls",
+			goroutines: 5,
+			iterations: 50,
+			logFunc: func(logger Logger, i int) {
+				logger.Debug("debug %d", i)
+			},
+			checkOutput: func(t *testing.T, output string) {
+				// Should have 250 total messages (5 goroutines * 50 iterations)
+				count := strings.Count(output, "DEBUG (TEST)")
+				if count != 250 {
+					t.Errorf("expected 250 DEBUG messages, got %d", count)
+				}
+			},
+		},
+		{
+			name:       "concurrent Warn calls",
+			goroutines: 8,
+			iterations: 25,
+			logFunc: func(logger Logger, i int) {
+				logger.Warn("warning %d", i)
+			},
+			checkOutput: func(t *testing.T, output string) {
+				// Should have 200 total messages (8 goroutines * 25 iterations)
+				count := strings.Count(output, "WARN (TEST)")
+				if count != 200 {
+					t.Errorf("expected 200 WARN messages, got %d", count)
+				}
+			},
+		},
+		{
+			name:       "concurrent Error calls",
+			goroutines: 6,
+			iterations: 30,
+			logFunc: func(logger Logger, i int) {
+				logger.Error(errors.New("error message"))
+			},
+			checkOutput: func(t *testing.T, output string) {
+				// Should have 180 total messages (6 goroutines * 30 iterations)
+				count := strings.Count(output, "ERROR (TEST)")
+				if count != 180 {
+					t.Errorf("expected 180 ERROR messages, got %d", count)
+				}
+			},
+		},
+		{
+			name:       "mixed concurrent calls",
+			goroutines: 10,
+			iterations: 50,
+			logFunc: func(logger Logger, i int) {
+				// Mix different log types
+				logger.Info("info %d", i)
+				logger.Debug("debug %d", i)
+				logger.Warn("warn %d", i)
+			},
+			checkOutput: func(t *testing.T, output string) {
+				// Should have 500 of each type (10 goroutines * 50 iterations)
+				infoCount := strings.Count(output, "INFO (TEST)")
+				debugCount := strings.Count(output, "DEBUG (TEST)")
+				warnCount := strings.Count(output, "WARN (TEST)")
+
+				if infoCount != 500 {
+					t.Errorf("expected 500 INFO messages, got %d", infoCount)
+				}
+				if debugCount != 500 {
+					t.Errorf("expected 500 DEBUG messages, got %d", debugCount)
+				}
+				if warnCount != 500 {
+					t.Errorf("expected 500 WARN messages, got %d", warnCount)
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var stdout safeBuffer
+			var stderr safeBuffer
+			logger := NewTestLogger("TEST", true, &stdout, &stderr)
+
+			var wg sync.WaitGroup
+			wg.Add(tt.goroutines)
+
+			// Launch concurrent goroutines
+			for g := 0; g < tt.goroutines; g++ {
+				go func(goroutineID int) {
+					defer wg.Done()
+					for i := 0; i < tt.iterations; i++ {
+						tt.logFunc(logger, goroutineID*tt.iterations+i)
+					}
+				}(g)
+			}
+
+			// Wait for all goroutines to complete
+			wg.Wait()
+
+			// Check output based on test expectations
+			output := stdout.String() + stderr.String()
+			tt.checkOutput(t, output)
+		})
+	}
 }

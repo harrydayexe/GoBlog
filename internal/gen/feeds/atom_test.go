@@ -11,7 +11,9 @@ import (
 )
 
 func TestGenerateAtom(t *testing.T) {
+	t.Parallel()
 	t.Run("valid atom feed with posts", func(t *testing.T) {
+		t.Parallel()
 		posts := []*models.Post{
 			{
 				Title:       "Test Post 1",
@@ -113,6 +115,7 @@ func TestGenerateAtom(t *testing.T) {
 	})
 
 	t.Run("atom feed with empty posts", func(t *testing.T) {
+		t.Parallel()
 		posts := []*models.Post{}
 
 		config := AtomConfig{
@@ -142,6 +145,7 @@ func TestGenerateAtom(t *testing.T) {
 	})
 
 	t.Run("atom feed without author", func(t *testing.T) {
+		t.Parallel()
 		posts := []*models.Post{
 			{
 				Title:       "Test Post",
@@ -180,6 +184,7 @@ func TestGenerateAtom(t *testing.T) {
 	})
 
 	t.Run("atom feed without html content", func(t *testing.T) {
+		t.Parallel()
 		posts := []*models.Post{
 			{
 				Title:       "Text Only Post",
@@ -213,6 +218,7 @@ func TestGenerateAtom(t *testing.T) {
 	})
 
 	t.Run("atom feed uses most recent post date", func(t *testing.T) {
+		t.Parallel()
 		recentDate := time.Date(2024, 12, 1, 12, 0, 0, 0, time.UTC)
 		posts := []*models.Post{
 			{
@@ -252,6 +258,7 @@ func TestGenerateAtom(t *testing.T) {
 	})
 
 	t.Run("atom feed with custom blog path", func(t *testing.T) {
+		t.Parallel()
 		posts := []*models.Post{
 			{
 				Title:       "Test Post",
@@ -279,6 +286,7 @@ func TestGenerateAtom(t *testing.T) {
 	})
 
 	t.Run("atom feed with author email only", func(t *testing.T) {
+		t.Parallel()
 		posts := []*models.Post{
 			{
 				Title:       "Test Post",

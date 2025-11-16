@@ -8,6 +8,7 @@ import (
 
 // TestConfig_Validate tests the configuration validation and defaults
 func TestConfig_Validate(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name      string
 		input     Config
@@ -153,6 +154,7 @@ func TestConfig_Validate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			cfg := tt.input
 			err := cfg.Validate()
 
@@ -176,6 +178,7 @@ func TestConfig_Validate(t *testing.T) {
 
 // TestParseConfigFromBytes tests parsing configuration from bytes
 func TestParseConfigFromBytes(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name      string
 		yaml      string
@@ -276,6 +279,7 @@ blog_path: /articles
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			cfg, err := ParseConfigFromBytes([]byte(tt.yaml))
 
 			if tt.expectErr {
@@ -296,6 +300,7 @@ blog_path: /articles
 
 // TestParseConfig tests parsing configuration from a file
 func TestParseConfig(t *testing.T) {
+	t.Parallel()
 	// Create a temporary directory for test files
 	tmpDir := t.TempDir()
 
@@ -365,6 +370,7 @@ output_folder: ./same
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			var filePath string
 			if tt.content != "" {
 				// Create test file
@@ -399,6 +405,7 @@ output_folder: ./same
 
 // TestSiteMetadata tests the SiteMetadata struct
 func TestSiteMetadata(t *testing.T) {
+	t.Parallel()
 	metadata := SiteMetadata{
 		Title:       "My Blog",
 		Description: "A blog about code",

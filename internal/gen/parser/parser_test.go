@@ -14,6 +14,7 @@ import (
 
 // TestNew tests parser creation
 func TestNew(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		logger log.Logger
@@ -30,6 +31,7 @@ func TestNew(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			p := New(tt.logger)
 			if p == nil {
 				t.Fatal("expected parser to be non-nil")
@@ -46,6 +48,7 @@ func TestNew(t *testing.T) {
 
 // TestParser_ParseMarkdown tests parsing markdown content
 func TestParser_ParseMarkdown(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name         string
 		content      string
@@ -164,6 +167,7 @@ description: "Testing typography"
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			var stdout, stderr bytes.Buffer
 			logger := log.NewTestLogger("TEST", true, &stdout, &stderr)
 			p := New(logger)
@@ -191,6 +195,7 @@ description: "Testing typography"
 
 // TestParser_ParseFile tests parsing a markdown file
 func TestParser_ParseFile(t *testing.T) {
+	t.Parallel()
 	// Create temporary directory for test files
 	tmpDir := t.TempDir()
 
@@ -249,6 +254,7 @@ Content here.`,
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			var stdout, stderr bytes.Buffer
 			logger := log.NewTestLogger("TEST", true, &stdout, &stderr)
 			p := New(logger)
@@ -290,6 +296,7 @@ Content here.`,
 
 // TestParser_ParseAllPosts tests discovering and parsing all posts
 func TestParser_ParseAllPosts(t *testing.T) {
+	t.Parallel()
 	// Create temporary directory for test files
 	tmpDir := t.TempDir()
 
@@ -371,6 +378,7 @@ Invalid post`,
 
 // TestParser_ParseAllPosts_EmptyDir tests parsing empty directory
 func TestParser_ParseAllPosts_EmptyDir(t *testing.T) {
+	t.Parallel()
 	tmpDir := t.TempDir()
 
 	var stdout, stderr bytes.Buffer
@@ -389,6 +397,7 @@ func TestParser_ParseAllPosts_EmptyDir(t *testing.T) {
 
 // TestParser_ParseAllPosts_NonExistentDir tests parsing non-existent directory
 func TestParser_ParseAllPosts_NonExistentDir(t *testing.T) {
+	t.Parallel()
 	var stdout, stderr bytes.Buffer
 	logger := log.NewTestLogger("TEST", false, &stdout, &stderr)
 	p := New(logger)
@@ -402,6 +411,7 @@ func TestParser_ParseAllPosts_NonExistentDir(t *testing.T) {
 
 // TestParser_ParseMarkdown_DateParsing tests various date formats
 func TestParser_ParseMarkdown_DateParsing(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		content  string
@@ -421,6 +431,7 @@ Content`,
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			var stdout, stderr bytes.Buffer
 			logger := log.NewTestLogger("TEST", false, &stdout, &stderr)
 			p := New(logger)
@@ -439,6 +450,7 @@ Content`,
 
 // TestParser_HTMLContent tests that HTML content is properly generated
 func TestParser_HTMLContent(t *testing.T) {
+	t.Parallel()
 	content := `---
 title: "HTML Test"
 date: 2024-03-15

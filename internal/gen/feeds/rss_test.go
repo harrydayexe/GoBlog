@@ -10,7 +10,9 @@ import (
 )
 
 func TestGenerateRSS(t *testing.T) {
+	t.Parallel()
 	t.Run("valid rss feed with posts", func(t *testing.T) {
+		t.Parallel()
 		posts := []*models.Post{
 			{
 				Title:       "Test Post 1",
@@ -125,6 +127,7 @@ func TestGenerateRSS(t *testing.T) {
 	})
 
 	t.Run("rss feed with empty posts", func(t *testing.T) {
+		t.Parallel()
 		posts := []*models.Post{}
 
 		config := RSSConfig{
@@ -160,6 +163,7 @@ func TestGenerateRSS(t *testing.T) {
 	})
 
 	t.Run("rss feed with minimal config", func(t *testing.T) {
+		t.Parallel()
 		posts := []*models.Post{
 			{
 				Title:       "Test Post",
@@ -205,6 +209,7 @@ func TestGenerateRSS(t *testing.T) {
 	})
 
 	t.Run("rss feed with custom blog path", func(t *testing.T) {
+		t.Parallel()
 		posts := []*models.Post{
 			{
 				Title:       "Test Post",
@@ -233,6 +238,7 @@ func TestGenerateRSS(t *testing.T) {
 	})
 
 	t.Run("rss feed with multiple posts sorts correctly", func(t *testing.T) {
+		t.Parallel()
 		oldDate := time.Date(2023, 1, 1, 12, 0, 0, 0, time.UTC)
 		newDate := time.Date(2024, 12, 1, 12, 0, 0, 0, time.UTC)
 
@@ -281,6 +287,7 @@ func TestGenerateRSS(t *testing.T) {
 	})
 
 	t.Run("rss feed with special characters in content", func(t *testing.T) {
+		t.Parallel()
 		posts := []*models.Post{
 			{
 				Title:       "Post with <HTML> & Special \"Chars\"",
@@ -315,6 +322,7 @@ func TestGenerateRSS(t *testing.T) {
 	})
 
 	t.Run("rss feed includes all required fields", func(t *testing.T) {
+		t.Parallel()
 		posts := []*models.Post{
 			{
 				Title:       "Test Post",
