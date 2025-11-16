@@ -35,13 +35,13 @@ type AtomAuthor struct {
 
 // AtomEntry represents an Atom entry (post)
 type AtomEntry struct {
-	Title   string      `xml:"title"`
-	Link    []AtomLink  `xml:"link"`
-	ID      string      `xml:"id"`
-	Updated string      `xml:"updated"`
-	Summary string      `xml:"summary,omitempty"`
+	Title   string       `xml:"title"`
+	Link    []AtomLink   `xml:"link"`
+	ID      string       `xml:"id"`
+	Updated string       `xml:"updated"`
+	Summary string       `xml:"summary,omitempty"`
 	Content *AtomContent `xml:"content,omitempty"`
-	Author  *AtomAuthor `xml:"author,omitempty"`
+	Author  *AtomAuthor  `xml:"author,omitempty"`
 }
 
 // AtomContent represents Atom content element

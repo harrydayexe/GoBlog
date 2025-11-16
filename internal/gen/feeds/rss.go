@@ -10,22 +10,22 @@ import (
 
 // RSS2Feed represents the root RSS 2.0 feed
 type RSS2Feed struct {
-	XMLName xml.Name    `xml:"rss"`
-	Version string      `xml:"version,attr"`
+	XMLName xml.Name     `xml:"rss"`
+	Version string       `xml:"version,attr"`
 	Channel *RSS2Channel `xml:"channel"`
 }
 
 // RSS2Channel represents the RSS channel
 type RSS2Channel struct {
-	Title         string      `xml:"title"`
-	Link          string      `xml:"link"`
-	Description   string      `xml:"description"`
-	Language      string      `xml:"language,omitempty"`
-	Copyright     string      `xml:"copyright,omitempty"`
-	LastBuildDate string      `xml:"lastBuildDate,omitempty"`
-	PubDate       string      `xml:"pubDate,omitempty"`
-	Generator     string      `xml:"generator,omitempty"`
-	Items         []RSS2Item  `xml:"item"`
+	Title         string     `xml:"title"`
+	Link          string     `xml:"link"`
+	Description   string     `xml:"description"`
+	Language      string     `xml:"language,omitempty"`
+	Copyright     string     `xml:"copyright,omitempty"`
+	LastBuildDate string     `xml:"lastBuildDate,omitempty"`
+	PubDate       string     `xml:"pubDate,omitempty"`
+	Generator     string     `xml:"generator,omitempty"`
+	Items         []RSS2Item `xml:"item"`
 }
 
 // RSS2Item represents an RSS item (post)
