@@ -440,8 +440,8 @@ func TestCopyFile(t *testing.T) {
 			}
 
 			// Cleanup for next test
-			os.Remove(src)
-			os.Remove(dst)
+			_ = os.Remove(src)
+			_ = os.Remove(dst)
 		})
 	}
 }

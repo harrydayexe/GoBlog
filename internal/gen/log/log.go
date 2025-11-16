@@ -28,7 +28,7 @@ type CLILogger struct {
 func (l CLILogger) Info(format string, args ...any) {
 	key := fmt.Sprintf("INFO (%s) ", l.key)
 	p := fmt.Sprintf("\033[36m%-"+l.width+"s \033[90m:\033[0m ", key)
-	fmt.Fprintf(l.stdout, p+format+"\n", args...)
+	_, _ = fmt.Fprintf(l.stdout, p+format+"\n", args...)
 }
 
 // Debug outputs a debug log to the stdout if verbose mode is enabled
@@ -36,7 +36,7 @@ func (l CLILogger) Debug(format string, args ...any) {
 	if l.verbose {
 		key := fmt.Sprintf("DEBUG (%s) ", l.key)
 		p := fmt.Sprintf("\033[96m%-"+l.width+"s \033[90m:\033[0m ", key)
-		fmt.Fprintf(l.stdout, p+format+"\n", args...)
+		_, _ = fmt.Fprintf(l.stdout, p+format+"\n", args...)
 	}
 }
 
@@ -44,14 +44,14 @@ func (l CLILogger) Debug(format string, args ...any) {
 func (l CLILogger) Warn(format string, args ...any) {
 	key := fmt.Sprintf("WARN (%s) ", l.key)
 	p := fmt.Sprintf("\033[33m%-"+l.width+"s \033[90m:\033[0m ", key)
-	fmt.Fprintf(l.stdout, p+format+"\n", args...)
+	_, _ = fmt.Fprintf(l.stdout, p+format+"\n", args...)
 }
 
 // Error outputs an error log to the stderr
 func (l CLILogger) Error(err error) {
 	key := fmt.Sprintf("ERROR (%s) ", l.key)
 	p := fmt.Sprintf("\033[31m%-"+l.width+"s \033[90m:\033[0m ", key)
-	fmt.Fprintf(l.stderr, p+"%s\n", err.Error())
+	_, _ = fmt.Fprintf(l.stderr, p+"%s\n", err.Error())
 }
 
 // NewCLILogger creates a new instance of CLILogger with the specified key,
