@@ -89,14 +89,16 @@ func New(opts Options) (*Server, error) {
 // AttachRoutes attaches blog routes to the given mux at the specified base path
 //
 // Example:
-//   mux := http.NewServeMux()
-//   server.AttachRoutes(mux, "/blog")
+//
+//	mux := http.NewServeMux()
+//	server.AttachRoutes(mux, "/blog")
 //
 // This will register:
-//   GET /blog           - Blog index
-//   GET /blog/posts/{slug} - Individual post
-//   GET /blog/tags/{tag}   - Posts by tag
-//   GET /blog/search       - Search (HTMX partial)
+//
+//	GET /blog           - Blog index
+//	GET /blog/posts/{slug} - Individual post
+//	GET /blog/tags/{tag}   - Posts by tag
+//	GET /blog/search       - Search (HTMX partial)
 func (s *Server) AttachRoutes(mux *http.ServeMux, basePath string) {
 	// Ensure base path starts with /
 	if basePath == "" || basePath[0] != '/' {

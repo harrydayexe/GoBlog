@@ -23,15 +23,15 @@ func main() {
 
 	// Configure the blog server
 	blogOpts := server.DefaultOptions()
-	blogOpts.ContentPath = "./posts"      // Path to your markdown posts
-	blogOpts.EnableCache = true            // Enable caching for better performance
-	blogOpts.CacheMaxMB = 100             // 100MB cache
-	blogOpts.CacheTTL = 60 * time.Minute  // Cache for 60 minutes
-	blogOpts.EnableSearch = true          // Enable full-text search
+	blogOpts.ContentPath = "./posts"     // Path to your markdown posts
+	blogOpts.EnableCache = true          // Enable caching for better performance
+	blogOpts.CacheMaxMB = 100            // 100MB cache
+	blogOpts.CacheTTL = 60 * time.Minute // Cache for 60 minutes
+	blogOpts.EnableSearch = true         // Enable full-text search
 	blogOpts.SearchIndexPath = "./blog.bleve"
-	blogOpts.RebuildIndex = false         // Only rebuild on first run
+	blogOpts.RebuildIndex = false // Only rebuild on first run
 	blogOpts.PostsPerPage = 10
-	blogOpts.Verbose = true               // Enable verbose logging
+	blogOpts.Verbose = true // Enable verbose logging
 
 	// Create the blog server
 	blogServer, err := server.New(blogOpts)

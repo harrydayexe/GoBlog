@@ -38,9 +38,9 @@ type CacheConfig struct {
 
 // SearchConfig contains search index settings
 type SearchConfig struct {
-	Enabled         bool   `yaml:"enabled"`
-	IndexPath       string `yaml:"index_path"`
-	RebuildOnStart  bool   `yaml:"rebuild_on_start"`
+	Enabled        bool   `yaml:"enabled"`
+	IndexPath      string `yaml:"index_path"`
+	RebuildOnStart bool   `yaml:"rebuild_on_start"`
 }
 
 // BlogConfig contains blog-specific settings

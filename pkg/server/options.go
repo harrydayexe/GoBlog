@@ -10,14 +10,14 @@ type Options struct {
 	ContentPath string
 
 	// Cache settings
-	EnableCache  bool
-	CacheMaxMB   int64
-	CacheTTL     time.Duration
+	EnableCache bool
+	CacheMaxMB  int64
+	CacheTTL    time.Duration
 
 	// Search settings
-	EnableSearch   bool
+	EnableSearch    bool
 	SearchIndexPath string
-	RebuildIndex   bool
+	RebuildIndex    bool
 
 	// Blog settings
 	PostsPerPage int
