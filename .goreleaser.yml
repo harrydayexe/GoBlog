@@ -104,7 +104,7 @@ brews:
       owner: harrydayexe
       name: homebrew-goblog
       branch: main
-      token: "{{ .Env.GITHUB_TOKEN }}"
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
     directory: Formula
     homepage: https://github.com/harrydayexe/GoBlog
     description: Unopinionated static site generator for markdown-based blogs
