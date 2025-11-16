@@ -1,0 +1,64 @@
+name: Claude Code Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: ['*']
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  review:
+    name: AI Code Review
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@v44
+        with:
+          files: |
+            **/*.go
+            **/*.md
+            **/*.yml
+            **/*.yaml
+
+      - name: Claude Code Review
+        uses: anthropics/anthropic-review-action@v1
+        if: steps.changed-files.outputs.any_changed == 'true'
+        with:
+          anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          model: claude-sonnet-4-5-20250929
+          review-type: comprehensive
+          files: ${{ steps.changed-files.outputs.all_changed_files }}
+          focus-areas: |
+            - Code quality and best practices
+            - Go idioms and conventions
+            - Security vulnerabilities
+            - Performance issues
+            - Documentation clarity
+            - Test coverage
+
+      - name: Summary
+        if: steps.changed-files.outputs.any_changed == 'true'
+        run: |
+          echo "### Claude Code Review Completed! 🤖" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Files reviewed**: ${{ steps.changed-files.outputs.all_changed_files_count }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Check the PR comments for detailed feedback." >> $GITHUB_STEP_SUMMARY
+
+      - name: No changes to review
+        if: steps.changed-files.outputs.any_changed == 'false'
+        run: |
+          echo "### No files to review 📝" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "No Go, Markdown, or YAML files were changed in this PR." >> $GITHUB_STEP_SUMMARY
