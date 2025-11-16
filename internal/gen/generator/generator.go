@@ -7,8 +7,10 @@ import (
 	"path/filepath"
 
 	"github.com/harrydayexe/GoBlog/internal/gen/config"
+	"github.com/harrydayexe/GoBlog/internal/gen/feeds"
 	"github.com/harrydayexe/GoBlog/internal/gen/log"
 	"github.com/harrydayexe/GoBlog/internal/gen/parser"
+	"github.com/harrydayexe/GoBlog/internal/gen/sitemap"
 	"github.com/harrydayexe/GoBlog/internal/gen/template"
 	"github.com/harrydayexe/GoBlog/pkg/models"
 )
@@ -80,6 +82,16 @@ func (g *Generator) Generate() error {
 	// Generate tag pages
 	if err := g.generateTagPages(publishedPosts); err != nil {
 		return fmt.Errorf("failed to generate tag pages: %w", err)
+	}
+
+	// Generate RSS and Atom feeds
+	if err := g.generateFeeds(publishedPosts); err != nil {
+		return fmt.Errorf("failed to generate feeds: %w", err)
+	}
+
+	// Generate sitemap
+	if err := g.generateSitemap(publishedPosts); err != nil {
+		return fmt.Errorf("failed to generate sitemap: %w", err)
 	}
 
 	// Copy static files
@@ -277,6 +289,84 @@ func (g *Generator) copyStaticFiles() error {
 	}
 
 	g.logger.Info("Static files copied successfully")
+	return nil
+}
+
+// generateFeeds generates RSS and Atom feeds
+func (g *Generator) generateFeeds(posts models.PostList) error {
+	g.logger.Info("Generating RSS and Atom feeds...")
+
+	blogDir := filepath.Join(g.cfg.OutputFolder, g.cfg.BlogPath)
+
+	// Prepare feed configuration
+	rssConfig := feeds.RSSConfig{
+		Title:       g.cfg.Site.Title,
+		Link:        g.cfg.Site.URL,
+		Description: g.cfg.Site.Description,
+		Language:    "en-us",
+		Copyright:   fmt.Sprintf("Copyright © %s", g.cfg.Site.Author),
+		Author:      g.cfg.Site.Author,
+		BlogPath:    g.cfg.BlogPath,
+	}
+
+	atomConfig := feeds.AtomConfig{
+		Title:       g.cfg.Site.Title,
+		Link:        g.cfg.Site.URL,
+		Description: g.cfg.Site.Description,
+		Author:      g.cfg.Site.Author,
+		BlogPath:    g.cfg.BlogPath,
+	}
+
+	// Generate RSS feed
+	rssContent, err := feeds.GenerateRSS(posts, rssConfig)
+	if err != nil {
+		return fmt.Errorf("failed to generate RSS feed: %w", err)
+	}
+
+	rssPath := filepath.Join(blogDir, "feed.xml")
+	if err := os.WriteFile(rssPath, []byte(rssContent), 0644); err != nil {
+		return fmt.Errorf("failed to write RSS feed: %w", err)
+	}
+	g.logger.Debug("Generated: %s", rssPath)
+
+	// Generate Atom feed
+	atomContent, err := feeds.GenerateAtom(posts, atomConfig)
+	if err != nil {
+		return fmt.Errorf("failed to generate Atom feed: %w", err)
+	}
+
+	atomPath := filepath.Join(blogDir, "atom.xml")
+	if err := os.WriteFile(atomPath, []byte(atomContent), 0644); err != nil {
+		return fmt.Errorf("failed to write Atom feed: %w", err)
+	}
+	g.logger.Debug("Generated: %s", atomPath)
+
+	g.logger.Info("Feed files generated successfully")
+	return nil
+}
+
+// generateSitemap generates sitemap.xml
+func (g *Generator) generateSitemap(posts models.PostList) error {
+	g.logger.Info("Generating sitemap...")
+
+	sitemapConfig := sitemap.SitemapConfig{
+		SiteURL:  g.cfg.Site.URL,
+		BlogPath: g.cfg.BlogPath,
+	}
+
+	sitemapContent, err := sitemap.GenerateSitemap(posts, sitemapConfig)
+	if err != nil {
+		return fmt.Errorf("failed to generate sitemap: %w", err)
+	}
+
+	// Write to root of output folder (sitemap should be at site root)
+	sitemapPath := filepath.Join(g.cfg.OutputFolder, "sitemap.xml")
+	if err := os.WriteFile(sitemapPath, []byte(sitemapContent), 0644); err != nil {
+		return fmt.Errorf("failed to write sitemap: %w", err)
+	}
+	g.logger.Debug("Generated: %s", sitemapPath)
+
+	g.logger.Info("Sitemap generated successfully")
 	return nil
 }
 
