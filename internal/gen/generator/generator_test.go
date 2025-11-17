@@ -388,7 +388,6 @@ func TestGenerator_Generate_NoPosts(t *testing.T) {
 // TestCopyFile tests the file copying helper
 func TestCopyFile(t *testing.T) {
 	t.Parallel()
-	tmpDir := t.TempDir()
 
 	tests := []struct {
 		name      string
@@ -415,8 +414,10 @@ func TestCopyFile(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			src := filepath.Join(tmpDir, "src.txt")
-			dst := filepath.Join(tmpDir, "dst.txt")
+			// Create unique temp directory for this subtest to avoid race conditions
+			subtestDir := t.TempDir()
+			src := filepath.Join(subtestDir, "src.txt")
+			dst := filepath.Join(subtestDir, "dst.txt")
 
 			// Create source file
 			if err := os.WriteFile(src, []byte(tt.content), 0644); err != nil {
