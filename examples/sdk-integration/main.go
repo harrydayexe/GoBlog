@@ -38,7 +38,11 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to create blog server: %v", err)
 	}
-	defer blogServer.Close()
+	defer func() {
+		if err := blogServer.Close(); err != nil {
+			log.Printf("Error closing blog server: %v", err)
+		}
+	}()
 
 	// Attach blog routes at /blog
 	// This creates:
@@ -52,7 +56,7 @@ func main() {
 	mux.HandleFunc("GET /blog/stats", func(w http.ResponseWriter, r *http.Request) {
 		stats := blogServer.Stats()
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, `{
+		_, _ = fmt.Fprintf(w, `{
   "total_posts": %d,
   "total_tags": %d,
   "cache_hits": %d,
@@ -107,7 +111,7 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 </body>
 </html>`
 	w.Header().Set("Content-Type", "text/html")
-	fmt.Fprint(w, html)
+	_, _ = fmt.Fprint(w, html)
 }
 
 func aboutHandler(w http.ResponseWriter, r *http.Request) {
@@ -135,7 +139,7 @@ func aboutHandler(w http.ResponseWriter, r *http.Request) {
 </body>
 </html>`
 	w.Header().Set("Content-Type", "text/html")
-	fmt.Fprint(w, html)
+	_, _ = fmt.Fprint(w, html)
 }
 
 func contactHandler(w http.ResponseWriter, r *http.Request) {
@@ -162,5 +166,5 @@ func contactHandler(w http.ResponseWriter, r *http.Request) {
 </body>
 </html>`
 	w.Header().Set("Content-Type", "text/html")
-	fmt.Fprint(w, html)
+	_, _ = fmt.Fprint(w, html)
 }

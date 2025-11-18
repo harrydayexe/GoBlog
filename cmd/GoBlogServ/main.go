@@ -79,7 +79,11 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to create blog server: %v", err)
 	}
-	defer blogServer.Close()
+	defer func() {
+		if err := blogServer.Close(); err != nil {
+			log.Printf("Error closing blog server: %v", err)
+		}
+	}()
 
 	// Create HTTP server with routes
 	mux := http.NewServeMux()
@@ -90,14 +94,14 @@ func main() {
 	// Add health check endpoint
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, "OK")
+		_, _ = fmt.Fprintf(w, "OK")
 	})
 
 	// Add stats endpoint
 	mux.HandleFunc("GET /stats", func(w http.ResponseWriter, r *http.Request) {
 		stats := blogServer.Stats()
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, `{"total_posts": %d, "total_tags": %d, "cache_hits": %d, "cache_misses": %d, "cache_hit_ratio": %.2f, "indexed_docs": %d}`,
+		_, _ = fmt.Fprintf(w, `{"total_posts": %d, "total_tags": %d, "cache_hits": %d, "cache_misses": %d, "cache_hit_ratio": %.2f, "indexed_docs": %d}`,
 			stats.TotalPosts,
 			len(stats.AllTags),
 			stats.CacheHits,
@@ -142,35 +146,35 @@ func main() {
 }
 
 func printHelp() {
-	fmt.Fprintf(os.Stdout, "GoBlogServ - Opinionated web server for markdown blogs\n\n")
-	fmt.Fprintf(os.Stdout, "Version: %s\n", version)
-	fmt.Fprintf(os.Stdout, "Commit:  %s\n", commit)
-	fmt.Fprintf(os.Stdout, "Built:   %s\n\n", date)
-	fmt.Fprintf(os.Stdout, "Usage:\n")
+	_, _ = fmt.Fprintf(os.Stdout, "GoBlogServ - Opinionated web server for markdown blogs\n\n")
+	_, _ = fmt.Fprintf(os.Stdout, "Version: %s\n", version)
+	_, _ = fmt.Fprintf(os.Stdout, "Commit:  %s\n", commit)
+	_, _ = fmt.Fprintf(os.Stdout, "Built:   %s\n\n", date)
+	_, _ = fmt.Fprintf(os.Stdout, "Usage:\n")
 	flag.PrintDefaults()
-	fmt.Fprintf(os.Stdout, "\nEnvironment Variables:\n")
-	fmt.Fprintf(os.Stdout, "  GOBLOG_CONTENT_PATH       Path to markdown posts (default: ./posts)\n")
-	fmt.Fprintf(os.Stdout, "  GOBLOG_CACHE_ENABLED      Enable caching (default: true)\n")
-	fmt.Fprintf(os.Stdout, "  GOBLOG_CACHE_MAX_MB       Max cache size in MB (default: 100)\n")
-	fmt.Fprintf(os.Stdout, "  GOBLOG_CACHE_TTL          Cache TTL duration (default: 60m)\n")
-	fmt.Fprintf(os.Stdout, "  GOBLOG_SEARCH_ENABLED     Enable search (default: true)\n")
-	fmt.Fprintf(os.Stdout, "  GOBLOG_SEARCH_INDEX_PATH  Search index path (default: ./blog.bleve)\n")
-	fmt.Fprintf(os.Stdout, "  GOBLOG_REBUILD_INDEX      Rebuild search index on startup (default: false)\n")
-	fmt.Fprintf(os.Stdout, "  GOBLOG_POSTS_PER_PAGE     Posts per page (default: 10)\n")
-	fmt.Fprintf(os.Stdout, "  GOBLOG_VERBOSE            Enable verbose logging (default: false)\n")
-	fmt.Fprintf(os.Stdout, "\nConfiguration Priority:\n")
-	fmt.Fprintf(os.Stdout, "  1. Command-line flags (highest priority)\n")
-	fmt.Fprintf(os.Stdout, "  2. Environment variables\n")
-	fmt.Fprintf(os.Stdout, "  3. Default values (lowest priority)\n")
-	fmt.Fprintf(os.Stdout, "\nExamples:\n")
-	fmt.Fprintf(os.Stdout, "  # Start server with default settings\n")
-	fmt.Fprintf(os.Stdout, "  goblogserv\n\n")
-	fmt.Fprintf(os.Stdout, "  # Start on port 3000 with verbose logging\n")
-	fmt.Fprintf(os.Stdout, "  goblogserv -port 3000 -verbose\n\n")
-	fmt.Fprintf(os.Stdout, "  # Configure via environment variables\n")
-	fmt.Fprintf(os.Stdout, "  export GOBLOG_CONTENT_PATH=/var/blog/posts\n")
-	fmt.Fprintf(os.Stdout, "  export GOBLOG_VERBOSE=true\n")
-	fmt.Fprintf(os.Stdout, "  goblogserv\n\n")
-	fmt.Fprintf(os.Stdout, "  # Docker: Use environment variables\n")
-	fmt.Fprintf(os.Stdout, "  docker run -e GOBLOG_CONTENT_PATH=/posts -v ./posts:/posts goblog\n\n")
+	_, _ = fmt.Fprintf(os.Stdout, "\nEnvironment Variables:\n")
+	_, _ = fmt.Fprintf(os.Stdout, "  GOBLOG_CONTENT_PATH       Path to markdown posts (default: ./posts)\n")
+	_, _ = fmt.Fprintf(os.Stdout, "  GOBLOG_CACHE_ENABLED      Enable caching (default: true)\n")
+	_, _ = fmt.Fprintf(os.Stdout, "  GOBLOG_CACHE_MAX_MB       Max cache size in MB (default: 100)\n")
+	_, _ = fmt.Fprintf(os.Stdout, "  GOBLOG_CACHE_TTL          Cache TTL duration (default: 60m)\n")
+	_, _ = fmt.Fprintf(os.Stdout, "  GOBLOG_SEARCH_ENABLED     Enable search (default: true)\n")
+	_, _ = fmt.Fprintf(os.Stdout, "  GOBLOG_SEARCH_INDEX_PATH  Search index path (default: ./blog.bleve)\n")
+	_, _ = fmt.Fprintf(os.Stdout, "  GOBLOG_REBUILD_INDEX      Rebuild search index on startup (default: false)\n")
+	_, _ = fmt.Fprintf(os.Stdout, "  GOBLOG_POSTS_PER_PAGE     Posts per page (default: 10)\n")
+	_, _ = fmt.Fprintf(os.Stdout, "  GOBLOG_VERBOSE            Enable verbose logging (default: false)\n")
+	_, _ = fmt.Fprintf(os.Stdout, "\nConfiguration Priority:\n")
+	_, _ = fmt.Fprintf(os.Stdout, "  1. Command-line flags (highest priority)\n")
+	_, _ = fmt.Fprintf(os.Stdout, "  2. Environment variables\n")
+	_, _ = fmt.Fprintf(os.Stdout, "  3. Default values (lowest priority)\n")
+	_, _ = fmt.Fprintf(os.Stdout, "\nExamples:\n")
+	_, _ = fmt.Fprintf(os.Stdout, "  # Start server with default settings\n")
+	_, _ = fmt.Fprintf(os.Stdout, "  goblogserv\n\n")
+	_, _ = fmt.Fprintf(os.Stdout, "  # Start on port 3000 with verbose logging\n")
+	_, _ = fmt.Fprintf(os.Stdout, "  goblogserv -port 3000 -verbose\n\n")
+	_, _ = fmt.Fprintf(os.Stdout, "  # Configure via environment variables\n")
+	_, _ = fmt.Fprintf(os.Stdout, "  export GOBLOG_CONTENT_PATH=/var/blog/posts\n")
+	_, _ = fmt.Fprintf(os.Stdout, "  export GOBLOG_VERBOSE=true\n")
+	_, _ = fmt.Fprintf(os.Stdout, "  goblogserv\n\n")
+	_, _ = fmt.Fprintf(os.Stdout, "  # Docker: Use environment variables\n")
+	_, _ = fmt.Fprintf(os.Stdout, "  docker run -e GOBLOG_CONTENT_PATH=/posts -v ./posts:/posts goblog\n\n")
 }

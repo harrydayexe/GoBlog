@@ -1,8 +1,6 @@
 module github.com/harrydayexe/GoBlog
 
-go 1.23.0
-
-toolchain go1.24.7
+go 1.25
 
 require (
 	github.com/alecthomas/chroma/v2 v2.20.0
@@ -41,7 +39,7 @@ require (
 	github.com/dlclark/regexp2 v1.11.5 // indirect
 	github.com/donseba/go-htmx v1.12.0
 	github.com/dustin/go-humanize v1.0.1 // indirect
-	github.com/fsnotify/fsnotify v1.9.0 // indirect
+	github.com/fsnotify/fsnotify v1.9.0
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/json-iterator/go v0.0.0-20171115153421-f7279a603ede // indirect
 	github.com/mschoch/smat v0.2.0 // indirect

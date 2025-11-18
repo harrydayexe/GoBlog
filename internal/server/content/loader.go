@@ -236,7 +236,9 @@ func (l *Loader) Watch() error {
 	// Watch the content directory
 	err = watcher.Add(l.contentPath)
 	if err != nil {
-		watcher.Close()
+		if closeErr := watcher.Close(); closeErr != nil {
+			log.Printf("Error closing watcher: %v", closeErr)
+		}
 		return fmt.Errorf("failed to watch directory: %w", err)
 	}
 
