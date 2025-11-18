@@ -156,7 +156,7 @@ goblogserv -content ./posts -port 8080
 
 **Dockerfile:**
 ```dockerfile
-FROM golang:1.22-alpine AS builder
+FROM golang:1.25-alpine AS builder
 WORKDIR /build
 COPY . .
 RUN go build -o goblogserv ./cmd/GoBlogServ
