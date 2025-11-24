@@ -6,12 +6,12 @@ require (
 	github.com/alecthomas/chroma/v2 v2.20.0
 	github.com/yuin/goldmark v1.7.13
 	github.com/yuin/goldmark-highlighting/v2 v2.0.0-20230729083705-37449abec8cc
-	go.abhg.dev/goldmark/frontmatter v0.2.0
+	go.abhg.dev/goldmark/frontmatter v0.3.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
-	github.com/BurntSushi/toml v1.2.1 // indirect
+	github.com/BurntSushi/toml v1.5.0 // indirect
 	github.com/RoaringBitmap/roaring/v2 v2.4.5 // indirect
 	github.com/a-h/templ v0.3.960
 	github.com/bits-and-blooms/bitset v1.22.0 // indirect
