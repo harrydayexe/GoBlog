@@ -1,8 +1,12 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"log"
 	"os"
+
+	"github.com/urfave/cli/v3"
 )
 
 // These are replaced at build time by GoReleaser
@@ -13,13 +17,32 @@ var (
 )
 
 func main() {
-	// Add a version command
-	if len(os.Args) > 1 && os.Args[1] == "version" {
-		fmt.Printf("goblog %s\n", version)
-		fmt.Printf("commit: %s\n", commit)
-		fmt.Printf("built: %s\n", date)
-		os.Exit(0)
-	} else {
-		println("Hello, World!")
+	cmd := &cli.Command{
+		Name:  "GoBlog",
+		Usage: "Create a blog feed from posts written in Markdown!",
+		Commands: []*cli.Command{
+			{
+				Name:    "generate",
+				Aliases: []string{"g"},
+				Usage:   "generate a static blog feed from markdown posts",
+				Action: func(ctx context.Context, c *cli.Command) error {
+					fmt.Println("generate")
+					return nil
+				},
+			},
+			{
+				Name:    "serve",
+				Aliases: []string{"s"},
+				Usage:   "serve a static blog feed from markdown posts",
+				Action: func(ctx context.Context, c *cli.Command) error {
+					fmt.Println("serve")
+					return nil
+				},
+			},
+		},
+	}
+
+	if err := cmd.Run(context.Background(), os.Args); err != nil {
+		log.Fatal(err)
 	}
 }
