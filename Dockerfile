@@ -11,7 +11,7 @@ RUN go mod download
 COPY . .
 
 # Build the binary
-RUN CGO_ENABLED=0 GOOS=linux go build -o goblogserve ./cmd/goblog
+RUN CGO_ENABLED=0 GOOS=linux go build -o goblog ./cmd/goblog
 
 # Runtime stage
 FROM alpine:latest
