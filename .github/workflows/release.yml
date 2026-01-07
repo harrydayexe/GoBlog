@@ -1,0 +1,30 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the repo
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      
+      - name: Create a new release
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          version: '~> v2'
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # - name: Notify Go checksum database
+      #   continue-on-error: true
+      #   run: curl -sSf "https://sum.golang.org/lookup/github.com/harrydayexe/goblog@${{ github.ref_name }}"
