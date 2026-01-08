@@ -2,10 +2,11 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"os"
 
+	"github.com/harrydayexe/GoBlog/internal/generator"
+	"github.com/harrydayexe/GoBlog/internal/server"
 	"github.com/urfave/cli/v3"
 )
 
@@ -21,24 +22,8 @@ func main() {
 		Name:  "GoBlog",
 		Usage: "Create a blog feed from posts written in Markdown!",
 		Commands: []*cli.Command{
-			{
-				Name:    "generate",
-				Aliases: []string{"g"},
-				Usage:   "generate a static blog feed from markdown posts",
-				Action: func(ctx context.Context, c *cli.Command) error {
-					fmt.Println("generate")
-					return nil
-				},
-			},
-			{
-				Name:    "serve",
-				Aliases: []string{"s"},
-				Usage:   "serve a static blog feed from markdown posts",
-				Action: func(ctx context.Context, c *cli.Command) error {
-					fmt.Println("serve")
-					return nil
-				},
-			},
+			&generator.GeneratorCommand,
+			&server.ServeCommand,
 		},
 	}
 
