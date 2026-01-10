@@ -31,7 +31,7 @@ type Parser struct {
 // - Footnote support
 // - Auto-generated heading IDs
 // - HTML sanitization (unsafe HTML disabled by default)
-func New(opts ...Option) *Parser {
+func New() *Parser {
 	// Configure goldmark with extensions
 	md := goldmark.New(
 		goldmark.WithExtensions(
@@ -55,11 +55,6 @@ func New(opts ...Option) *Parser {
 
 	p := &Parser{
 		md: md,
-	}
-
-	// Apply options
-	for _, opt := range opts {
-		opt(p)
 	}
 
 	return p
