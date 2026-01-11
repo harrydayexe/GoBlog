@@ -3,9 +3,11 @@ package main
 import (
 	"context"
 	"log"
+	"log/slog"
 	"os"
 
 	"github.com/harrydayexe/GoBlog/internal/generator"
+	"github.com/harrydayexe/GoBlog/internal/logger"
 	"github.com/harrydayexe/GoBlog/internal/server"
 	"github.com/urfave/cli/v3"
 )
@@ -18,6 +20,9 @@ var (
 )
 
 func main() {
+	logger := slog.New(logger.NewDefaultCLIHandlerWithVerbosity(os.Stdout, slog.LevelInfo))
+	slog.SetDefault(logger)
+
 	cmd := &cli.Command{
 		Name:  "GoBlog",
 		Usage: "Create a blog feed from posts written in Markdown!",
