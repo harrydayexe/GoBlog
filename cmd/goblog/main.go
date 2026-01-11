@@ -23,29 +23,33 @@ func main() {
 	var verbosity int
 
 	cmd := &cli.Command{
-		Name:  "GoBlog",
-		Usage: "Create a blog feed from posts written in Markdown!",
+		Name:                   "GoBlog",
+		Usage:                  "Create a blog feed from posts written in Markdown!",
+		UseShortOptionHandling: true,
 		Commands: []*cli.Command{
 			&generator.GeneratorCommand,
 			&server.ServeCommand,
 		},
 		Flags: []cli.Flag{
-			&cli.IntFlag{
-				Name:        "verbose",
-				Aliases:     []string{"v"},
-				Usage:       "verbose output (-v, -vv, -vvv for increasing verbosity)",
-				Value:       0,
-				Destination: &verbosity,
+			&cli.BoolFlag{
+				Name:    "verbose",
+				Aliases: []string{"v"},
+				Usage:   "verbose output (-v, -vv, -vvv for increasing verbosity)",
+				Config: cli.BoolConfig{
+					Count: &verbosity,
+				},
 			},
 		},
 		Before: func(ctx context.Context, c *cli.Command) (context.Context, error) {
-			level := slog.LevelWarn
+			var level slog.Level
 			switch verbosity {
+			case 0:
+				level = slog.LevelWarn
 			case 1:
 				level = slog.LevelInfo
 			case 2:
 				level = slog.LevelInfo - 1 // Info logs with params
-			case 3:
+			default:
 				level = slog.LevelDebug // All logs with params
 			}
 
