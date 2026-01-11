@@ -1,6 +1,6 @@
 package parser
 
-import "github.com/harrydayexe/GoBlog/internal/parser"
+import "github.com/harrydayexe/GoBlog/v2/internal/parser"
 
 // Option is a function which can update the parser config
 type Option func(*parser.Config)
