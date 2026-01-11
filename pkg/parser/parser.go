@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/alecthomas/chroma/v2/formatters/html"
+	parserin "github.com/harrydayexe/GoBlog/internal/parser"
 	"github.com/harrydayexe/GoBlog/pkg/models"
 	"github.com/yuin/goldmark"
 	highlighting "github.com/yuin/goldmark-highlighting/v2"
@@ -21,7 +22,8 @@ import (
 // Parser reads markdown files and converts them to Post objects.
 // A Parser is safe for concurrent use after creation.
 type Parser struct {
-	md goldmark.Markdown
+	md     goldmark.Markdown
+	config *parserin.Config
 }
 
 // New creates a new Parser with the specified options.
@@ -31,18 +33,36 @@ type Parser struct {
 // - Footnote support
 // - Auto-generated heading IDs
 // - HTML sanitization (unsafe HTML disabled by default)
-func New() *Parser {
+func New(opts ...Option) *Parser {
+	config := &parserin.Config{
+		EnableCodeHighlighting: true,
+		CodeHighlightingStyle:  "monokai",
+		EnableFootnote:         false,
+	}
+
+	for _, opt := range opts {
+		opt(config)
+	}
+
+	var extensions []goldmark.Extender = []goldmark.Extender{
+		&frontmatter.Extender{},
+	}
+	if config.EnableFootnote {
+		extensions = append(extensions, extension.Footnote)
+	}
+	if config.EnableCodeHighlighting {
+		extensions = append(extensions, highlighting.NewHighlighting(
+			highlighting.WithStyle(config.CodeHighlightingStyle),
+			highlighting.WithFormatOptions(
+				html.WithClasses(true),
+			),
+		))
+	}
+
 	// Configure goldmark with extensions
 	md := goldmark.New(
 		goldmark.WithExtensions(
-			&frontmatter.Extender{},
-			extension.Footnote,
-			highlighting.NewHighlighting(
-				highlighting.WithStyle("monokai"),
-				highlighting.WithFormatOptions(
-					html.WithClasses(true),
-				),
-			),
+			extensions...,
 		),
 		goldmark.WithParserOptions(
 			parser.WithAutoHeadingID(),
