@@ -141,7 +141,7 @@ func TestParseFile_WithCodeBlocks(t *testing.T) {
 }
 
 func TestParseFile_WithFootnotes(t *testing.T) {
-	p := New()
+	p := New(WithFootnote())
 	fsys := os.DirFS("testdata")
 
 	post, err := p.ParseFile(fsys, "with-footnotes.md")
@@ -150,8 +150,13 @@ func TestParseFile_WithFootnotes(t *testing.T) {
 	}
 
 	// Verify footnotes are rendered (goldmark uses <sup> for footnote refs)
-	if !strings.Contains(post.Content, "sup") || !strings.Contains(post.Content, "footnote") {
-		t.Error("expected footnotes to be rendered")
+	if !strings.Contains(post.Content, "<sup") {
+		t.Error("expected footnotes to include <sup> tags for references")
+	}
+
+	// Verify footnote section is rendered
+	if !strings.Contains(post.Content, "footnote-ref") || !strings.Contains(post.Content, "footnotes") {
+		t.Error("expected proper footnote rendering with goldmark classes")
 	}
 }
 
@@ -270,4 +275,301 @@ func TestFileError_Unwrap(t *testing.T) {
 	if fe.Unwrap() != original {
 		t.Error("expected Unwrap to return original error")
 	}
+}
+
+func TestNew_WithCodeHighlighting(t *testing.T) {
+	fsys := os.DirFS("testdata")
+
+	// Test with highlighting disabled
+	p := New(WithCodeHighlighting(false))
+	post, err := p.ParseFile(fsys, "with-code.md")
+	if err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+
+	// When highlighting is disabled, code should still be in <pre><code> but without chroma classes
+	if !strings.Contains(post.Content, "<pre") || !strings.Contains(post.Content, "<code") {
+		t.Error("expected code blocks to be rendered in <pre><code> tags")
+	}
+
+	// Should NOT contain chroma highlighting classes
+	if strings.Contains(post.Content, "chroma") {
+		t.Error("expected no chroma highlighting classes when highlighting is disabled")
+	}
+
+	// Test with highlighting explicitly enabled
+	p = New(WithCodeHighlighting(true))
+	post, err = p.ParseFile(fsys, "with-code.md")
+	if err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+
+	// Should contain chroma classes
+	if !strings.Contains(post.Content, "chroma") {
+		t.Error("expected chroma highlighting classes when highlighting is enabled")
+	}
+
+	// Test default behavior (should be enabled)
+	p = New()
+	post, err = p.ParseFile(fsys, "with-code.md")
+	if err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+
+	// Default should have highlighting enabled
+	if !strings.Contains(post.Content, "chroma") {
+		t.Error("expected chroma highlighting classes by default")
+	}
+}
+
+func TestNew_WithCodeHighlightingStyle(t *testing.T) {
+	fsys := os.DirFS("testdata")
+
+	// Test with custom style
+	p := New(WithCodeHighlightingStyle("dracula"))
+	post, err := p.ParseFile(fsys, "with-code.md")
+	if err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+
+	// Should contain chroma classes (highlighting enabled)
+	if !strings.Contains(post.Content, "chroma") {
+		t.Error("expected chroma highlighting classes when style is set")
+	}
+
+	// Code content should be preserved
+	if !strings.Contains(post.Content, "Hello, World!") {
+		t.Error("expected code content to be preserved")
+	}
+
+	// Test with different style to ensure parser accepts it
+	p = New(WithCodeHighlightingStyle("monokai"))
+	post, err = p.ParseFile(fsys, "with-code.md")
+	if err != nil {
+		t.Fatalf("expected no error with monokai style, got: %v", err)
+	}
+
+	if !strings.Contains(post.Content, "chroma") {
+		t.Error("expected chroma highlighting classes with monokai style")
+	}
+}
+
+func TestNew_WithFootnote(t *testing.T) {
+	fsys := os.DirFS("testdata")
+
+	// Test without footnote option (default disabled)
+	p := New()
+	post, err := p.ParseFile(fsys, "with-footnotes.md")
+	if err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+
+	// Footnote markers like [^1] should appear as plain text when disabled
+	if strings.Contains(post.Content, "<sup") {
+		t.Error("expected no <sup> tags when footnotes are disabled")
+	}
+
+	// Should contain the raw footnote syntax
+	if !strings.Contains(post.Content, "[^1]") {
+		t.Error("expected footnote markers to appear as plain text when disabled")
+	}
+
+	// Test with footnote option enabled
+	p = New(WithFootnote())
+	post, err = p.ParseFile(fsys, "with-footnotes.md")
+	if err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+
+	// Should contain <sup> tags for footnote references
+	if !strings.Contains(post.Content, "<sup") {
+		t.Error("expected <sup> tags when footnotes are enabled")
+	}
+
+	// Should contain footnote section
+	if !strings.Contains(post.Content, "footnote-ref") {
+		t.Error("expected footnote references when footnotes are enabled")
+	}
+
+	// Raw marker should NOT appear when rendered
+	if strings.Contains(post.Content, "[^1]") {
+		t.Error("expected footnote markers to be rendered, not shown as plain text")
+	}
+}
+
+func TestNew_CombinedOptions(t *testing.T) {
+	fsys := os.DirFS("testdata")
+
+	// Test combining code highlighting style and footnotes
+	p := New(
+		WithCodeHighlightingStyle("monokai"),
+		WithFootnote(),
+	)
+
+	// Test with code
+	post, err := p.ParseFile(fsys, "with-code.md")
+	if err != nil {
+		t.Fatalf("expected no error parsing code file, got: %v", err)
+	}
+
+	if !strings.Contains(post.Content, "chroma") {
+		t.Error("expected code highlighting to work with combined options")
+	}
+
+	// Test with footnotes
+	post, err = p.ParseFile(fsys, "with-footnotes.md")
+	if err != nil {
+		t.Fatalf("expected no error parsing footnote file, got: %v", err)
+	}
+
+	if !strings.Contains(post.Content, "<sup") {
+		t.Error("expected footnotes to work with combined options")
+	}
+
+	// Test combining code highlighting disabled with footnotes enabled
+	p = New(
+		WithCodeHighlighting(false),
+		WithFootnote(),
+	)
+
+	post, err = p.ParseFile(fsys, "with-code.md")
+	if err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+
+	if strings.Contains(post.Content, "chroma") {
+		t.Error("expected code highlighting to be disabled")
+	}
+
+	post, err = p.ParseFile(fsys, "with-footnotes.md")
+	if err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+
+	if !strings.Contains(post.Content, "<sup") {
+		t.Error("expected footnotes to still work when code highlighting is disabled")
+	}
+}
+
+func Example() {
+	p := New()
+
+	fsys := os.DirFS("testdata")
+	post, err := p.ParseFile(fsys, "valid-post.md")
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
+
+	fmt.Println(post.Title)
+	// Output: A Valid Blog Post
+}
+
+func Example_withOptions() {
+	// Configure parser with custom options
+	p := New(
+		WithCodeHighlightingStyle("dracula"),
+		WithFootnote(),
+	)
+
+	fsys := os.DirFS("testdata")
+	post, err := p.ParseFile(fsys, "with-code.md")
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
+
+	fmt.Println("Configured parser")
+	fmt.Println("Has content:", len(post.Content) > 0)
+	// Output: Configured parser
+	// Has content: true
+}
+
+func ExampleParser_ParseFile() {
+	p := New()
+	fsys := os.DirFS("testdata")
+
+	post, err := p.ParseFile(fsys, "valid-post.md")
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
+
+	fmt.Printf("Title: %s\n", post.Title)
+	fmt.Printf("Tags: %d\n", len(post.Tags))
+	// Output: Title: A Valid Blog Post
+	// Tags: 3
+}
+
+func ExampleParser_ParseDirectory() {
+	p := New(WithFootnote())
+	fsys := os.DirFS("testdata")
+
+	posts, err := p.ParseDirectory(fsys)
+
+	// Partial results may be returned with errors
+	if err != nil {
+		if parseErrs, ok := err.(ParseErrors); ok {
+			fmt.Printf("Parsed with some errors\n")
+			fmt.Printf("Valid posts: %d\n", len(posts))
+			fmt.Printf("Errors: %d\n", len(parseErrs.Errors))
+			return
+		}
+	}
+
+	fmt.Printf("Valid posts: %d\n", len(posts))
+	// Output: Parsed with some errors
+	// Valid posts: 3
+	// Errors: 4
+}
+
+func ExampleWithCodeHighlighting() {
+	// Disable code highlighting
+	p := New(WithCodeHighlighting(false))
+
+	fsys := os.DirFS("testdata")
+	post, err := p.ParseFile(fsys, "with-code.md")
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
+
+	fmt.Println("Highlighting disabled")
+	fmt.Println("Post parsed:", post.Title != "")
+	// Output: Highlighting disabled
+	// Post parsed: true
+}
+
+func ExampleWithCodeHighlightingStyle() {
+	// Use a different syntax highlighting style
+	p := New(WithCodeHighlightingStyle("dracula"))
+
+	fsys := os.DirFS("testdata")
+	post, err := p.ParseFile(fsys, "with-code.md")
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
+
+	fmt.Println("Custom highlighting style")
+	fmt.Println("Post parsed:", post.Title != "")
+	// Output: Custom highlighting style
+	// Post parsed: true
+}
+
+func ExampleWithFootnote() {
+	// Enable PHP Markdown Extra footnotes
+	p := New(WithFootnote())
+
+	fsys := os.DirFS("testdata")
+	post, err := p.ParseFile(fsys, "with-footnotes.md")
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
+
+	fmt.Println("Footnotes enabled")
+	fmt.Println("Post parsed:", post.Title != "")
+	// Output: Footnotes enabled
+	// Post parsed: true
 }

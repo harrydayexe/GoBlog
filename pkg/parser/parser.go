@@ -29,8 +29,8 @@ type Parser struct {
 // New creates a new Parser with the specified options.
 // The parser is configured with:
 // - YAML frontmatter parsing
-// - Syntax highlighting for code blocks
-// - Footnote support
+// - Syntax highlighting for code blocks (enabled by default, use WithCodeHighlighting to disable)
+// - Optional footnote support (disabled by default, use WithFootnote to enable)
 // - Auto-generated heading IDs
 // - HTML sanitization (unsafe HTML disabled by default)
 func New(opts ...Option) *Parser {

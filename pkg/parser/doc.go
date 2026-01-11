@@ -28,5 +28,26 @@
 //		// handle error - may be ParseErrors with partial results
 //	}
 //
+// # Configuration
+//
+// The parser can be customized using functional options:
+//
+//	// Disable code highlighting
+//	p := parser.New(parser.WithCodeHighlighting(false))
+//
+//	// Change syntax highlighting style
+//	p := parser.New(parser.WithCodeHighlightingStyle("dracula"))
+//
+//	// Enable footnote support
+//	p := parser.New(parser.WithFootnote())
+//
+//	// Combine multiple options
+//	p := parser.New(
+//	    parser.WithCodeHighlightingStyle("monokai"),
+//	    parser.WithFootnote(),
+//	)
+//
+// See the Option functions for all available configuration options.
+//
 // A Parser is safe for concurrent use by multiple goroutines after creation.
 package parser

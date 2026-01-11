@@ -34,6 +34,12 @@ func WithCodeHighlighting(enable bool) Option {
 }
 
 // WithFootnote enables the use of PHP Markdown Extra Footnotes.
+//
+// Footnotes allow you to add references and notes without cluttering the main text.
+// Use [^1] in your text and define footnotes with [^1]: Your footnote text.
+//
+// See the PHP Markdown Extra documentation for syntax details:
+// https://michelf.ca/projects/php-markdown/extra/#footnotes
 func WithFootnote() Option {
 	return func(c *parser.Config) {
 		c.EnableFootnote = true
