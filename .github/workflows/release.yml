@@ -56,4 +56,4 @@ jobs:
 
       - name: Notify Go checksum database
         continue-on-error: true
-        run: curl -sSf "https://sum.golang.org/lookup/github.com/harrydayexe/GoBlog@${{ github.ref_name }}"
+        run: curl -sSf "https://sum.golang.org/lookup/github.com/harrydayexe/goblog@${{ github.ref_name }}"
