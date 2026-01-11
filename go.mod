@@ -1,4 +1,4 @@
-module github.com/harrydayexe/GoBlog
+module github.com/harrydayexe/GoBlog/v2
 
 go 1.25.4
 
