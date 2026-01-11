@@ -20,8 +20,7 @@ var (
 )
 
 func main() {
-	logger := slog.New(logger.NewDefaultCLIHandlerWithVerbosity(os.Stdout, slog.LevelInfo))
-	slog.SetDefault(logger)
+	var verbosity int
 
 	cmd := &cli.Command{
 		Name:  "GoBlog",
@@ -29,6 +28,31 @@ func main() {
 		Commands: []*cli.Command{
 			&generator.GeneratorCommand,
 			&server.ServeCommand,
+		},
+		Flags: []cli.Flag{
+			&cli.IntFlag{
+				Name:        "verbose",
+				Aliases:     []string{"v"},
+				Usage:       "verbose output (-v, -vv, -vvv for increasing verbosity)",
+				Value:       0,
+				Destination: &verbosity,
+			},
+		},
+		Before: func(ctx context.Context, c *cli.Command) (context.Context, error) {
+			level := slog.LevelWarn
+			switch verbosity {
+			case 1:
+				level = slog.LevelInfo
+			case 2:
+				level = slog.LevelInfo - 1 // Info logs with params
+			case 3:
+				level = slog.LevelDebug // All logs with params
+			}
+
+			logger := slog.New(logger.NewDefaultCLIHandlerWithVerbosity(os.Stdout, level))
+			slog.SetDefault(logger)
+
+			return ctx, nil
 		},
 	}
 
