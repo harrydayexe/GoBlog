@@ -6,9 +6,9 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/harrydayexe/GoBlog/internal/generator"
-	"github.com/harrydayexe/GoBlog/internal/logger"
-	"github.com/harrydayexe/GoBlog/internal/server"
+	"github.com/harrydayexe/GoBlog/v2/internal/generator"
+	"github.com/harrydayexe/GoBlog/v2/internal/logger"
+	"github.com/harrydayexe/GoBlog/v2/internal/server"
 	"github.com/urfave/cli/v3"
 )
 

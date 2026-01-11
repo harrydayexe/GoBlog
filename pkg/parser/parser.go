@@ -9,8 +9,8 @@ import (
 	"strings"
 
 	"github.com/alecthomas/chroma/v2/formatters/html"
-	parserin "github.com/harrydayexe/GoBlog/internal/parser"
-	"github.com/harrydayexe/GoBlog/pkg/models"
+	parserin "github.com/harrydayexe/GoBlog/v2/internal/parser"
+	"github.com/harrydayexe/GoBlog/v2/pkg/models"
 	"github.com/yuin/goldmark"
 	highlighting "github.com/yuin/goldmark-highlighting/v2"
 	"github.com/yuin/goldmark/extension"
