@@ -1,6 +1,9 @@
 package generator
 
-import "io/fs"
+import (
+	"fmt"
+	"io/fs"
+)
 
 // GeneratorConfig contains all the configuration to control how a Generator
 // operates.
@@ -16,6 +19,10 @@ type GeneratorConfig struct {
 	// When true, output should contain only the raw HTML and not be inserted
 	// into a template
 	RawOutput bool
+}
+
+func (c GeneratorConfig) String() string {
+	return fmt.Sprintf("Generator Config\n - RawOutput %t\n", c.RawOutput)
 }
 
 // Option is a function which modifies a GeneratorConfig.
