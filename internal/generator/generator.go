@@ -19,10 +19,12 @@ func NewGeneratorCommand(ctx context.Context, c *cli.Command) error {
 		options = append(options, generator.WithRawOutput())
 	}
 
-	_, err := generator.New(postsFsys, options...)
+	gen, err := generator.New(postsFsys, options...)
 	if err != nil {
 		return err
 	}
+
+	gen.DebugConfig(ctx)
 
 	return nil
 }

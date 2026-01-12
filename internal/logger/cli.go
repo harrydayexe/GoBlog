@@ -101,7 +101,7 @@ func setLevel(r slog.Record, log *Log, showInfo bool) {
 
 	switch r.Level {
 	case slog.LevelDebug:
-		log.ColorFunc = color.BlueString
+		log.ColorFunc = color.CyanString
 	case slog.LevelInfo:
 		if !showInfo {
 			log.Level = ""

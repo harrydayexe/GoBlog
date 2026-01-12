@@ -3,6 +3,7 @@ package generator
 import (
 	"context"
 	"io/fs"
+	"log/slog"
 )
 
 // Generator produces HTML output based on its input configuration.
@@ -13,6 +14,7 @@ import (
 // operations should not be called concurrently on the same instance.
 type Generator struct {
 	config *GeneratorConfig
+	logger *slog.Logger
 }
 
 // New creates a new Generator with the specified options.
@@ -22,6 +24,8 @@ type Generator struct {
 // Options can be provided to customize behavior such as template directories,
 // posts per page, and other generation parameters.
 func New(posts fs.FS, opts ...Option) (*Generator, error) {
+	logger := slog.Default()
+
 	// TODO: Validate posts input somehow?
 	config := GeneratorConfig{
 		PostsDir: posts,
@@ -34,6 +38,7 @@ func New(posts fs.FS, opts ...Option) (*Generator, error) {
 
 	gen := Generator{
 		config: &config,
+		logger: logger,
 	}
 
 	return &gen, nil
@@ -55,4 +60,9 @@ func New(posts fs.FS, opts ...Option) (*Generator, error) {
 // template rendering encounters an error.
 func (g *Generator) Generate(ctx context.Context) (*GeneratedBlog, error) {
 	return nil, nil
+}
+
+// ValidateConfig logs the current config at the debug level
+func (g *Generator) DebugConfig(ctx context.Context) {
+	g.logger.DebugContext(ctx, g.config.String())
 }
