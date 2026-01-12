@@ -18,4 +18,13 @@ var GeneratorCommand cli.Command = cli.Command{
 		fmt.Println("generate")
 		return nil
 	},
+	UseShortOptionHandling: true,
+	Flags: []cli.Flag{
+		&cli.BoolFlag{
+			Name:    "raw",
+			Aliases: []string{"r"},
+			Usage:   "output raw HTML without template wrapper",
+			Value:   false,
+		},
+	},
 }
