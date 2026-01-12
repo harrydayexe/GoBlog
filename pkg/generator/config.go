@@ -13,8 +13,19 @@ import "io/fs"
 type GeneratorConfig struct {
 	PostsDir     fs.FS // The filesystem containing the input posts in markdown
 	TemplatesDir fs.FS // The filesystem containing the templates to use
+	// When true, output should contain only the raw HTML and not be inserted
+	// into a template
+	RawOutput bool
 }
 
 // Option is a function which modifies a GeneratorConfig.
 // Options are used to configure optional parameters when creating a new Generator.
 type Option func(*GeneratorConfig)
+
+// WithRawOutput sets the config to only generate the raw HTML for each post
+// without inserting it into a template.
+func WithRawOutput() Option {
+	return func(gc *GeneratorConfig) {
+		gc.RawOutput = true
+	}
+}

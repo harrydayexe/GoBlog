@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"log/slog"
 	"os"
@@ -22,10 +23,21 @@ var (
 func main() {
 	var verbosity int
 
+	cli.VersionFlag = &cli.BoolFlag{
+		Name:    "version",
+		Aliases: []string{"V"},
+		Usage:   "print only the version",
+	}
+
+	cli.VersionPrinter = func(cmd *cli.Command) {
+		fmt.Printf("GoBlog version %s\nCommit %s\nDate %s\n", version, commit, date)
+	}
+
 	cmd := &cli.Command{
 		Name:                   "GoBlog",
 		Usage:                  "Create a blog feed from posts written in Markdown!",
 		UseShortOptionHandling: true,
+		Version:                "unknown",
 		Commands: []*cli.Command{
 			&generator.GeneratorCommand,
 			&server.ServeCommand,

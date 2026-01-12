@@ -1,6 +1,9 @@
 package generator
 
-import "context"
+import (
+	"context"
+	"io/fs"
+)
 
 // Generator produces HTML output based on its input configuration.
 // It reads markdown files from a configured filesystem and renders them
@@ -18,8 +21,22 @@ type Generator struct {
 //
 // Options can be provided to customize behavior such as template directories,
 // posts per page, and other generation parameters.
-func New() (*Generator, error) {
-	return nil, nil
+func New(posts fs.FS, opts ...Option) (*Generator, error) {
+	// TODO: Validate posts input somehow?
+	config := GeneratorConfig{
+		PostsDir: posts,
+	}
+
+	// Run options on config
+	for _, opt := range opts {
+		opt(&config)
+	}
+
+	gen := Generator{
+		config: &config,
+	}
+
+	return &gen, nil
 }
 
 // Generate reads markdown post files from the configured filesystem and
