@@ -62,7 +62,15 @@ func (g *Generator) Generate(ctx context.Context) (*GeneratedBlog, error) {
 	return nil, nil
 }
 
-// ValidateConfig logs the current config at the debug level
+// DebugConfig logs the current generator configuration at the debug level.
+//
+// This method is useful for troubleshooting and verifying configuration
+// settings during development or when diagnosing issues. The output includes
+// all generator configuration details and respects the provided context for
+// structured logging.
+//
+// The log output will only appear if the logger is configured to show debug
+// level messages.
 func (g *Generator) DebugConfig(ctx context.Context) {
 	g.logger.DebugContext(ctx, g.config.String())
 }
