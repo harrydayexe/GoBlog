@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/alecthomas/chroma/v2/formatters/html"
-	parserin "github.com/harrydayexe/GoBlog/v2/internal/parser"
 	"github.com/harrydayexe/GoBlog/v2/pkg/models"
 	"github.com/yuin/goldmark"
 	highlighting "github.com/yuin/goldmark-highlighting/v2"
@@ -23,7 +22,7 @@ import (
 // A Parser is safe for concurrent use after creation.
 type Parser struct {
 	md     goldmark.Markdown
-	config *parserin.Config
+	config *Config
 }
 
 // New creates a new Parser with the specified options.
@@ -34,7 +33,7 @@ type Parser struct {
 // - Auto-generated heading IDs
 // - HTML sanitization (unsafe HTML disabled by default)
 func New(opts ...Option) *Parser {
-	config := &parserin.Config{
+	config := &Config{
 		EnableCodeHighlighting: true,
 		CodeHighlightingStyle:  "monokai",
 		EnableFootnote:         false,

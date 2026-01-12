@@ -1,9 +1,7 @@
 package parser
 
-import "github.com/harrydayexe/GoBlog/v2/internal/parser"
-
 // Option is a function which can update the parser config
-type Option func(*parser.Config)
+type Option func(*Config)
 
 // WithCodeHighlightingStyle sets the code highlighting style for ringfenced
 // code blocks and enables code highlighting if it wasn't already
@@ -14,7 +12,7 @@ type Option func(*parser.Config)
 // [documentation]: https://pkg.go.dev/github.com/alecthomas/chroma
 // [source code]: https://github.com/alecthomas/chroma/tree/master/styles
 func WithCodeHighlightingStyle(style string) Option {
-	return func(c *parser.Config) {
+	return func(c *Config) {
 		c.EnableCodeHighlighting = true
 		c.CodeHighlightingStyle = style
 	}
@@ -28,7 +26,7 @@ func WithCodeHighlightingStyle(style string) Option {
 // [documentation]: https://pkg.go.dev/github.com/alecthomas/chroma
 // [source code]: https://github.com/alecthomas/chroma/
 func WithCodeHighlighting(enable bool) Option {
-	return func(c *parser.Config) {
+	return func(c *Config) {
 		c.EnableCodeHighlighting = enable
 	}
 }
@@ -41,7 +39,7 @@ func WithCodeHighlighting(enable bool) Option {
 // See the PHP Markdown Extra documentation for syntax details:
 // https://michelf.ca/projects/php-markdown/extra/#footnotes
 func WithFootnote() Option {
-	return func(c *parser.Config) {
+	return func(c *Config) {
 		c.EnableFootnote = true
 	}
 }
