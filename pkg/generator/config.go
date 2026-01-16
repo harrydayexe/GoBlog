@@ -3,6 +3,8 @@ package generator
 import (
 	"fmt"
 	"io/fs"
+
+	"github.com/harrydayexe/GoBlog/v2/pkg/parser"
 )
 
 // GeneratorConfig contains all the configuration to control how a Generator
@@ -18,7 +20,8 @@ type GeneratorConfig struct {
 	TemplatesDir fs.FS // The filesystem containing the templates to use
 	// When true, output should contain only the raw HTML and not be inserted
 	// into a template
-	RawOutput bool
+	RawOutput    bool
+	ParserConfig parser.Config // The config to use when parsing
 }
 
 func (c GeneratorConfig) String() string {

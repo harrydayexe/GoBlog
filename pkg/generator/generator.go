@@ -4,6 +4,9 @@ import (
 	"context"
 	"io/fs"
 	"log/slog"
+
+	"github.com/harrydayexe/GoBlog/v2/pkg/models"
+	"github.com/harrydayexe/GoBlog/v2/pkg/parser"
 )
 
 // Generator produces HTML output based on its input configuration.
@@ -23,25 +26,30 @@ type Generator struct {
 //
 // Options can be provided to customize behavior such as template directories,
 // posts per page, and other generation parameters.
-func New(posts fs.FS, opts ...Option) (*Generator, error) {
-	logger := slog.Default()
+func New(posts fs.FS, opts ...Option) *Generator {
 
 	// TODO: Validate posts input somehow?
-	config := GeneratorConfig{
+	config := &GeneratorConfig{
 		PostsDir: posts,
 	}
 
 	// Run options on config
 	for _, opt := range opts {
-		opt(&config)
+		opt(config)
 	}
 
+	return NewWithConfig(config)
+}
+
+func NewWithConfig(config *GeneratorConfig) *Generator {
+	logger := slog.Default()
+
 	gen := Generator{
-		config: &config,
+		config: config,
 		logger: logger,
 	}
 
-	return &gen, nil
+	return &gen
 }
 
 // Generate reads markdown post files from the configured filesystem and
@@ -59,6 +67,19 @@ func New(posts fs.FS, opts ...Option) (*Generator, error) {
 // It returns an error if markdown files cannot be read, parsing fails, or
 // template rendering encounters an error.
 func (g *Generator) Generate(ctx context.Context) (*GeneratedBlog, error) {
+	p := parser.NewWithConfig(&g.config.ParserConfig)
+
+	posts, err := p.ParseDirectory(g.config.PostsDir)
+	if err != nil {
+		return nil, err
+	}
+
+	// Step 2: If RawOutput mode, return immediately with raw HTML
+	if g.config.RawOutput {
+		return g.assembleRawBlog(posts), nil
+	}
+
+	// Step 3: Apply templates (TODO: future work)
 	return nil, nil
 }
 
@@ -73,4 +94,14 @@ func (g *Generator) Generate(ctx context.Context) (*GeneratedBlog, error) {
 // level messages.
 func (g *Generator) DebugConfig(ctx context.Context) {
 	g.logger.DebugContext(ctx, g.config.String())
+}
+
+func (g *Generator) assembleRawBlog(posts models.PostList) *GeneratedBlog {
+	blog := NewEmptyGeneratedBlog()
+
+	for _, post := range posts {
+		blog.Posts[post.Slug] = post.Content
+	}
+
+	return blog
 }
