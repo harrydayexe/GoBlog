@@ -1,3 +1,4 @@
+// Package logger provides CLI logging with colored output using slog.
 package logger
 
 import (
@@ -10,6 +11,7 @@ import (
 	"github.com/fatih/color"
 )
 
+// Log represents a formatted log message with color and level information.
 type Log struct {
 	ColorFunc  func(format string, a ...any) string
 	Level      string
@@ -34,12 +36,14 @@ func newLog() Log {
 	}
 }
 
+// CLIHandler implements slog.Handler with colored output for CLI applications.
 type CLIHandler struct {
 	slog.Handler
 	opts *slog.HandlerOptions
 	l    *log.Logger
 }
 
+// NewCLIHandlerWithOptions creates a CLIHandler with the specified handler options.
 func NewCLIHandlerWithOptions(
 	out io.Writer,
 	opts slog.HandlerOptions,
@@ -52,6 +56,7 @@ func NewCLIHandlerWithOptions(
 	return h
 }
 
+// NewDefaultCLIHandler creates a CLIHandler with default options.
 func NewDefaultCLIHandler(
 	out io.Writer,
 ) *CLIHandler {
@@ -65,6 +70,7 @@ func NewDefaultCLIHandler(
 	return h
 }
 
+// NewDefaultCLIHandlerWithVerbosity creates a CLIHandler with a specific verbosity level.
 func NewDefaultCLIHandlerWithVerbosity(
 	out io.Writer,
 	verboseLevel slog.Level,
@@ -81,6 +87,7 @@ func NewDefaultCLIHandlerWithVerbosity(
 	return h
 }
 
+// Handle implements slog.Handler by formatting and outputting log records with colors.
 func (h *CLIHandler) Handle(ctx context.Context, r slog.Record) error {
 	loggingLevel := h.opts.Level.Level()
 

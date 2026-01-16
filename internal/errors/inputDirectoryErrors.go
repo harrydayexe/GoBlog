@@ -11,6 +11,7 @@ type InputDirectoryError struct {
 	Msg  string
 }
 
+// Error implements the error interface.
 func (e *InputDirectoryError) Error() string {
 	switch e.Type {
 	case TypeHint:
@@ -22,6 +23,7 @@ func (e *InputDirectoryError) Error() string {
 	}
 }
 
+// HandlerString returns a colored error string for CLI display.
 func (e *InputDirectoryError) HandlerString() string {
 	switch e.Type {
 	case TypeHint:
@@ -33,6 +35,7 @@ func (e *InputDirectoryError) HandlerString() string {
 	}
 }
 
+// NewDirectoryInaccessibleError creates an error for when a directory cannot be accessed.
 func NewDirectoryInaccessibleError(err error) error {
 	msg := fmt.Sprintf("cannot access directory: %s", err.Error())
 	return &InputDirectoryError{
@@ -41,6 +44,7 @@ func NewDirectoryInaccessibleError(err error) error {
 	}
 }
 
+// NewNotADirectoryError creates an error for when a path is not a directory.
 func NewNotADirectoryError(path string) error {
 	msg := fmt.Sprintf("path is not a directory: %s", path)
 	return &InputDirectoryError{
@@ -49,6 +53,7 @@ func NewNotADirectoryError(path string) error {
 	}
 }
 
+// NewPathNotSpecifiedError creates an error for when a path is not specified.
 func NewPathNotSpecifiedError() error {
 	msg := "please specify a path"
 	return &InputDirectoryError{
