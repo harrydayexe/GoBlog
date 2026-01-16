@@ -9,6 +9,7 @@ import (
 	"github.com/urfave/cli/v3"
 )
 
+// NewGeneratorCommand handles the generate command by processing markdown posts into HTML.
 func NewGeneratorCommand(ctx context.Context, c *cli.Command) error {
 	inputPostsDir := c.StringArg(InputPostsDirArgName)
 	postsFsys, err := utilities.GetDirectoryFromInput(inputPostsDir)

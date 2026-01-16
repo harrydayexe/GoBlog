@@ -7,6 +7,7 @@ import (
 	"github.com/harrydayexe/GoBlog/v2/internal/errors"
 )
 
+// GetDirectoryFromInput validates a path and returns it as an fs.FS.
 func GetDirectoryFromInput(path string) (fs.FS, error) {
 	if path == "" {
 		return nil, errors.NewPathNotSpecifiedError()
