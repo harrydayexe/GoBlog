@@ -2,9 +2,11 @@ package parser
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"html/template"
 	"io/fs"
+	"log/slog"
 	"path/filepath"
 	"strings"
 
@@ -23,6 +25,7 @@ import (
 type Parser struct {
 	md     goldmark.Markdown
 	config *Config
+	logger *slog.Logger
 }
 
 // New creates a new Parser with the specified options.
@@ -77,7 +80,8 @@ func NewWithConfig(config *Config) *Parser {
 	)
 
 	p := &Parser{
-		md: md,
+		md:     md,
+		logger: slog.Default(),
 	}
 
 	return p
@@ -93,7 +97,8 @@ func NewWithConfig(config *Config) *Parser {
 //
 // Returns an error if the file cannot be read, frontmatter is invalid,
 // required fields are missing, or markdown rendering fails.
-func (p *Parser) ParseFile(fsys fs.FS, path string) (*models.Post, error) {
+func (p *Parser) ParseFile(ctx context.Context, fsys fs.FS, path string) (*models.Post, error) {
+	p.logger.InfoContext(ctx, fmt.Sprintf("Parsing file %s...", path))
 	// Read file contents
 	content, err := fs.ReadFile(fsys, path)
 	if err != nil {
@@ -101,17 +106,17 @@ func (p *Parser) ParseFile(fsys fs.FS, path string) (*models.Post, error) {
 	}
 
 	// Create parser context
-	ctx := parser.NewContext()
+	pctx := parser.NewContext()
 
 	// Parse markdown (this also extracts frontmatter via the extension)
 	var htmlBuf bytes.Buffer
-	if err := p.md.Convert(content, &htmlBuf, parser.WithContext(ctx)); err != nil {
+	if err := p.md.Convert(content, &htmlBuf, parser.WithContext(pctx)); err != nil {
 		return nil, fmt.Errorf("failed to render markdown: %w", err)
 	}
 
 	// Extract frontmatter from context
 	var post models.Post
-	fmData := frontmatter.Get(ctx)
+	fmData := frontmatter.Get(pctx)
 	if fmData == nil {
 		return nil, fmt.Errorf("no frontmatter found in file")
 	}
@@ -154,7 +159,8 @@ func (p *Parser) ParseFile(fsys fs.FS, path string) (*models.Post, error) {
 //
 // Only files with .md or .markdown extensions are processed. Other files
 // and directories are silently skipped.
-func (p *Parser) ParseDirectory(fsys fs.FS) (models.PostList, error) {
+func (p *Parser) ParseDirectory(ctx context.Context, fsys fs.FS) (models.PostList, error) {
+	p.logger.InfoContext(ctx, "Parsing posts")
 	var posts models.PostList
 	var parseErrors ParseErrors
 
@@ -181,7 +187,7 @@ func (p *Parser) ParseDirectory(fsys fs.FS) (models.PostList, error) {
 		}
 
 		// Parse the file
-		post, err := p.ParseFile(fsys, path)
+		post, err := p.ParseFile(ctx, fsys, path)
 		if err != nil {
 			// Parsing failed - collect error but continue
 			parseErrors.Errors = append(parseErrors.Errors, FileError{

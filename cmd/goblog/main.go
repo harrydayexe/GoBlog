@@ -3,12 +3,11 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"log/slog"
 	"os"
 
 	"github.com/harrydayexe/GoBlog/v2/internal/generator"
-	"github.com/harrydayexe/GoBlog/v2/internal/logger"
+	loggermod "github.com/harrydayexe/GoBlog/v2/internal/logger"
 	"github.com/harrydayexe/GoBlog/v2/internal/server"
 	"github.com/urfave/cli/v3"
 )
@@ -22,6 +21,7 @@ var (
 
 func main() {
 	var verbosity int
+	var logger *slog.Logger
 
 	cli.VersionFlag = &cli.BoolFlag{
 		Name:    "version",
@@ -65,7 +65,7 @@ func main() {
 				level = slog.LevelDebug // All logs with params
 			}
 
-			logger := slog.New(logger.NewDefaultCLIHandlerWithVerbosity(os.Stdout, level))
+			logger = slog.New(loggermod.NewDefaultCLIHandlerWithVerbosity(os.Stdout, level))
 			slog.SetDefault(logger)
 
 			return ctx, nil
@@ -73,6 +73,7 @@ func main() {
 	}
 
 	if err := cmd.Run(context.Background(), os.Args); err != nil {
-		log.Fatal(err)
+		logger.Error(err.Error())
+		os.Exit(1)
 	}
 }

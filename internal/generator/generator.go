@@ -3,15 +3,18 @@ package generator
 import (
 	"context"
 	"fmt"
-	"os"
 
+	"github.com/harrydayexe/GoBlog/v2/internal/utilities"
 	"github.com/harrydayexe/GoBlog/v2/pkg/generator"
 	"github.com/urfave/cli/v3"
 )
 
 func NewGeneratorCommand(ctx context.Context, c *cli.Command) error {
 	inputPostsDir := c.StringArg(InputPostsDirArgName)
-	postsFsys := os.DirFS(inputPostsDir)
+	postsFsys, err := utilities.GetDirectoryFromInput(inputPostsDir)
+	if err != nil {
+		return err
+	}
 
 	options := []generator.Option{}
 
