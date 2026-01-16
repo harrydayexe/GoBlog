@@ -2,6 +2,7 @@ package generator
 
 import (
 	"context"
+	"fmt"
 	"io/fs"
 	"log/slog"
 
@@ -67,9 +68,10 @@ func NewWithConfig(config *GeneratorConfig) *Generator {
 // It returns an error if markdown files cannot be read, parsing fails, or
 // template rendering encounters an error.
 func (g *Generator) Generate(ctx context.Context) (*GeneratedBlog, error) {
+	g.logger.DebugContext(ctx, "Creating parser for generate call")
 	p := parser.NewWithConfig(&g.config.ParserConfig)
 
-	posts, err := p.ParseDirectory(g.config.PostsDir)
+	posts, err := p.ParseDirectory(ctx, g.config.PostsDir)
 	if err != nil {
 		return nil, err
 	}
@@ -80,7 +82,7 @@ func (g *Generator) Generate(ctx context.Context) (*GeneratedBlog, error) {
 	}
 
 	// Step 3: Apply templates (TODO: future work)
-	return nil, nil
+	return nil, fmt.Errorf("Only raw output is enabled at this point")
 }
 
 // DebugConfig logs the current generator configuration at the debug level.
