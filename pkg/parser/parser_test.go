@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -8,10 +9,11 @@ import (
 )
 
 func TestParseFile_ValidPost(t *testing.T) {
+	t.Parallel()
 	p := New()
 	fsys := os.DirFS("testdata")
 
-	post, err := p.ParseFile(fsys, "valid-post.md")
+	post, err := p.ParseFile(context.Background(), fsys, "valid-post.md")
 	if err != nil {
 		t.Fatalf("expected no error, got: %v", err)
 	}
@@ -66,10 +68,11 @@ func TestParseFile_ValidPost(t *testing.T) {
 }
 
 func TestParseFile_MissingTitle(t *testing.T) {
+	t.Parallel()
 	p := New()
 	fsys := os.DirFS("testdata")
 
-	_, err := p.ParseFile(fsys, "missing-title.md")
+	_, err := p.ParseFile(context.Background(), fsys, "missing-title.md")
 	if err == nil {
 		t.Fatal("expected error for missing title, got nil")
 	}
@@ -80,10 +83,11 @@ func TestParseFile_MissingTitle(t *testing.T) {
 }
 
 func TestParseFile_MissingDescription(t *testing.T) {
+	t.Parallel()
 	p := New()
 	fsys := os.DirFS("testdata")
 
-	_, err := p.ParseFile(fsys, "missing-description.md")
+	_, err := p.ParseFile(context.Background(), fsys, "missing-description.md")
 	if err == nil {
 		t.Fatal("expected error for missing description, got nil")
 	}
@@ -94,20 +98,22 @@ func TestParseFile_MissingDescription(t *testing.T) {
 }
 
 func TestParseFile_InvalidYAML(t *testing.T) {
+	t.Parallel()
 	p := New()
 	fsys := os.DirFS("testdata")
 
-	_, err := p.ParseFile(fsys, "invalid-yaml.md")
+	_, err := p.ParseFile(context.Background(), fsys, "invalid-yaml.md")
 	if err == nil {
 		t.Fatal("expected error for invalid YAML, got nil")
 	}
 }
 
 func TestParseFile_NoFrontmatter(t *testing.T) {
+	t.Parallel()
 	p := New()
 	fsys := os.DirFS("testdata")
 
-	_, err := p.ParseFile(fsys, "no-frontmatter.md")
+	_, err := p.ParseFile(context.Background(), fsys, "no-frontmatter.md")
 	if err == nil {
 		t.Fatal("expected error for missing frontmatter, got nil")
 	}
@@ -121,10 +127,11 @@ func TestParseFile_NoFrontmatter(t *testing.T) {
 }
 
 func TestParseFile_WithCodeBlocks(t *testing.T) {
+	t.Parallel()
 	p := New()
 	fsys := os.DirFS("testdata")
 
-	post, err := p.ParseFile(fsys, "with-code.md")
+	post, err := p.ParseFile(context.Background(), fsys, "with-code.md")
 	if err != nil {
 		t.Fatalf("expected no error, got: %v", err)
 	}
@@ -141,10 +148,11 @@ func TestParseFile_WithCodeBlocks(t *testing.T) {
 }
 
 func TestParseFile_WithFootnotes(t *testing.T) {
+	t.Parallel()
 	p := New(WithFootnote())
 	fsys := os.DirFS("testdata")
 
-	post, err := p.ParseFile(fsys, "with-footnotes.md")
+	post, err := p.ParseFile(context.Background(), fsys, "with-footnotes.md")
 	if err != nil {
 		t.Fatalf("expected no error, got: %v", err)
 	}
@@ -161,20 +169,22 @@ func TestParseFile_WithFootnotes(t *testing.T) {
 }
 
 func TestParseFile_NonExistentFile(t *testing.T) {
+	t.Parallel()
 	p := New()
 	fsys := os.DirFS("testdata")
 
-	_, err := p.ParseFile(fsys, "does-not-exist.md")
+	_, err := p.ParseFile(context.Background(), fsys, "does-not-exist.md")
 	if err == nil {
 		t.Fatal("expected error for non-existent file, got nil")
 	}
 }
 
 func TestParseDirectory(t *testing.T) {
+	t.Parallel()
 	p := New()
 	fsys := os.DirFS("testdata")
 
-	posts, err := p.ParseDirectory(fsys)
+	posts, err := p.ParseDirectory(context.Background(), fsys)
 
 	// We expect errors because some test files are intentionally invalid
 	var parseErrs ParseErrors
@@ -219,6 +229,7 @@ func TestParseDirectory(t *testing.T) {
 }
 
 func TestParseErrors_Error(t *testing.T) {
+	t.Parallel()
 	testErr := fmt.Errorf("test error")
 	pe := ParseErrors{
 		Errors: []FileError{
@@ -240,6 +251,7 @@ func TestParseErrors_Error(t *testing.T) {
 }
 
 func TestParseErrors_HasErrors(t *testing.T) {
+	t.Parallel()
 	pe := ParseErrors{}
 	if pe.HasErrors() {
 		t.Error("expected HasErrors to return false for empty errors")
@@ -253,6 +265,7 @@ func TestParseErrors_HasErrors(t *testing.T) {
 }
 
 func TestFileError_Error(t *testing.T) {
+	t.Parallel()
 	testErr := fmt.Errorf("test error")
 	fe := FileError{
 		Path: "test.md",
@@ -266,6 +279,7 @@ func TestFileError_Error(t *testing.T) {
 }
 
 func TestFileError_Unwrap(t *testing.T) {
+	t.Parallel()
 	original := fmt.Errorf("original error")
 	fe := FileError{
 		Path: "test.md",
@@ -278,11 +292,12 @@ func TestFileError_Unwrap(t *testing.T) {
 }
 
 func TestNew_WithCodeHighlighting(t *testing.T) {
+	t.Parallel()
 	fsys := os.DirFS("testdata")
 
 	// Test with highlighting disabled
 	p := New(WithCodeHighlighting(false))
-	post, err := p.ParseFile(fsys, "with-code.md")
+	post, err := p.ParseFile(context.Background(), fsys, "with-code.md")
 	if err != nil {
 		t.Fatalf("expected no error, got: %v", err)
 	}
@@ -299,7 +314,7 @@ func TestNew_WithCodeHighlighting(t *testing.T) {
 
 	// Test with highlighting explicitly enabled
 	p = New(WithCodeHighlighting(true))
-	post, err = p.ParseFile(fsys, "with-code.md")
+	post, err = p.ParseFile(context.Background(), fsys, "with-code.md")
 	if err != nil {
 		t.Fatalf("expected no error, got: %v", err)
 	}
@@ -311,7 +326,7 @@ func TestNew_WithCodeHighlighting(t *testing.T) {
 
 	// Test default behavior (should be enabled)
 	p = New()
-	post, err = p.ParseFile(fsys, "with-code.md")
+	post, err = p.ParseFile(context.Background(), fsys, "with-code.md")
 	if err != nil {
 		t.Fatalf("expected no error, got: %v", err)
 	}
@@ -323,11 +338,12 @@ func TestNew_WithCodeHighlighting(t *testing.T) {
 }
 
 func TestNew_WithCodeHighlightingStyle(t *testing.T) {
+	t.Parallel()
 	fsys := os.DirFS("testdata")
 
 	// Test with custom style
 	p := New(WithCodeHighlightingStyle("dracula"))
-	post, err := p.ParseFile(fsys, "with-code.md")
+	post, err := p.ParseFile(context.Background(), fsys, "with-code.md")
 	if err != nil {
 		t.Fatalf("expected no error, got: %v", err)
 	}
@@ -344,7 +360,7 @@ func TestNew_WithCodeHighlightingStyle(t *testing.T) {
 
 	// Test with different style to ensure parser accepts it
 	p = New(WithCodeHighlightingStyle("monokai"))
-	post, err = p.ParseFile(fsys, "with-code.md")
+	post, err = p.ParseFile(context.Background(), fsys, "with-code.md")
 	if err != nil {
 		t.Fatalf("expected no error with monokai style, got: %v", err)
 	}
@@ -355,11 +371,12 @@ func TestNew_WithCodeHighlightingStyle(t *testing.T) {
 }
 
 func TestNew_WithFootnote(t *testing.T) {
+	t.Parallel()
 	fsys := os.DirFS("testdata")
 
 	// Test without footnote option (default disabled)
 	p := New()
-	post, err := p.ParseFile(fsys, "with-footnotes.md")
+	post, err := p.ParseFile(context.Background(), fsys, "with-footnotes.md")
 	if err != nil {
 		t.Fatalf("expected no error, got: %v", err)
 	}
@@ -376,7 +393,7 @@ func TestNew_WithFootnote(t *testing.T) {
 
 	// Test with footnote option enabled
 	p = New(WithFootnote())
-	post, err = p.ParseFile(fsys, "with-footnotes.md")
+	post, err = p.ParseFile(context.Background(), fsys, "with-footnotes.md")
 	if err != nil {
 		t.Fatalf("expected no error, got: %v", err)
 	}
@@ -398,6 +415,7 @@ func TestNew_WithFootnote(t *testing.T) {
 }
 
 func TestNew_CombinedOptions(t *testing.T) {
+	t.Parallel()
 	fsys := os.DirFS("testdata")
 
 	// Test combining code highlighting style and footnotes
@@ -407,7 +425,7 @@ func TestNew_CombinedOptions(t *testing.T) {
 	)
 
 	// Test with code
-	post, err := p.ParseFile(fsys, "with-code.md")
+	post, err := p.ParseFile(context.Background(), fsys, "with-code.md")
 	if err != nil {
 		t.Fatalf("expected no error parsing code file, got: %v", err)
 	}
@@ -417,7 +435,7 @@ func TestNew_CombinedOptions(t *testing.T) {
 	}
 
 	// Test with footnotes
-	post, err = p.ParseFile(fsys, "with-footnotes.md")
+	post, err = p.ParseFile(context.Background(), fsys, "with-footnotes.md")
 	if err != nil {
 		t.Fatalf("expected no error parsing footnote file, got: %v", err)
 	}
@@ -432,7 +450,7 @@ func TestNew_CombinedOptions(t *testing.T) {
 		WithFootnote(),
 	)
 
-	post, err = p.ParseFile(fsys, "with-code.md")
+	post, err = p.ParseFile(context.Background(), fsys, "with-code.md")
 	if err != nil {
 		t.Fatalf("expected no error, got: %v", err)
 	}
@@ -441,7 +459,7 @@ func TestNew_CombinedOptions(t *testing.T) {
 		t.Error("expected code highlighting to be disabled")
 	}
 
-	post, err = p.ParseFile(fsys, "with-footnotes.md")
+	post, err = p.ParseFile(context.Background(), fsys, "with-footnotes.md")
 	if err != nil {
 		t.Fatalf("expected no error, got: %v", err)
 	}
@@ -455,7 +473,7 @@ func Example() {
 	p := New()
 
 	fsys := os.DirFS("testdata")
-	post, err := p.ParseFile(fsys, "valid-post.md")
+	post, err := p.ParseFile(context.Background(), fsys, "valid-post.md")
 	if err != nil {
 		fmt.Println("Error:", err)
 		return
@@ -473,7 +491,7 @@ func Example_withOptions() {
 	)
 
 	fsys := os.DirFS("testdata")
-	post, err := p.ParseFile(fsys, "with-code.md")
+	post, err := p.ParseFile(context.Background(), fsys, "with-code.md")
 	if err != nil {
 		fmt.Println("Error:", err)
 		return
@@ -489,7 +507,7 @@ func ExampleParser_ParseFile() {
 	p := New()
 	fsys := os.DirFS("testdata")
 
-	post, err := p.ParseFile(fsys, "valid-post.md")
+	post, err := p.ParseFile(context.Background(), fsys, "valid-post.md")
 	if err != nil {
 		fmt.Println("Error:", err)
 		return
@@ -505,7 +523,7 @@ func ExampleParser_ParseDirectory() {
 	p := New(WithFootnote())
 	fsys := os.DirFS("testdata")
 
-	posts, err := p.ParseDirectory(fsys)
+	posts, err := p.ParseDirectory(context.Background(), fsys)
 
 	// Partial results may be returned with errors
 	if err != nil {
@@ -528,7 +546,7 @@ func ExampleWithCodeHighlighting() {
 	p := New(WithCodeHighlighting(false))
 
 	fsys := os.DirFS("testdata")
-	post, err := p.ParseFile(fsys, "with-code.md")
+	post, err := p.ParseFile(context.Background(), fsys, "with-code.md")
 	if err != nil {
 		fmt.Println("Error:", err)
 		return
@@ -545,7 +563,7 @@ func ExampleWithCodeHighlightingStyle() {
 	p := New(WithCodeHighlightingStyle("dracula"))
 
 	fsys := os.DirFS("testdata")
-	post, err := p.ParseFile(fsys, "with-code.md")
+	post, err := p.ParseFile(context.Background(), fsys, "with-code.md")
 	if err != nil {
 		fmt.Println("Error:", err)
 		return
@@ -562,7 +580,7 @@ func ExampleWithFootnote() {
 	p := New(WithFootnote())
 
 	fsys := os.DirFS("testdata")
-	post, err := p.ParseFile(fsys, "with-footnotes.md")
+	post, err := p.ParseFile(context.Background(), fsys, "with-footnotes.md")
 	if err != nil {
 		fmt.Println("Error:", err)
 		return
