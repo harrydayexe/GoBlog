@@ -9,6 +9,7 @@ import (
 	"github.com/harrydayexe/GoBlog/v2/internal/generator"
 	loggermod "github.com/harrydayexe/GoBlog/v2/internal/logger"
 	"github.com/harrydayexe/GoBlog/v2/internal/server"
+	"github.com/harrydayexe/GoBlog/v2/internal/utilities"
 	"github.com/urfave/cli/v3"
 )
 
@@ -73,7 +74,6 @@ func main() {
 	}
 
 	if err := cmd.Run(context.Background(), os.Args); err != nil {
-		logger.Error(err.Error())
-		os.Exit(1)
+		utilities.CliErrorHandler(err)
 	}
 }
