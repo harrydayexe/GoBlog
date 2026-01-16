@@ -42,7 +42,7 @@ func TestParseFile_ValidPost(t *testing.T) {
 		t.Error("expected slug to be generated")
 	}
 
-	if post.Content == "" {
+	if string(post.Content) == "" {
 		t.Error("expected content to be rendered")
 	}
 
@@ -55,12 +55,12 @@ func TestParseFile_ValidPost(t *testing.T) {
 	}
 
 	// Verify HTML was actually rendered (should contain <h1> tag)
-	if !strings.Contains(post.Content, "<h1") {
+	if !strings.Contains(string(post.Content), "<h1") {
 		t.Error("expected rendered HTML to contain heading tags")
 	}
 
 	// Verify markdown was converted (should contain <strong> for **)
-	if !strings.Contains(post.Content, "<strong>valid</strong>") {
+	if !strings.Contains(string(post.Content), "<strong>valid</strong>") {
 		t.Error("expected rendered HTML to contain bold text")
 	}
 }
@@ -130,12 +130,12 @@ func TestParseFile_WithCodeBlocks(t *testing.T) {
 	}
 
 	// Verify syntax highlighting is applied (should have <pre> or <code> tags)
-	if !strings.Contains(post.Content, "<pre") && !strings.Contains(post.Content, "<code") {
+	if !strings.Contains(string(post.Content), "<pre") && !strings.Contains(string(post.Content), "<code") {
 		t.Error("expected code blocks to be rendered with <pre> or <code> tags")
 	}
 
 	// Check that code content is preserved
-	if !strings.Contains(post.Content, "Hello, World!") {
+	if !strings.Contains(string(post.Content), "Hello, World!") {
 		t.Error("expected code content to be preserved in HTML")
 	}
 }
@@ -150,12 +150,12 @@ func TestParseFile_WithFootnotes(t *testing.T) {
 	}
 
 	// Verify footnotes are rendered (goldmark uses <sup> for footnote refs)
-	if !strings.Contains(post.Content, "<sup") {
+	if !strings.Contains(string(post.Content), "<sup") {
 		t.Error("expected footnotes to include <sup> tags for references")
 	}
 
 	// Verify footnote section is rendered
-	if !strings.Contains(post.Content, "footnote-ref") || !strings.Contains(post.Content, "footnotes") {
+	if !strings.Contains(string(post.Content), "footnote-ref") || !strings.Contains(string(post.Content), "footnotes") {
 		t.Error("expected proper footnote rendering with goldmark classes")
 	}
 }
@@ -212,7 +212,7 @@ func TestParseDirectory(t *testing.T) {
 		if post.Slug == "" {
 			t.Errorf("post %s has empty slug", post.SourcePath)
 		}
-		if post.Content == "" {
+		if string(post.Content) == "" {
 			t.Errorf("post %s has empty content", post.SourcePath)
 		}
 	}
@@ -288,12 +288,12 @@ func TestNew_WithCodeHighlighting(t *testing.T) {
 	}
 
 	// When highlighting is disabled, code should still be in <pre><code> but without chroma classes
-	if !strings.Contains(post.Content, "<pre") || !strings.Contains(post.Content, "<code") {
+	if !strings.Contains(string(post.Content), "<pre") || !strings.Contains(string(post.Content), "<code") {
 		t.Error("expected code blocks to be rendered in <pre><code> tags")
 	}
 
 	// Should NOT contain chroma highlighting classes
-	if strings.Contains(post.Content, "chroma") {
+	if strings.Contains(string(post.Content), "chroma") {
 		t.Error("expected no chroma highlighting classes when highlighting is disabled")
 	}
 
@@ -305,7 +305,7 @@ func TestNew_WithCodeHighlighting(t *testing.T) {
 	}
 
 	// Should contain chroma classes
-	if !strings.Contains(post.Content, "chroma") {
+	if !strings.Contains(string(post.Content), "chroma") {
 		t.Error("expected chroma highlighting classes when highlighting is enabled")
 	}
 
@@ -317,7 +317,7 @@ func TestNew_WithCodeHighlighting(t *testing.T) {
 	}
 
 	// Default should have highlighting enabled
-	if !strings.Contains(post.Content, "chroma") {
+	if !strings.Contains(string(post.Content), "chroma") {
 		t.Error("expected chroma highlighting classes by default")
 	}
 }
@@ -333,12 +333,12 @@ func TestNew_WithCodeHighlightingStyle(t *testing.T) {
 	}
 
 	// Should contain chroma classes (highlighting enabled)
-	if !strings.Contains(post.Content, "chroma") {
+	if !strings.Contains(string(post.Content), "chroma") {
 		t.Error("expected chroma highlighting classes when style is set")
 	}
 
 	// Code content should be preserved
-	if !strings.Contains(post.Content, "Hello, World!") {
+	if !strings.Contains(string(post.Content), "Hello, World!") {
 		t.Error("expected code content to be preserved")
 	}
 
@@ -349,7 +349,7 @@ func TestNew_WithCodeHighlightingStyle(t *testing.T) {
 		t.Fatalf("expected no error with monokai style, got: %v", err)
 	}
 
-	if !strings.Contains(post.Content, "chroma") {
+	if !strings.Contains(string(post.Content), "chroma") {
 		t.Error("expected chroma highlighting classes with monokai style")
 	}
 }
@@ -365,12 +365,12 @@ func TestNew_WithFootnote(t *testing.T) {
 	}
 
 	// Footnote markers like [^1] should appear as plain text when disabled
-	if strings.Contains(post.Content, "<sup") {
+	if strings.Contains(string(post.Content), "<sup") {
 		t.Error("expected no <sup> tags when footnotes are disabled")
 	}
 
 	// Should contain the raw footnote syntax
-	if !strings.Contains(post.Content, "[^1]") {
+	if !strings.Contains(string(post.Content), "[^1]") {
 		t.Error("expected footnote markers to appear as plain text when disabled")
 	}
 
@@ -382,17 +382,17 @@ func TestNew_WithFootnote(t *testing.T) {
 	}
 
 	// Should contain <sup> tags for footnote references
-	if !strings.Contains(post.Content, "<sup") {
+	if !strings.Contains(string(post.Content), "<sup") {
 		t.Error("expected <sup> tags when footnotes are enabled")
 	}
 
 	// Should contain footnote section
-	if !strings.Contains(post.Content, "footnote-ref") {
+	if !strings.Contains(string(post.Content), "footnote-ref") {
 		t.Error("expected footnote references when footnotes are enabled")
 	}
 
 	// Raw marker should NOT appear when rendered
-	if strings.Contains(post.Content, "[^1]") {
+	if strings.Contains(string(post.Content), "[^1]") {
 		t.Error("expected footnote markers to be rendered, not shown as plain text")
 	}
 }
@@ -412,7 +412,7 @@ func TestNew_CombinedOptions(t *testing.T) {
 		t.Fatalf("expected no error parsing code file, got: %v", err)
 	}
 
-	if !strings.Contains(post.Content, "chroma") {
+	if !strings.Contains(string(post.Content), "chroma") {
 		t.Error("expected code highlighting to work with combined options")
 	}
 
@@ -422,7 +422,7 @@ func TestNew_CombinedOptions(t *testing.T) {
 		t.Fatalf("expected no error parsing footnote file, got: %v", err)
 	}
 
-	if !strings.Contains(post.Content, "<sup") {
+	if !strings.Contains(string(post.Content), "<sup") {
 		t.Error("expected footnotes to work with combined options")
 	}
 
@@ -437,7 +437,7 @@ func TestNew_CombinedOptions(t *testing.T) {
 		t.Fatalf("expected no error, got: %v", err)
 	}
 
-	if strings.Contains(post.Content, "chroma") {
+	if strings.Contains(string(post.Content), "chroma") {
 		t.Error("expected code highlighting to be disabled")
 	}
 
@@ -446,7 +446,7 @@ func TestNew_CombinedOptions(t *testing.T) {
 		t.Fatalf("expected no error, got: %v", err)
 	}
 
-	if !strings.Contains(post.Content, "<sup") {
+	if !strings.Contains(string(post.Content), "<sup") {
 		t.Error("expected footnotes to still work when code highlighting is disabled")
 	}
 }

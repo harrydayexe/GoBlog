@@ -1,4 +1,4 @@
 package generator
 
 const RawOutputFlagName = "raw"
-const InputPostsDirFlagName = "input-posts"
+const InputPostsDirArgName = "input-posts"

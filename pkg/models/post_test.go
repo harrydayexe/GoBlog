@@ -380,17 +380,17 @@ func TestPostList_GetAllTags_Empty(t *testing.T) {
 // TestPost_HTMLContent tests HTML content handling
 func TestPost_HTMLContent(t *testing.T) {
 	t.Parallel()
-	htmlStr := "<p>Hello <strong>World</strong></p>"
+	htmlStr := []byte("<p>Hello <strong>World</strong></p>")
 	post := Post{
 		Content:     htmlStr,
 		HTMLContent: template.HTML(htmlStr),
 	}
 
-	if string(post.HTMLContent) != htmlStr {
+	if string(post.HTMLContent) != string(htmlStr) {
 		t.Errorf("HTMLContent = %q, want %q", post.HTMLContent, htmlStr)
 	}
 
-	if post.Content != htmlStr {
+	if string(post.Content) != string(htmlStr) {
 		t.Errorf("Content = %q, want %q", post.Content, htmlStr)
 	}
 }

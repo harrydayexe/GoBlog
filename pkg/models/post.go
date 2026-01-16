@@ -18,7 +18,7 @@ type Post struct {
 
 	// Generated fields
 	Slug        string        // URL-friendly identifier
-	Content     string        // Rendered HTML content
+	Content     []byte        // Rendered HTML content
 	HTMLContent template.HTML // HTML content for templates (not escaped)
 	RawContent  string        // Original markdown content
 	SourcePath  string        // Path to source markdown file

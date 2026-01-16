@@ -43,6 +43,10 @@ func New(opts ...Option) *Parser {
 		opt(config)
 	}
 
+	return NewWithConfig(config)
+}
+
+func NewWithConfig(config *Config) *Parser {
 	var extensions []goldmark.Extender = []goldmark.Extender{
 		&frontmatter.Extender{},
 	}
@@ -129,7 +133,8 @@ func (p *Parser) ParseFile(fsys fs.FS, path string) (*models.Post, error) {
 	post.RawContent = string(content)
 
 	// Store rendered HTML
-	post.Content = htmlBuf.String()
+	// WARNING: Might not be safe concurrently due to buffer overwriting?
+	post.Content = htmlBuf.Bytes()
 	post.HTMLContent = template.HTML(post.Content)
 
 	// Generate slug from title or filename

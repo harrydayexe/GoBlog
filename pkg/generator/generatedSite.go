@@ -13,3 +13,10 @@ type GeneratedBlog struct {
 	Index []byte            // Index contains the raw HTML for the blog index page
 	Tags  map[string][]byte // Tags maps each tag name to its tag page HTML
 }
+
+func NewEmptyGeneratedBlog() *GeneratedBlog {
+	return &GeneratedBlog{
+		Posts: make(map[string][]byte),
+		Tags:  make(map[string][]byte),
+	}
+}
