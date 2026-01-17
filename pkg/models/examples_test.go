@@ -14,7 +14,7 @@ func Example() {
 		Date:        time.Date(2024, 3, 15, 0, 0, 0, 0, time.UTC),
 		Description: "An introduction to Go programming",
 		Tags:        []string{"go", "tutorial"},
-		Content:     "<p>Welcome to Go programming!</p>",
+		Content:     []byte("<p>Welcome to Go programming!</p>"),
 	}
 
 	// Generate a URL-friendly slug
