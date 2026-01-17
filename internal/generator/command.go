@@ -18,6 +18,10 @@ var GeneratorCommand cli.Command = cli.Command{
 			Name:      InputPostsDirArgName,
 			UsageText: "directory containing markdown posts",
 		},
+		&cli.StringArg{
+			Name:      OutputDirArgName,
+			UsageText: "directory to write the generated blog to",
+		},
 	},
 	Flags: []cli.Flag{
 		&cli.BoolFlag{
