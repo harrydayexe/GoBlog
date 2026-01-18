@@ -2,6 +2,7 @@ package utilities
 
 import (
 	"os"
+	"path/filepath"
 
 	"github.com/harrydayexe/GoBlog/v2/internal/errors"
 )
@@ -12,16 +13,18 @@ func GetDirectoryFromInput(path string, nonexistentAllowed bool) (string, error)
 		return "", errors.NewPathNotSpecifiedError()
 	}
 
-	info, err := os.Stat(path)
+	dirPath := filepath.Clean(path)
+
+	info, err := os.Stat(dirPath)
 	if err != nil {
 		if os.IsNotExist(err) && nonexistentAllowed {
-			return path, nil
+			return dirPath, nil
 		}
 		return "", errors.NewDirectoryInaccessibleError(err)
 	}
 	if !info.IsDir() {
-		return "", errors.NewNotADirectoryError(path)
+		return "", errors.NewNotADirectoryError(dirPath)
 	}
 
-	return path, nil
+	return dirPath, nil
 }
