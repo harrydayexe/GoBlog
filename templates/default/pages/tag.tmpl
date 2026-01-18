@@ -1,0 +1,51 @@
+{{define "content"}}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <!-- Tag Header -->
+    <section class="mb-12">
+        <h1 class="text-4xl font-bold text-gray-900 mb-4">
+            Posts tagged with <span class="text-blue-600">#{{.Tag}}</span>
+        </h1>
+        <p class="text-gray-600">
+            {{.PostCount}} {{if eq .PostCount 1}}post{{else}}posts{{end}} found
+        </p>
+    </section>
+
+    <!-- Posts Grid -->
+    {{if .Posts}}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        {{range .Posts}}
+            {{template "post-card" .}}
+        {{end}}
+    </div>
+    {{else}}
+    <!-- Empty State -->
+    <div class="text-center py-16">
+        <svg class="mx-auto h-24 w-24 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
+        </svg>
+        <h3 class="mt-4 text-lg font-medium text-gray-900">No posts found</h3>
+        <p class="mt-2 text-gray-500">There are no posts with the tag "{{.Tag}}".</p>
+        <div class="mt-6">
+            <a href="/" class="text-blue-600 hover:text-blue-800 font-medium inline-flex items-center">
+                <svg class="mr-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                </svg>
+                Back to Home
+            </a>
+        </div>
+    </div>
+    {{end}}
+
+    <!-- Back Navigation -->
+    {{if .Posts}}
+    <div class="mt-12 pt-8 border-t border-gray-200">
+        <a href="/" class="text-blue-600 hover:text-blue-800 font-medium inline-flex items-center">
+            <svg class="mr-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+            </svg>
+            Back to Home
+        </a>
+    </div>
+    {{end}}
+</div>
+{{end}}
