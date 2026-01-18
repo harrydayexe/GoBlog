@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/harrydayexe/GoBlog/v2/pkg/config"
 	"github.com/harrydayexe/GoBlog/v2/pkg/generator"
 )
 
@@ -12,7 +13,7 @@ import (
 func Example() {
 	// Create a generator with posts from testdata directory
 	fsys := os.DirFS("testdata")
-	gen := generator.New(fsys, generator.WithRawOutput())
+	gen := generator.New(fsys, config.WithRawOutput())
 
 	// Generate the blog
 	ctx := context.Background()
@@ -30,7 +31,7 @@ func Example() {
 func Example_rawOutput() {
 	// Raw output mode generates HTML without templates
 	fsys := os.DirFS("testdata")
-	gen := generator.New(fsys, generator.WithRawOutput())
+	gen := generator.New(fsys, config.WithRawOutput())
 
 	ctx := context.Background()
 	blog, err := gen.Generate(ctx)
@@ -62,12 +63,14 @@ func ExampleNewWithConfig() {
 	fsys := os.DirFS("testdata")
 
 	// Create a custom configuration
-	config := &generator.GeneratorConfig{
-		PostsDir:  fsys,
-		RawOutput: true,
+	cfg := generator.GeneratorConfig{
+		CommonConfig: config.CommonConfig{
+			RawOutput: true,
+		},
+		PostsDir: fsys,
 	}
 
-	gen := generator.NewWithConfig(config)
+	gen := generator.NewWithConfig(cfg)
 
 	if gen != nil {
 		fmt.Println("Generator created with custom config")
@@ -78,7 +81,7 @@ func ExampleNewWithConfig() {
 // ExampleGenerator_Generate demonstrates generating a blog.
 func ExampleGenerator_Generate() {
 	fsys := os.DirFS("testdata")
-	gen := generator.New(fsys, generator.WithRawOutput())
+	gen := generator.New(fsys, config.WithRawOutput())
 
 	ctx := context.Background()
 	blog, err := gen.Generate(ctx)
@@ -96,7 +99,7 @@ func ExampleGenerator_Generate() {
 // ExampleGenerator_DebugConfig demonstrates debugging generator configuration.
 func ExampleGenerator_DebugConfig() {
 	fsys := os.DirFS("testdata")
-	gen := generator.New(fsys, generator.WithRawOutput())
+	gen := generator.New(fsys, config.WithRawOutput())
 
 	ctx := context.Background()
 	gen.DebugConfig(ctx)
@@ -110,7 +113,7 @@ func ExampleWithRawOutput() {
 	fsys := os.DirFS("testdata")
 
 	// Enable raw output mode (no templates)
-	gen := generator.New(fsys, generator.WithRawOutput())
+	gen := generator.New(fsys, config.WithRawOutput())
 
 	ctx := context.Background()
 	blog, err := gen.Generate(ctx)
@@ -128,7 +131,7 @@ func ExampleWithRawOutput() {
 // ExampleGeneratedBlog demonstrates working with a GeneratedBlog.
 func ExampleGeneratedBlog() {
 	fsys := os.DirFS("testdata")
-	gen := generator.New(fsys, generator.WithRawOutput())
+	gen := generator.New(fsys, config.WithRawOutput())
 
 	ctx := context.Background()
 	blog, err := gen.Generate(ctx)
