@@ -3,7 +3,7 @@
 [![Go Reference](https://pkg.go.dev/badge/github.com/harrydayexe/GoBlog.svg)](https://pkg.go.dev/github.com/harrydayexe/GoBlog)
 [![Go Report Card](https://goreportcard.com/badge/github.com/harrydayexe/GoBlog)](https://goreportcard.com/report/github.com/harrydayexe/GoBlog)
 [![Test](https://github.com/harrydayexe/GoBlog/actions/workflows/test.yml/badge.svg?event=push)](https://github.com/harrydayexe/GoBlog/actions/workflows/test.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: MIT](https://img.shields.io/badge/License-GPL3-yellow.svg)](LICENSE)
 
 GoBlog is a flexible blog generation and serving system for creating static blog feeds from Markdown files. It provides a powerful parser for Markdown content with YAML frontmatter, as well as multiple deployment options including a CLI tool, Docker image, and embeddable Go package.
 
