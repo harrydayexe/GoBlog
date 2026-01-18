@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"log/slog"
 
+	"github.com/harrydayexe/GoBlog/v2/pkg/config"
 	"github.com/harrydayexe/GoBlog/v2/pkg/models"
 	"github.com/harrydayexe/GoBlog/v2/pkg/parser"
 )
@@ -17,7 +18,7 @@ import (
 // A Generator is safe for concurrent use after creation, but Generate
 // operations should not be called concurrently on the same instance.
 type Generator struct {
-	config *GeneratorConfig
+	config GeneratorConfig
 	logger *slog.Logger
 }
 
@@ -27,22 +28,22 @@ type Generator struct {
 //
 // Options can be provided to customize behavior such as template directories,
 // posts per page, and other generation parameters.
-func New(posts fs.FS, opts ...Option) *Generator {
+func New(posts fs.FS, opts ...config.CommonOption) *Generator {
 
 	// TODO: Validate posts input somehow?
-	config := &GeneratorConfig{
+	config := GeneratorConfig{
 		PostsDir: posts,
 	}
 
 	// Run options on config
 	for _, opt := range opts {
-		opt(config)
+		opt(&config.CommonConfig)
 	}
 
 	return NewWithConfig(config)
 }
 
-func NewWithConfig(config *GeneratorConfig) *Generator {
+func NewWithConfig(config GeneratorConfig) *Generator {
 	logger := slog.Default()
 
 	gen := Generator{
