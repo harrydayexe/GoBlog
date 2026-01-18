@@ -16,7 +16,7 @@ func TestNewDirectoryWriter(t *testing.T) {
 	tests := []struct {
 		name        string
 		outputDir   string
-		opts        []config.CommonOption
+		opts        []config.Option
 		wantRawOut  bool
 	}{
 		{
@@ -28,7 +28,7 @@ func TestNewDirectoryWriter(t *testing.T) {
 		{
 			name:       "with RawOutput option",
 			outputDir:  "/tmp/blog-raw",
-			opts:       []config.CommonOption{config.WithRawOutput()},
+			opts:       []config.Option{config.WithRawOutput()},
 			wantRawOut: true,
 		},
 	}
@@ -39,34 +39,13 @@ func TestNewDirectoryWriter(t *testing.T) {
 
 			writer := NewDirectoryWriter(tt.outputDir, tt.opts...)
 
-			if writer.config.OutputPath != tt.outputDir {
-				t.Errorf("OutputPath = %q, want %q", writer.config.OutputPath, tt.outputDir)
+			if writer.outputDir != tt.outputDir {
+				t.Errorf("outputDir = %q, want %q", writer.outputDir, tt.outputDir)
 			}
-			if writer.config.RawOutput != tt.wantRawOut {
-				t.Errorf("RawOutput = %v, want %v", writer.config.RawOutput, tt.wantRawOut)
+			if writer.RawOutput.RawOutput != tt.wantRawOut {
+				t.Errorf("RawOutput = %v, want %v", writer.RawOutput.RawOutput, tt.wantRawOut)
 			}
 		})
-	}
-}
-
-// TestNewDirectoryWriterWithConfig tests explicit config construction.
-func TestNewDirectoryWriterWithConfig(t *testing.T) {
-	t.Parallel()
-
-	cfg := DirectoryWriterConfig{
-		CommonConfig: config.CommonConfig{
-			RawOutput: true,
-		},
-		OutputPath: "/var/www/blog",
-	}
-
-	writer := NewDirectoryWriterWithConfig(cfg)
-
-	if writer.config.OutputPath != cfg.OutputPath {
-		t.Errorf("OutputPath = %q, want %q", writer.config.OutputPath, cfg.OutputPath)
-	}
-	if writer.config.RawOutput != cfg.RawOutput {
-		t.Errorf("RawOutput = %v, want %v", writer.config.RawOutput, cfg.RawOutput)
 	}
 }
 

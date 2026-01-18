@@ -20,7 +20,7 @@ func TestNew(t *testing.T) {
 	tests := []struct {
 		name    string
 		posts   fs.FS
-		opts    []config.CommonOption
+		opts    []config.Option
 		wantNil bool
 	}{
 		{
@@ -32,7 +32,7 @@ func TestNew(t *testing.T) {
 		{
 			name:    "with valid filesystem and RawOutput option",
 			posts:   testFS,
-			opts:    []config.CommonOption{config.WithRawOutput()},
+			opts:    []config.Option{config.WithRawOutput()},
 			wantNil: false,
 		},
 	}
@@ -56,34 +56,6 @@ func TestNew(t *testing.T) {
 	}
 }
 
-// TestNewWithConfig tests creating a new Generator with direct config.
-func TestNewWithConfig(t *testing.T) {
-	t.Parallel()
-
-	testFS := os.DirFS("testdata")
-
-	cfg := GeneratorConfig{
-		CommonConfig: config.CommonConfig{
-			RawOutput: true,
-		},
-		PostsDir: testFS,
-	}
-
-	gen := NewWithConfig(cfg)
-
-	if gen == nil {
-		t.Fatal("NewWithConfig() returned nil")
-	}
-
-	if gen.logger == nil {
-		t.Error("NewWithConfig() returned generator with nil logger")
-	}
-
-	if !gen.config.RawOutput {
-		t.Error("NewWithConfig() config RawOutput = false, want true")
-	}
-}
-
 // TestNew_NilFilesystem tests creating a generator with nil filesystem.
 func TestNew_NilFilesystem(t *testing.T) {
 	t.Parallel()
@@ -96,8 +68,8 @@ func TestNew_NilFilesystem(t *testing.T) {
 		t.Fatal("New(nil) returned nil")
 	}
 
-	if gen.config.PostsDir != nil {
-		t.Error("New(nil) should have nil PostsDir in config")
+	if gen.PostsDir != nil {
+		t.Error("New(nil) should have nil PostsDir")
 	}
 }
 
@@ -309,13 +281,13 @@ func TestWithRawOutput(t *testing.T) {
 
 	// Without option
 	genWithout := New(testFS)
-	if genWithout.config.RawOutput {
+	if genWithout.RawOutput.RawOutput {
 		t.Error("Generator without config.WithRawOutput() has RawOutput = true, want false")
 	}
 
 	// With option
 	genWith := New(testFS, config.WithRawOutput())
-	if !genWith.config.RawOutput {
+	if !genWith.RawOutput.RawOutput {
 		t.Error("Generator with config.WithRawOutput() has RawOutput = false, want true")
 	}
 }
@@ -386,31 +358,25 @@ func TestGeneratedBlog_NewEmptyGeneratedBlog(t *testing.T) {
 	}
 }
 
-// TestGeneratorConfig_String tests the String method.
-func TestGeneratorConfig_String(t *testing.T) {
+// TestGenerator_String tests the String method.
+func TestGenerator_String(t *testing.T) {
 	t.Parallel()
+
+	testFS := os.DirFS("testdata")
 
 	tests := []struct {
 		name      string
-		config    GeneratorConfig
+		gen       *Generator
 		wantEmpty bool
 	}{
 		{
-			name: "with RawOutput true",
-			config: GeneratorConfig{
-				CommonConfig: config.CommonConfig{
-					RawOutput: true,
-				},
-			},
+			name:      "with RawOutput true",
+			gen:       New(testFS, config.WithRawOutput()),
 			wantEmpty: false,
 		},
 		{
-			name: "with RawOutput false",
-			config: GeneratorConfig{
-				CommonConfig: config.CommonConfig{
-					RawOutput: false,
-				},
-			},
+			name:      "with RawOutput false",
+			gen:       New(testFS),
 			wantEmpty: false,
 		},
 	}
@@ -419,7 +385,7 @@ func TestGeneratorConfig_String(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			got := tt.config.String()
+			got := tt.gen.String()
 
 			if (len(got) == 0) != tt.wantEmpty {
 				t.Errorf("String() = %q, wantEmpty %v", got, tt.wantEmpty)

@@ -58,26 +58,6 @@ func ExampleNew() {
 	// Output: Generator created
 }
 
-// ExampleNewWithConfig demonstrates creating a generator with custom configuration.
-func ExampleNewWithConfig() {
-	fsys := os.DirFS("testdata")
-
-	// Create a custom configuration
-	cfg := generator.GeneratorConfig{
-		CommonConfig: config.CommonConfig{
-			RawOutput: true,
-		},
-		PostsDir: fsys,
-	}
-
-	gen := generator.NewWithConfig(cfg)
-
-	if gen != nil {
-		fmt.Println("Generator created with custom config")
-	}
-	// Output: Generator created with custom config
-}
-
 // ExampleGenerator_Generate demonstrates generating a blog.
 func ExampleGenerator_Generate() {
 	fsys := os.DirFS("testdata")
