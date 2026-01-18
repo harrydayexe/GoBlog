@@ -3,26 +3,26 @@ package outputter
 import (
 	"fmt"
 
+	"github.com/harrydayexe/GoBlog/v2/pkg/config"
 	"github.com/harrydayexe/GoBlog/v2/pkg/generator"
 )
 
 type DirectoryWriterConfig struct {
+	config.CommonConfig
 	OutputPath string
 }
-
-type DirectoryWriterOption func(*DirectoryWriterConfig)
 
 type DirectoryWriter struct {
 	config DirectoryWriterConfig
 }
 
-func NewDirectoryWriter(outputDir string, opts ...DirectoryWriterOption) DirectoryWriter {
+func NewDirectoryWriter(outputDir string, opts ...config.CommonOption) DirectoryWriter {
 	config := DirectoryWriterConfig{
 		OutputPath: outputDir,
 	}
 
 	for _, opt := range opts {
-		opt(&config)
+		opt(&config.CommonConfig)
 	}
 
 	return NewDirectoryWriterWithConfig(config)
