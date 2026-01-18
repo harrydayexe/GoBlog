@@ -18,8 +18,21 @@ import (
 // A Generator is safe for concurrent use after creation, but Generate
 // operations should not be called concurrently on the same instance.
 type Generator struct {
-	config GeneratorConfig
-	logger *slog.Logger
+	PostsDir fs.FS // The filesystem containing the input posts in markdown
+
+	config.RawOutput
+	config.TemplatesDir               // The filesystem containing the templates to use
+	ParserConfig        parser.Config // The config to use when parsing
+	logger              *slog.Logger
+}
+
+func (c Generator) String() string {
+	return fmt.Sprintf(`Generator Config
+- RawOutput           %t
+- Templates Directory %t`,
+		c.RawOutput,
+		c.TemplatesDir.TemplatesDir != nil,
+	)
 }
 
 // New creates a new Generator with the specified options.
@@ -28,27 +41,21 @@ type Generator struct {
 //
 // Options can be provided to customize behavior such as template directories,
 // posts per page, and other generation parameters.
-func New(posts fs.FS, opts ...config.CommonOption) *Generator {
+func New(posts fs.FS, opts ...config.Option) *Generator {
+	logger := slog.Default()
 
-	// TODO: Validate posts input somehow?
-	config := GeneratorConfig{
+	gen := Generator{
 		PostsDir: posts,
+		logger:   logger,
 	}
 
 	// Run options on config
 	for _, opt := range opts {
-		opt(&config.CommonConfig)
-	}
-
-	return NewWithConfig(config)
-}
-
-func NewWithConfig(config GeneratorConfig) *Generator {
-	logger := slog.Default()
-
-	gen := Generator{
-		config: config,
-		logger: logger,
+		if opt.WithRawOutputFunc != nil {
+			opt.WithRawOutputFunc(&gen.RawOutput)
+		} else if opt.WithTemplatesFunc != nil {
+			opt.WithTemplatesFunc(&gen.TemplatesDir)
+		}
 	}
 
 	return &gen
@@ -83,15 +90,15 @@ func NewWithConfig(config GeneratorConfig) *Generator {
 // template rendering encounters an error.
 func (g *Generator) Generate(ctx context.Context) (*GeneratedBlog, error) {
 	g.logger.DebugContext(ctx, "Creating parser for generate call")
-	p := parser.NewWithConfig(&g.config.ParserConfig)
+	p := parser.NewWithConfig(&g.ParserConfig)
 
-	posts, err := p.ParseDirectory(ctx, g.config.PostsDir)
+	posts, err := p.ParseDirectory(ctx, g.PostsDir)
 	if err != nil {
 		return nil, err
 	}
 
 	// Step 2: If RawOutput mode, return immediately with raw HTML
-	if g.config.RawOutput {
+	if g.RawOutput.RawOutput {
 		return g.assembleRawBlog(posts), nil
 	}
 
@@ -109,7 +116,7 @@ func (g *Generator) Generate(ctx context.Context) (*GeneratedBlog, error) {
 // The log output will only appear if the logger is configured to show debug
 // level messages.
 func (g *Generator) DebugConfig(ctx context.Context) {
-	g.logger.DebugContext(ctx, g.config.String())
+	g.logger.DebugContext(ctx, g.String())
 }
 
 func (g *Generator) assembleRawBlog(posts models.PostList) *GeneratedBlog {
