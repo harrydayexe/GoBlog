@@ -17,6 +17,7 @@ func CliErrorHandler(err error) {
 			os.Exit(1)
 		} else {
 			fmt.Fprintln(os.Stdout, inputDirectoryError.HandlerString())
+			fmt.Fprintln(os.Stdout, "Use --help for more info")
 		}
 	}
 }
