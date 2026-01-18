@@ -4,7 +4,6 @@ import (
 	"context"
 	"io/fs"
 	"os"
-	"path/filepath"
 
 	"github.com/harrydayexe/GoBlog/v2/internal/utilities"
 	"github.com/harrydayexe/GoBlog/v2/pkg/config"
@@ -27,13 +26,24 @@ func NewGeneratorCommand(ctx context.Context, c *cli.Command) error {
 	if err != nil {
 		return err
 	}
-	outputDir = filepath.Clean(c.StringArg(OutputDirArgName))
 
 	opts := []config.Option{}
 
 	rawOutputFlag := c.Bool(RawOutputFlagName)
 	if rawOutputFlag {
 		opts = append(opts, config.WithRawOutput())
+	}
+
+	templateDirPath := c.String(TemplateDirFlagName)
+	if templateDirPath != "" {
+		templateDirPath, err = utilities.GetDirectoryFromInput(templateDirPath, false)
+		if err != nil {
+			return nil
+		}
+
+		templateDir := os.DirFS(templateDirPath)
+
+		opts = append(opts, config.WithTemplatesDir(templateDir))
 	}
 
 	handler := outputter.NewDirectoryWriter(outputDir, opts...)

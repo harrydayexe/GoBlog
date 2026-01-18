@@ -30,5 +30,10 @@ var GeneratorCommand cli.Command = cli.Command{
 			Usage:   "output raw HTML without template wrapper (skips tag pages and template rendering)",
 			Value:   false,
 		},
+		&cli.StringFlag{
+			Name:    TemplateDirFlagName,
+			Aliases: []string{"t"},
+			Usage:   "directory of templates to use when rendering",
+		},
 	},
 }
