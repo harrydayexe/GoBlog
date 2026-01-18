@@ -1,25 +1,27 @@
 package utilities
 
 import (
-	"io/fs"
 	"os"
 
 	"github.com/harrydayexe/GoBlog/v2/internal/errors"
 )
 
 // GetDirectoryFromInput validates a path and returns it as an fs.FS.
-func GetDirectoryFromInput(path string) (fs.FS, error) {
+func GetDirectoryFromInput(path string, nonexistentAllowed bool) (string, error) {
 	if path == "" {
-		return nil, errors.NewPathNotSpecifiedError()
+		return "", errors.NewPathNotSpecifiedError()
 	}
 
 	info, err := os.Stat(path)
 	if err != nil {
-		return nil, errors.NewDirectoryInaccessibleError(err)
+		if os.IsNotExist(err) && nonexistentAllowed {
+			return path, nil
+		}
+		return "", errors.NewDirectoryInaccessibleError(err)
 	}
 	if !info.IsDir() {
-		return nil, errors.NewNotADirectoryError(path)
+		return "", errors.NewNotADirectoryError(path)
 	}
 
-	return os.DirFS(path), nil
+	return path, nil
 }

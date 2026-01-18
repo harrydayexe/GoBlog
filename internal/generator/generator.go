@@ -3,6 +3,8 @@ package generator
 import (
 	"context"
 	"io/fs"
+	"os"
+	"path/filepath"
 
 	"github.com/harrydayexe/GoBlog/v2/internal/utilities"
 	"github.com/harrydayexe/GoBlog/v2/pkg/config"
@@ -14,11 +16,18 @@ import (
 // NewGeneratorCommand handles the generate command by processing markdown posts into HTML.
 func NewGeneratorCommand(ctx context.Context, c *cli.Command) error {
 	inputPostsDir := c.StringArg(InputPostsDirArgName)
-	outputDir := c.StringArg(OutputDirArgName)
-	postsFsys, err := utilities.GetDirectoryFromInput(inputPostsDir)
+	inputPostsDir, err := utilities.GetDirectoryFromInput(inputPostsDir, false)
 	if err != nil {
 		return err
 	}
+	postsFsys := os.DirFS(inputPostsDir)
+
+	outputDirString := c.StringArg(OutputDirArgName)
+	outputDir, err := utilities.GetDirectoryFromInput(outputDirString, true)
+	if err != nil {
+		return err
+	}
+	outputDir = filepath.Clean(c.StringArg(OutputDirArgName))
 
 	opts := []config.CommonOption{}
 
