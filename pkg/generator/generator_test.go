@@ -7,6 +7,8 @@ import (
 	"os"
 	"testing"
 	"time"
+
+	"github.com/harrydayexe/GoBlog/v2/pkg/config"
 )
 
 // TestNew tests creating a new Generator with various options.
@@ -18,7 +20,7 @@ func TestNew(t *testing.T) {
 	tests := []struct {
 		name    string
 		posts   fs.FS
-		opts    []Option
+		opts    []config.CommonOption
 		wantNil bool
 	}{
 		{
@@ -30,7 +32,7 @@ func TestNew(t *testing.T) {
 		{
 			name:    "with valid filesystem and RawOutput option",
 			posts:   testFS,
-			opts:    []Option{WithRawOutput()},
+			opts:    []config.CommonOption{config.WithRawOutput()},
 			wantNil: false,
 		},
 	}
@@ -46,9 +48,6 @@ func TestNew(t *testing.T) {
 			}
 
 			if gen != nil {
-				if gen.config == nil {
-					t.Error("New() returned generator with nil config")
-				}
 				if gen.logger == nil {
 					t.Error("New() returned generator with nil logger")
 				}
@@ -63,19 +62,17 @@ func TestNewWithConfig(t *testing.T) {
 
 	testFS := os.DirFS("testdata")
 
-	config := &GeneratorConfig{
-		PostsDir:  testFS,
-		RawOutput: true,
+	cfg := GeneratorConfig{
+		CommonConfig: config.CommonConfig{
+			RawOutput: true,
+		},
+		PostsDir: testFS,
 	}
 
-	gen := NewWithConfig(config)
+	gen := NewWithConfig(cfg)
 
 	if gen == nil {
 		t.Fatal("NewWithConfig() returned nil")
-	}
-
-	if gen.config != config {
-		t.Error("NewWithConfig() did not use provided config")
 	}
 
 	if gen.logger == nil {
@@ -109,7 +106,7 @@ func TestGenerate_RawOutput(t *testing.T) {
 	t.Parallel()
 
 	testFS := os.DirFS("testdata")
-	gen := New(testFS, WithRawOutput())
+	gen := New(testFS, config.WithRawOutput())
 
 	ctx := context.Background()
 	blog, err := gen.Generate(ctx)
@@ -140,7 +137,7 @@ func TestGenerate_MultiplePosts(t *testing.T) {
 	t.Parallel()
 
 	testFS := os.DirFS("testdata")
-	gen := New(testFS, WithRawOutput())
+	gen := New(testFS, config.WithRawOutput())
 
 	ctx := context.Background()
 	blog, err := gen.Generate(ctx)
@@ -172,7 +169,7 @@ func TestGenerate_EmptyDirectory(t *testing.T) {
 	tempDir := t.TempDir()
 	testFS := os.DirFS(tempDir)
 
-	gen := New(testFS, WithRawOutput())
+	gen := New(testFS, config.WithRawOutput())
 
 	ctx := context.Background()
 	blog, err := gen.Generate(ctx)
@@ -194,7 +191,7 @@ func TestGenerate_WithParserErrors(t *testing.T) {
 	// Use parser's testdata which contains invalid files
 	testFS := os.DirFS("../parser/testdata")
 
-	gen := New(testFS, WithRawOutput())
+	gen := New(testFS, config.WithRawOutput())
 
 	ctx := context.Background()
 	blog, err := gen.Generate(ctx)
@@ -215,7 +212,7 @@ func TestGenerate_ContextCanceled(t *testing.T) {
 	t.Parallel()
 
 	testFS := os.DirFS("testdata")
-	gen := New(testFS, WithRawOutput())
+	gen := New(testFS, config.WithRawOutput())
 
 	// Create a pre-canceled context
 	ctx, cancel := context.WithCancel(context.Background())
@@ -241,7 +238,7 @@ func TestGenerate_ContextTimeout(t *testing.T) {
 	t.Parallel()
 
 	testFS := os.DirFS("testdata")
-	gen := New(testFS, WithRawOutput())
+	gen := New(testFS, config.WithRawOutput())
 
 	// Create a context with very short timeout (1 nanosecond - guaranteed to expire)
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Nanosecond)
@@ -290,7 +287,7 @@ func TestDebugConfig(t *testing.T) {
 	t.Parallel()
 
 	testFS := os.DirFS("testdata")
-	gen := New(testFS, WithRawOutput())
+	gen := New(testFS, config.WithRawOutput())
 
 	ctx := context.Background()
 
@@ -313,13 +310,13 @@ func TestWithRawOutput(t *testing.T) {
 	// Without option
 	genWithout := New(testFS)
 	if genWithout.config.RawOutput {
-		t.Error("Generator without WithRawOutput() has RawOutput = true, want false")
+		t.Error("Generator without config.WithRawOutput() has RawOutput = true, want false")
 	}
 
 	// With option
-	genWith := New(testFS, WithRawOutput())
+	genWith := New(testFS, config.WithRawOutput())
 	if !genWith.config.RawOutput {
-		t.Error("Generator with WithRawOutput() has RawOutput = false, want true")
+		t.Error("Generator with config.WithRawOutput() has RawOutput = false, want true")
 	}
 }
 
@@ -328,7 +325,7 @@ func TestAssembleRawBlog(t *testing.T) {
 	t.Parallel()
 
 	testFS := os.DirFS("testdata")
-	gen := New(testFS, WithRawOutput())
+	gen := New(testFS, config.WithRawOutput())
 
 	ctx := context.Background()
 	blog, err := gen.Generate(ctx)
@@ -401,14 +398,18 @@ func TestGeneratorConfig_String(t *testing.T) {
 		{
 			name: "with RawOutput true",
 			config: GeneratorConfig{
-				RawOutput: true,
+				CommonConfig: config.CommonConfig{
+					RawOutput: true,
+				},
 			},
 			wantEmpty: false,
 		},
 		{
 			name: "with RawOutput false",
 			config: GeneratorConfig{
-				RawOutput: false,
+				CommonConfig: config.CommonConfig{
+					RawOutput: false,
+				},
 			},
 			wantEmpty: false,
 		},

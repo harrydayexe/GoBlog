@@ -18,19 +18,20 @@ func TestGetDirectoryFromInput_ValidAbsolutePath(t *testing.T) {
 	// Create a temporary directory
 	tempDir := t.TempDir()
 
-	// Get the filesystem
-	result, err := GetDirectoryFromInput(tempDir)
+	// Get the path
+	result, err := GetDirectoryFromInput(tempDir, false)
 	if err != nil {
 		t.Fatalf("GetDirectoryFromInput() error = %v, want nil", err)
 	}
 
-	// Verify it's a valid fs.FS
-	if result == nil {
-		t.Fatal("GetDirectoryFromInput() returned nil fs.FS")
+	// Verify it's a valid path
+	if result == "" {
+		t.Fatal("GetDirectoryFromInput() returned empty string")
 	}
 
-	// Verify we can read the directory
-	_, err = fs.ReadDir(result, ".")
+	// Verify we can read the directory using os.DirFS
+	testFS := os.DirFS(result)
+	_, err = fs.ReadDir(testFS, ".")
 	if err != nil {
 		t.Errorf("fs.ReadDir() error = %v, want nil", err)
 	}
@@ -58,15 +59,15 @@ func TestGetDirectoryFromInput_ValidRelativePath(t *testing.T) {
 		t.Fatalf("os.Mkdir() error = %v", err)
 	}
 
-	// Get the filesystem using relative path
-	result, err := GetDirectoryFromInput(subDir)
+	// Get the path using relative path
+	result, err := GetDirectoryFromInput(subDir, false)
 	if err != nil {
 		t.Fatalf("GetDirectoryFromInput() error = %v, want nil", err)
 	}
 
-	// Verify it's a valid fs.FS
-	if result == nil {
-		t.Fatal("GetDirectoryFromInput() returned nil fs.FS")
+	// Verify it's a valid path
+	if result == "" {
+		t.Fatal("GetDirectoryFromInput() returned empty string")
 	}
 }
 
@@ -74,7 +75,7 @@ func TestGetDirectoryFromInput_ValidRelativePath(t *testing.T) {
 func TestGetDirectoryFromInput_EmptyPath(t *testing.T) {
 	t.Parallel()
 
-	_, err := GetDirectoryFromInput("")
+	_, err := GetDirectoryFromInput("", false)
 	if err == nil {
 		t.Fatal("GetDirectoryFromInput(\"\") expected error, got nil")
 	}
@@ -100,7 +101,7 @@ func TestGetDirectoryFromInput_NonExistentPath(t *testing.T) {
 
 	nonExistentPath := filepath.Join(t.TempDir(), "does-not-exist")
 
-	_, err := GetDirectoryFromInput(nonExistentPath)
+	_, err := GetDirectoryFromInput(nonExistentPath, false)
 	if err == nil {
 		t.Fatal("GetDirectoryFromInput() expected error for non-existent path, got nil")
 	}
@@ -131,7 +132,7 @@ func TestGetDirectoryFromInput_FileNotDirectory(t *testing.T) {
 		t.Fatalf("os.WriteFile() error = %v", err)
 	}
 
-	_, err := GetDirectoryFromInput(tempFile)
+	_, err := GetDirectoryFromInput(tempFile, false)
 	if err == nil {
 		t.Fatal("GetDirectoryFromInput() expected error for file path, got nil")
 	}
@@ -159,17 +160,18 @@ func TestGetDirectoryFromInput_FileNotDirectory(t *testing.T) {
 func TestGetDirectoryFromInput_CurrentDirectory(t *testing.T) {
 	t.Parallel()
 
-	result, err := GetDirectoryFromInput(".")
+	result, err := GetDirectoryFromInput(".", false)
 	if err != nil {
 		t.Fatalf("GetDirectoryFromInput(\".\") error = %v, want nil", err)
 	}
 
-	if result == nil {
-		t.Fatal("GetDirectoryFromInput(\".\") returned nil fs.FS")
+	if result == "" {
+		t.Fatal("GetDirectoryFromInput(\".\") returned empty string")
 	}
 
-	// Verify we can read the directory
-	_, err = fs.ReadDir(result, ".")
+	// Verify we can read the directory using os.DirFS
+	testFS := os.DirFS(result)
+	_, err = fs.ReadDir(testFS, ".")
 	if err != nil {
 		t.Errorf("fs.ReadDir() error = %v, want nil", err)
 	}
@@ -179,17 +181,18 @@ func TestGetDirectoryFromInput_CurrentDirectory(t *testing.T) {
 func TestGetDirectoryFromInput_ParentDirectory(t *testing.T) {
 	t.Parallel()
 
-	result, err := GetDirectoryFromInput("..")
+	result, err := GetDirectoryFromInput("..", false)
 	if err != nil {
 		t.Fatalf("GetDirectoryFromInput(\"..\") error = %v, want nil", err)
 	}
 
-	if result == nil {
-		t.Fatal("GetDirectoryFromInput(\"..\") returned nil fs.FS")
+	if result == "" {
+		t.Fatal("GetDirectoryFromInput(\"..\") returned empty string")
 	}
 
-	// Verify we can read the directory
-	_, err = fs.ReadDir(result, ".")
+	// Verify we can read the directory using os.DirFS
+	testFS := os.DirFS(result)
+	_, err = fs.ReadDir(testFS, ".")
 	if err != nil {
 		t.Errorf("fs.ReadDir() error = %v, want nil", err)
 	}
