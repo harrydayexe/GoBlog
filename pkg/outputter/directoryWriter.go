@@ -8,17 +8,6 @@ import (
 	"github.com/harrydayexe/GoBlog/v2/pkg/generator"
 )
 
-// DirectoryWriterConfig contains configuration for DirectoryWriter.
-//
-// It embeds config.CommonConfig to inherit shared options like RawOutput.
-// OutputPath specifies the directory where HTML files will be written.
-type DirectoryWriterConfig struct {
-	config.CommonConfig
-	// OutputPath is the directory where the blog files will be written.
-	// The directory will be created if it does not exist.
-	OutputPath string
-}
-
 // DirectoryWriter is an Outputter implementation that writes blog content
 // as static HTML files to a filesystem directory.
 //
@@ -28,7 +17,8 @@ type DirectoryWriterConfig struct {
 // DirectoryWriter is safe for concurrent use, though concurrent writes to
 // the same output directory may result in filesystem race conditions.
 type DirectoryWriter struct {
-	config DirectoryWriterConfig
+	config.RawOutput
+	outputDir string
 }
 
 // NewDirectoryWriter creates a new DirectoryWriter with the specified output
@@ -47,31 +37,18 @@ type DirectoryWriter struct {
 // This is the recommended constructor for most use cases. Use
 // NewDirectoryWriterWithConfig when you need to provide an explicit
 // DirectoryWriterConfig struct.
-func NewDirectoryWriter(outputDir string, opts ...config.CommonOption) DirectoryWriter {
-	config := DirectoryWriterConfig{
-		OutputPath: outputDir,
+func NewDirectoryWriter(outputDir string, opts ...config.Option) DirectoryWriter {
+	dw := DirectoryWriter{
+		outputDir: outputDir,
 	}
 
 	for _, opt := range opts {
-		opt(&config.CommonConfig)
+		if opt.WithRawOutputFunc != nil {
+			opt.WithRawOutputFunc(&dw.RawOutput)
+		}
 	}
 
-	return NewDirectoryWriterWithConfig(config)
-}
-
-// NewDirectoryWriterWithConfig creates a new DirectoryWriter with an explicit
-// configuration struct.
-//
-// This constructor is useful when you need to programmatically build a
-// DirectoryWriterConfig or when working with configuration systems that
-// populate config structs.
-//
-// For most use cases, prefer NewDirectoryWriter which uses the functional
-// options pattern.
-func NewDirectoryWriterWithConfig(config DirectoryWriterConfig) DirectoryWriter {
-	return DirectoryWriter{
-		config: config,
-	}
+	return dw
 }
 
 // HandleGeneratedBlog writes the generated blog content to the filesystem
@@ -100,15 +77,15 @@ func NewDirectoryWriterWithConfig(config DirectoryWriterConfig) DirectoryWriter 
 // created successfully while others were not. The output directory may
 // be in a partial state.
 func (dw DirectoryWriter) HandleGeneratedBlog(blog *generator.GeneratedBlog) error {
-	if err := writeMapToFiles(blog.Posts, dw.config.OutputPath); err != nil {
+	if err := writeMapToFiles(blog.Posts, dw.outputDir); err != nil {
 		return err
 	}
-	if !dw.config.RawOutput {
-		if err := writeMapToFiles(blog.Tags, filepath.Join(dw.config.OutputPath, "tags")); err != nil {
+	if !dw.RawOutput.RawOutput {
+		if err := writeMapToFiles(blog.Tags, filepath.Join(dw.outputDir, "tags")); err != nil {
 			return err
 		}
 	}
-	if err := os.WriteFile(filepath.Join(dw.config.OutputPath, "index.html"), blog.Index, 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dw.outputDir, "index.html"), blog.Index, 0644); err != nil {
 		return err
 	}
 
