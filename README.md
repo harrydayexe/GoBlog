@@ -104,6 +104,80 @@ goblog gen posts/ output/
 goblog serve posts/ --port 8080
 ```
 
+## Advanced Features
+
+### Raw Output Mode
+
+GoBlog supports raw HTML output mode for advanced use cases where you need direct access to the generated HTML without template wrappers. This is useful when:
+
+- Integrating GoBlog output into an existing site or CMS
+- Building custom templates in your own application
+- Embedding blog content in other HTML frameworks
+- Processing HTML content programmatically before display
+
+#### Using Raw Output with the CLI
+
+```bash
+# Generate raw HTML files without templates
+goblog gen posts/ output/ --raw
+
+# Or use the short flag
+goblog gen posts/ output/ -r
+```
+
+When raw output mode is enabled:
+- Individual post files contain only the parsed Markdown converted to HTML
+- No template wrapping is applied to the content
+- The `tags/` directory is not created (tag pages are skipped)
+- The `index.html` file is still generated but contains raw HTML
+
+#### Using Raw Output with the Go API
+
+```go
+package main
+
+import (
+    "context"
+    "os"
+
+    "github.com/harrydayexe/GoBlog/v2/pkg/config"
+    "github.com/harrydayexe/GoBlog/v2/pkg/generator"
+    "github.com/harrydayexe/GoBlog/v2/pkg/outputter"
+)
+
+func main() {
+    // Create generator with raw output enabled
+    fsys := os.DirFS("posts/")
+    gen := generator.New(fsys, config.WithRawOutput())
+
+    // Generate the blog
+    blog, err := gen.Generate(context.Background())
+    if err != nil {
+        panic(err)
+    }
+
+    // Access raw HTML bytes directly
+    for slug, htmlContent := range blog.Posts {
+        // Process or wrap htmlContent as needed
+        // htmlContent contains only the parsed Markdown as HTML
+    }
+
+    // Write to disk with raw output mode
+    writer := outputter.NewDirectoryWriter("output/", config.WithRawOutput())
+    writer.HandleGeneratedBlog(blog)
+}
+```
+
+#### What to Expect from Raw Output
+
+When `RawOutput` is enabled, the `GeneratedBlog` structure contains:
+
+- **`Posts` map**: Keys are post slugs (derived from filenames), values are raw HTML byte slices containing only the Markdown content converted to HTML
+- **`Index` field**: Contains raw HTML bytes for the index page (currently empty in raw mode)
+- **`Tags` map**: Will be empty - tag pages are not generated in raw output mode
+
+The HTML content is clean, semantic HTML generated from your Markdown without any surrounding structure like `<html>`, `<head>`, or `<body>` tags. This gives you complete control over how to integrate the content into your site.
+
 ## Docker Usage 
 
 ```bash
