@@ -82,6 +82,12 @@ func NewDirectoryWriterWithConfig(config DirectoryWriterConfig) DirectoryWriter 
 //   - {slug}.html: individual post files, one per post
 //   - tags/{tag}.html: tag pages (only if RawOutput is false)
 //
+// When RawOutput mode is enabled (via config.WithRawOutput()), the tags/
+// directory is not created and individual post files contain only raw HTML
+// fragments without template wrappers. This is useful when you plan to
+// wrap the content with your own templates or integrate it into an existing
+// site structure.
+//
 // All necessary directories are created automatically with permissions 0755.
 // Files are written with permissions 0644.
 //

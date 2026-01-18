@@ -27,7 +27,7 @@ var GeneratorCommand cli.Command = cli.Command{
 		&cli.BoolFlag{
 			Name:    RawOutputFlagName,
 			Aliases: []string{"r"},
-			Usage:   "output raw HTML without template wrapper",
+			Usage:   "output raw HTML without template wrapper (skips tag pages and template rendering)",
 			Value:   false,
 		},
 	},

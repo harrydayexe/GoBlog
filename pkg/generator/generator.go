@@ -62,6 +62,19 @@ func NewWithConfig(config GeneratorConfig) *Generator {
 // is in-memory only; callers are responsible for writing to disk or serving
 // via HTTP as needed.
 //
+// # Output Mode Behavior
+//
+// When RawOutput is disabled (default):
+//   - Posts contain fully templated HTML pages
+//   - Tags map contains rendered tag pages
+//   - Index contains the complete index page with template
+//
+// When RawOutput is enabled (via config.WithRawOutput()):
+//   - Posts contain only the Markdown-to-HTML conversion without templates
+//   - Tags map will be empty (tag generation is skipped)
+//   - Index will be empty or minimal
+//   - Useful for custom integration scenarios
+//
 // Generate respects the provided context and will return early with
 // context.Canceled or context.DeadlineExceeded if the context is canceled
 // or times out.
