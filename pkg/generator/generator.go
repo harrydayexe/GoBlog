@@ -53,8 +53,8 @@ func New(posts fs.FS, opts ...config.Option) *Generator {
 	for _, opt := range opts {
 		if opt.WithRawOutputFunc != nil {
 			opt.WithRawOutputFunc(&gen.RawOutput)
-		} else if opt.WithTemplatesFunc != nil {
-			opt.WithTemplatesFunc(&gen.TemplatesDir)
+		} else if opt.WithTemplatesDirFunc != nil {
+			opt.WithTemplatesDirFunc(&gen.TemplatesDir)
 		}
 	}
 

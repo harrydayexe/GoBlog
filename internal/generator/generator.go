@@ -29,7 +29,7 @@ func NewGeneratorCommand(ctx context.Context, c *cli.Command) error {
 	}
 	outputDir = filepath.Clean(c.StringArg(OutputDirArgName))
 
-	opts := []config.CommonOption{}
+	opts := []config.Option{}
 
 	rawOutputFlag := c.Bool(RawOutputFlagName)
 	if rawOutputFlag {
@@ -41,7 +41,7 @@ func NewGeneratorCommand(ctx context.Context, c *cli.Command) error {
 	return runGenerate(ctx, postsFsys, opts, handler)
 }
 
-func runGenerate(ctx context.Context, postsFsys fs.FS, opts []config.CommonOption, handler outputter.Outputter) error {
+func runGenerate(ctx context.Context, postsFsys fs.FS, opts []config.Option, handler outputter.Outputter) error {
 	gen := generator.New(postsFsys, opts...)
 	gen.DebugConfig(ctx)
 
