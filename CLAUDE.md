@@ -44,6 +44,11 @@ GoBlog is a blog generation and serving system for creating static blog feeds fr
 
 ## Development Guidelines
 
+I am using Git Worktrees to run multiple instances of claude code at once. 
+You are to use the current working directory (ie the same result as `pwd`) as the parent directory.
+
+Do not search in the GitBlog.git directory as this contains multiple children directories all containing different git states of the repo.
+
 ### IMPORTANT: Architecture Decisions
 
 **Claude is NOT TRUSTED to make architectural decisions independently.**
@@ -53,9 +58,3 @@ When working on this project:
 - DO NOT assume implementation details
 - CONFIRM approaches before implementing
 - Exact designs are not finalized - clarification is required
-
-### Project Status
-
-- Repository initialized
-- Components not yet implemented
-- Architecture and detailed specifications pending
