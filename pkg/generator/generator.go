@@ -58,6 +58,10 @@ func New(posts fs.FS, opts ...config.Option) *Generator {
 		}
 	}
 
+	if gen.TemplatesDir.TemplatesDir == nil {
+
+	}
+
 	return &gen
 }
 
