@@ -82,26 +82,6 @@ func ExampleNewDirectoryWriter_withRawOutput() {
 	// Writer created with RawOutput enabled
 }
 
-// ExampleNewDirectoryWriterWithConfig demonstrates creating a DirectoryWriter
-// using an explicit configuration struct.
-func ExampleNewDirectoryWriterWithConfig() {
-	// Build a configuration struct
-	cfg := outputter.DirectoryWriterConfig{
-		CommonConfig: config.CommonConfig{
-			RawOutput: true,
-		},
-		OutputPath: "/var/www/blog",
-	}
-
-	writer := outputter.NewDirectoryWriterWithConfig(cfg)
-
-	fmt.Printf("Writer created with explicit config\n")
-	_ = writer // Use the writer
-
-	// Output:
-	// Writer created with explicit config
-}
-
 // ExampleDirectoryWriter_HandleGeneratedBlog demonstrates writing
 // generated blog content to disk.
 func ExampleDirectoryWriter_HandleGeneratedBlog() {
