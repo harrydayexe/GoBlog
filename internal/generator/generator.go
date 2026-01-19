@@ -3,6 +3,7 @@ package generator
 import (
 	"context"
 	"io/fs"
+	"log/slog"
 	"os"
 
 	"github.com/harrydayexe/GoBlog/v2/internal/utilities"
@@ -38,23 +39,30 @@ func NewGeneratorCommand(ctx context.Context, c *cli.Command) error {
 	templateDirPath := c.String(TemplateDirFlagName)
 	var templateDir fs.FS
 	if templateDirPath == "" {
+		slog.Default().DebugContext(ctx, "Using default templates")
 		templateDir = templates.Default
 	} else {
+		slog.Default().DebugContext(ctx, "Using custom templates")
 		templateDirPath, err = utilities.GetDirectoryFromInput(templateDirPath, false)
 		if err != nil {
-			return nil
+			return err
 		}
 
 		templateDir = os.DirFS(templateDirPath)
 	}
 
+	renderer, err := generator.NewTemplateRenderer(templateDir)
+	if err != nil {
+		return err
+	}
+
 	handler := outputter.NewDirectoryWriter(outputDir, opts...)
 
-	return runGenerate(ctx, postsFsys, templateDir, opts, handler)
+	return runGenerate(ctx, postsFsys, renderer, opts, handler)
 }
 
-func runGenerate(ctx context.Context, postsFsys fs.FS, templatesFsys fs.FS, opts []config.Option, handler outputter.Outputter) error {
-	gen := generator.New(postsFsys, templatesFsys, opts...)
+func runGenerate(ctx context.Context, postsFsys fs.FS, renderer *generator.TemplateRenderer, opts []config.Option, handler outputter.Outputter) error {
+	gen := generator.New(postsFsys, renderer, opts...)
 	gen.DebugConfig(ctx)
 
 	blog, err := gen.Generate(ctx)
@@ -62,5 +70,7 @@ func runGenerate(ctx context.Context, postsFsys fs.FS, templatesFsys fs.FS, opts
 		return err
 	}
 
-	return handler.HandleGeneratedBlog(blog)
+	slog.DebugContext(ctx, "Handling generated blog")
+
+	return handler.HandleGeneratedBlog(ctx, blog)
 }
