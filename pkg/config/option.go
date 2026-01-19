@@ -11,6 +11,7 @@ package config
 // provided option functions like WithRawOutput() and WithTemplatesDir().
 type Option struct {
 	WithRawOutputFunc func(v *RawOutput)
+	WithSiteTitleFunc func(v *SiteTitle)
 }
 
 // RawOutput is a configuration type that controls whether HTML output
@@ -42,6 +43,16 @@ func WithRawOutput() Option {
 	return Option{
 		WithRawOutputFunc: func(v *RawOutput) {
 			v.RawOutput = true
+		},
+	}
+}
+
+type SiteTitle struct{ SiteTitle string }
+
+func WithSiteTitle(title string) Option {
+	return Option{
+		WithSiteTitleFunc: func(v *SiteTitle) {
+			v.SiteTitle = title
 		},
 	}
 }

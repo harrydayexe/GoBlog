@@ -1,6 +1,8 @@
 package outputter
 
 import (
+	"context"
+	"log/slog"
 	"os"
 	"path/filepath"
 
@@ -19,6 +21,7 @@ import (
 type DirectoryWriter struct {
 	config.RawOutput
 	outputDir string
+	logger    *slog.Logger
 }
 
 // NewDirectoryWriter creates a new DirectoryWriter with the specified output
@@ -38,8 +41,11 @@ type DirectoryWriter struct {
 // NewDirectoryWriterWithConfig when you need to provide an explicit
 // DirectoryWriterConfig struct.
 func NewDirectoryWriter(outputDir string, opts ...config.Option) DirectoryWriter {
+	logger := slog.Default()
+
 	dw := DirectoryWriter{
 		outputDir: outputDir,
+		logger:    logger,
 	}
 
 	for _, opt := range opts {
@@ -47,6 +53,8 @@ func NewDirectoryWriter(outputDir string, opts ...config.Option) DirectoryWriter
 			opt.WithRawOutputFunc(&dw.RawOutput)
 		}
 	}
+
+	logger.Debug("Directory Writer created", slog.String("output directory", outputDir))
 
 	return dw
 }
@@ -76,19 +84,22 @@ func NewDirectoryWriter(outputDir string, opts ...config.Option) DirectoryWriter
 // If an error occurs partway through writing, some files may have been
 // created successfully while others were not. The output directory may
 // be in a partial state.
-func (dw DirectoryWriter) HandleGeneratedBlog(blog *generator.GeneratedBlog) error {
-	if err := writeMapToFiles(blog.Posts, dw.outputDir); err != nil {
+func (dw DirectoryWriter) HandleGeneratedBlog(ctx context.Context, blog *generator.GeneratedBlog) error {
+	dw.logger.InfoContext(ctx, "Writing blog to directory")
+	if err := writeMapToFiles(blog.Posts, filepath.Join(dw.outputDir, "posts")); err != nil {
 		return err
 	}
 	if !dw.RawOutput.RawOutput {
+		dw.logger.DebugContext(ctx, "Raw output enabled, skipping tags and index page")
 		if err := writeMapToFiles(blog.Tags, filepath.Join(dw.outputDir, "tags")); err != nil {
 			return err
 		}
-	}
-	if err := os.WriteFile(filepath.Join(dw.outputDir, "index.html"), blog.Index, 0644); err != nil {
-		return err
+		if err := os.WriteFile(filepath.Join(dw.outputDir, "index.html"), blog.Index, 0644); err != nil {
+			return err
+		}
 	}
 
+	dw.logger.InfoContext(ctx, "Finished writing to output directory")
 	return nil
 }
 

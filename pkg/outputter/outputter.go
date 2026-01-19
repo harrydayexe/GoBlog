@@ -1,6 +1,10 @@
 package outputter
 
-import "github.com/harrydayexe/GoBlog/v2/pkg/generator"
+import (
+	"context"
+
+	"github.com/harrydayexe/GoBlog/v2/pkg/generator"
+)
 
 // Outputter defines the interface for handling generated blog content.
 //
@@ -19,5 +23,5 @@ type Outputter interface {
 	//
 	// Returns an error if the output operation fails (e.g., filesystem errors,
 	// network errors, permission issues).
-	HandleGeneratedBlog(*generator.GeneratedBlog) error
+	HandleGeneratedBlog(context.Context, *generator.GeneratedBlog) error
 }

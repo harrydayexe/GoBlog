@@ -57,10 +57,8 @@ func main() {
 			var level slog.Level
 			switch verbosity {
 			case 0:
-				level = slog.LevelWarn
-			case 1:
 				level = slog.LevelInfo
-			case 2:
+			case 1:
 				level = slog.LevelInfo - 1 // Info logs with params
 			default:
 				level = slog.LevelDebug // All logs with params

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"html/template"
 	"io/fs"
+	"log/slog"
 	"time"
 
 	"github.com/harrydayexe/GoBlog/v2/pkg/models"
@@ -66,6 +67,7 @@ func NewTemplateRenderer(templatesFS fs.FS) (*TemplateRenderer, error) {
 func (tr *TemplateRenderer) RenderPost(data models.PostPageData) ([]byte, error) {
 	var buf bytes.Buffer
 	err := tr.templates.ExecuteTemplate(&buf, "pages/post.tmpl", data)
+	slog.Debug("Rendered post " + data.Post.Slug)
 	return buf.Bytes(), err
 }
 
@@ -73,6 +75,7 @@ func (tr *TemplateRenderer) RenderPost(data models.PostPageData) ([]byte, error)
 func (tr *TemplateRenderer) RenderIndex(data models.IndexPageData) ([]byte, error) {
 	var buf bytes.Buffer
 	err := tr.templates.ExecuteTemplate(&buf, "pages/index.tmpl", data)
+	slog.Debug("Rendered index page", slog.Int("number of posts", len(data.Posts)))
 	return buf.Bytes(), err
 }
 
@@ -80,5 +83,6 @@ func (tr *TemplateRenderer) RenderIndex(data models.IndexPageData) ([]byte, erro
 func (tr *TemplateRenderer) RenderTag(data models.TagPageData) ([]byte, error) {
 	var buf bytes.Buffer
 	err := tr.templates.ExecuteTemplate(&buf, "pages/tag.tmpl", data)
+	slog.Debug("Rendered tag page " + data.Tag)
 	return buf.Bytes(), err
 }

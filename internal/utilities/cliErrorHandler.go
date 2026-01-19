@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/fatih/color"
 	inerrors "github.com/harrydayexe/GoBlog/v2/internal/errors"
 )
 
@@ -19,5 +20,7 @@ func CliErrorHandler(err error) {
 			fmt.Fprintln(os.Stdout, inputDirectoryError.HandlerString())
 			fmt.Fprintln(os.Stdout, "Use --help for more info")
 		}
+	} else {
+		fmt.Fprintln(os.Stderr, color.RedString(err.Error()))
 	}
 }

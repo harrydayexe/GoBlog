@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/fs"
 	"log/slog"
+	"time"
 
 	"github.com/harrydayexe/GoBlog/v2/pkg/config"
 	"github.com/harrydayexe/GoBlog/v2/pkg/models"
@@ -18,20 +19,20 @@ import (
 // A Generator is safe for concurrent use after creation, but Generate
 // operations should not be called concurrently on the same instance.
 type Generator struct {
-	PostsDir     fs.FS // The filesystem containing the input posts in markdown
-	TemplatesDir fs.FS // The filesystem containing the templates to use
+	PostsDir fs.FS // The filesystem containing the input posts in markdown
 
 	config.RawOutput
+	config.SiteTitle
 	ParserConfig parser.Config // The config to use when parsing
-	logger       *slog.Logger
+
+	logger   *slog.Logger
+	renderer *TemplateRenderer
 }
 
 func (c Generator) String() string {
 	return fmt.Sprintf(`Generator Config
-- RawOutput           %t
-- Templates Directory %t`,
+- RawOutput           %t`,
 		c.RawOutput,
-		c.TemplatesDir != nil,
 	)
 }
 
@@ -41,19 +42,27 @@ func (c Generator) String() string {
 //
 // Options can be provided to customize behavior such as template directories,
 // posts per page, and other generation parameters.
-func New(posts fs.FS, templates fs.FS, opts ...config.Option) *Generator {
+func New(posts fs.FS, renderer *TemplateRenderer, opts ...config.Option) *Generator {
 	logger := slog.Default()
 
 	gen := Generator{
-		PostsDir:     posts,
-		TemplatesDir: templates,
-		logger:       logger,
+		PostsDir: posts,
+		logger:   logger,
+		renderer: renderer,
 	}
 
 	// Run options on config
 	for _, opt := range opts {
 		if opt.WithRawOutputFunc != nil {
 			opt.WithRawOutputFunc(&gen.RawOutput)
+		} else if opt.WithSiteTitleFunc != nil {
+			opt.WithSiteTitleFunc(&gen.SiteTitle)
+		}
+	}
+
+	if gen.SiteTitle.SiteTitle == "" {
+		gen.SiteTitle = config.SiteTitle{
+			SiteTitle: "GoBlog",
 		}
 	}
 
@@ -98,11 +107,12 @@ func (g *Generator) Generate(ctx context.Context) (*GeneratedBlog, error) {
 
 	// Step 2: If RawOutput mode, return immediately with raw HTML
 	if g.RawOutput.RawOutput {
+		g.logger.InfoContext(ctx, "Raw output enabled, ignoring templates")
 		return g.assembleRawBlog(posts), nil
 	}
 
-	// Step 3: Apply templates (TODO: future work)
-	return nil, fmt.Errorf("Only raw output is enabled at this point")
+	// Step 3: Apply templates
+	return g.assembleBlogWithTemplates(ctx, posts)
 }
 
 // DebugConfig logs the current generator configuration at the debug level.
@@ -126,4 +136,77 @@ func (g *Generator) assembleRawBlog(posts models.PostList) *GeneratedBlog {
 	}
 
 	return blog
+}
+
+func (g *Generator) assembleBlogWithTemplates(ctx context.Context, posts models.PostList) (*GeneratedBlog, error) {
+	g.logger.DebugContext(ctx, "Rendering posts with templates")
+	blog := NewEmptyGeneratedBlog()
+
+	// Sort posts by date descending
+	posts.SortByDate()
+
+	// Render individual post pages
+	for _, post := range posts {
+		data := models.PostPageData{
+			BaseData: models.BaseData{
+				SiteTitle:   g.SiteTitle.SiteTitle,
+				PageTitle:   post.Title,
+				Description: post.Description,
+				Year:        time.Now().Year(),
+			},
+			Post: post,
+		}
+
+		rendered, err := g.renderer.RenderPost(data)
+		if err != nil {
+			return nil, fmt.Errorf("failed to render post %s: %w", post.Slug, err)
+		}
+
+		blog.Posts[post.Slug] = rendered
+	}
+
+	// Render index page
+	indexData := models.IndexPageData{
+		BaseData: models.BaseData{
+			SiteTitle:   g.SiteTitle.SiteTitle,
+			PageTitle:   "Home",
+			Description: "Recent blog posts",
+			Year:        time.Now().Year(),
+		},
+		Posts:      posts,
+		TotalPosts: len(posts),
+	}
+
+	index, err := g.renderer.RenderIndex(indexData)
+	if err != nil {
+		return nil, fmt.Errorf("failed to render index: %w", err)
+	}
+	blog.Index = index
+
+	// Render tag pages
+	allTags := posts.GetAllTags()
+	for _, tag := range allTags {
+		tagPosts := posts.FilterByTag(tag)
+
+		tagData := models.TagPageData{
+			BaseData: models.BaseData{
+				SiteTitle:   g.SiteTitle.SiteTitle,
+				PageTitle:   "Tag: " + tag,
+				Description: fmt.Sprintf("Posts tagged with %s", tag),
+				Year:        time.Now().Year(),
+			},
+			Tag:       tag,
+			Posts:     tagPosts,
+			PostCount: len(tagPosts),
+		}
+
+		rendered, err := g.renderer.RenderTag(tagData)
+		if err != nil {
+			return nil, fmt.Errorf("failed to render tag page %s: %w", tag, err)
+		}
+
+		blog.Tags[tag] = rendered
+	}
+
+	return blog, nil
 }
