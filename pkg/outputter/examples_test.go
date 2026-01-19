@@ -154,7 +154,7 @@ This is a simple blog post.
 
 	// Generate the blog using os.DirFS to create a filesystem
 	// Use RawOutput since templates are not fully implemented yet
-	gen := generator.New(os.DirFS(postsDir), config.WithRawOutput())
+	gen := generator.New(os.DirFS(postsDir), nil, config.WithRawOutput())
 	blog, err := gen.Generate(context.Background())
 	if err != nil {
 		log.Fatal(err)

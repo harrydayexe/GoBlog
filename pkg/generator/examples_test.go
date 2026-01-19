@@ -13,7 +13,7 @@ import (
 func Example() {
 	// Create a generator with posts from testdata directory
 	fsys := os.DirFS("testdata")
-	gen := generator.New(fsys, config.WithRawOutput())
+	gen := generator.New(fsys, nil, config.WithRawOutput())
 
 	// Generate the blog
 	ctx := context.Background()
@@ -31,7 +31,7 @@ func Example() {
 func Example_rawOutput() {
 	// Raw output mode generates HTML without templates
 	fsys := os.DirFS("testdata")
-	gen := generator.New(fsys, config.WithRawOutput())
+	gen := generator.New(fsys, nil, config.WithRawOutput())
 
 	ctx := context.Background()
 	blog, err := gen.Generate(ctx)
@@ -50,7 +50,7 @@ func Example_rawOutput() {
 func ExampleNew() {
 	// Create a generator with default configuration
 	fsys := os.DirFS("testdata")
-	gen := generator.New(fsys)
+	gen := generator.New(fsys, nil)
 
 	if gen != nil {
 		fmt.Println("Generator created")
@@ -61,7 +61,7 @@ func ExampleNew() {
 // ExampleGenerator_Generate demonstrates generating a blog.
 func ExampleGenerator_Generate() {
 	fsys := os.DirFS("testdata")
-	gen := generator.New(fsys, config.WithRawOutput())
+	gen := generator.New(fsys, nil, config.WithRawOutput())
 
 	ctx := context.Background()
 	blog, err := gen.Generate(ctx)
@@ -79,7 +79,7 @@ func ExampleGenerator_Generate() {
 // ExampleGenerator_DebugConfig demonstrates debugging generator configuration.
 func ExampleGenerator_DebugConfig() {
 	fsys := os.DirFS("testdata")
-	gen := generator.New(fsys, config.WithRawOutput())
+	gen := generator.New(fsys, nil, config.WithRawOutput())
 
 	ctx := context.Background()
 	gen.DebugConfig(ctx)
@@ -93,7 +93,7 @@ func ExampleWithRawOutput() {
 	fsys := os.DirFS("testdata")
 
 	// Enable raw output mode (no templates)
-	gen := generator.New(fsys, config.WithRawOutput())
+	gen := generator.New(fsys, nil, config.WithRawOutput())
 
 	ctx := context.Background()
 	blog, err := gen.Generate(ctx)
@@ -111,7 +111,7 @@ func ExampleWithRawOutput() {
 // ExampleGeneratedBlog demonstrates working with a GeneratedBlog.
 func ExampleGeneratedBlog() {
 	fsys := os.DirFS("testdata")
-	gen := generator.New(fsys, config.WithRawOutput())
+	gen := generator.New(fsys, nil, config.WithRawOutput())
 
 	ctx := context.Background()
 	blog, err := gen.Generate(ctx)

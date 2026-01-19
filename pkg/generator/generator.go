@@ -18,12 +18,12 @@ import (
 // A Generator is safe for concurrent use after creation, but Generate
 // operations should not be called concurrently on the same instance.
 type Generator struct {
-	PostsDir fs.FS // The filesystem containing the input posts in markdown
+	PostsDir     fs.FS // The filesystem containing the input posts in markdown
+	TemplatesDir fs.FS // The filesystem containing the templates to use
 
 	config.RawOutput
-	config.TemplatesDir               // The filesystem containing the templates to use
-	ParserConfig        parser.Config // The config to use when parsing
-	logger              *slog.Logger
+	ParserConfig parser.Config // The config to use when parsing
+	logger       *slog.Logger
 }
 
 func (c Generator) String() string {
@@ -31,7 +31,7 @@ func (c Generator) String() string {
 - RawOutput           %t
 - Templates Directory %t`,
 		c.RawOutput,
-		c.TemplatesDir.TemplatesDir != nil,
+		c.TemplatesDir != nil,
 	)
 }
 
@@ -41,25 +41,20 @@ func (c Generator) String() string {
 //
 // Options can be provided to customize behavior such as template directories,
 // posts per page, and other generation parameters.
-func New(posts fs.FS, opts ...config.Option) *Generator {
+func New(posts fs.FS, templates fs.FS, opts ...config.Option) *Generator {
 	logger := slog.Default()
 
 	gen := Generator{
-		PostsDir: posts,
-		logger:   logger,
+		PostsDir:     posts,
+		TemplatesDir: templates,
+		logger:       logger,
 	}
 
 	// Run options on config
 	for _, opt := range opts {
 		if opt.WithRawOutputFunc != nil {
 			opt.WithRawOutputFunc(&gen.RawOutput)
-		} else if opt.WithTemplatesDirFunc != nil {
-			opt.WithTemplatesDirFunc(&gen.TemplatesDir)
 		}
-	}
-
-	if gen.TemplatesDir.TemplatesDir == nil {
-
 	}
 
 	return &gen

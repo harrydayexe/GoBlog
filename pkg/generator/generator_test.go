@@ -41,7 +41,7 @@ func TestNew(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			gen := New(tt.posts, tt.opts...)
+			gen := New(tt.posts, nil, tt.opts...)
 
 			if (gen == nil) != tt.wantNil {
 				t.Errorf("New() = %v, wantNil %v", gen, tt.wantNil)
@@ -62,7 +62,7 @@ func TestNew_NilFilesystem(t *testing.T) {
 
 	// Generator creation with nil filesystem should still succeed
 	// (validation happens during Generate)
-	gen := New(nil)
+	gen := New(nil, nil)
 
 	if gen == nil {
 		t.Fatal("New(nil) returned nil")
@@ -78,7 +78,7 @@ func TestGenerate_RawOutput(t *testing.T) {
 	t.Parallel()
 
 	testFS := os.DirFS("testdata")
-	gen := New(testFS, config.WithRawOutput())
+	gen := New(testFS, nil, config.WithRawOutput())
 
 	ctx := context.Background()
 	blog, err := gen.Generate(ctx)
@@ -109,7 +109,7 @@ func TestGenerate_MultiplePosts(t *testing.T) {
 	t.Parallel()
 
 	testFS := os.DirFS("testdata")
-	gen := New(testFS, config.WithRawOutput())
+	gen := New(testFS, nil, config.WithRawOutput())
 
 	ctx := context.Background()
 	blog, err := gen.Generate(ctx)
@@ -141,7 +141,7 @@ func TestGenerate_EmptyDirectory(t *testing.T) {
 	tempDir := t.TempDir()
 	testFS := os.DirFS(tempDir)
 
-	gen := New(testFS, config.WithRawOutput())
+	gen := New(testFS, nil, config.WithRawOutput())
 
 	ctx := context.Background()
 	blog, err := gen.Generate(ctx)
@@ -163,7 +163,7 @@ func TestGenerate_WithParserErrors(t *testing.T) {
 	// Use parser's testdata which contains invalid files
 	testFS := os.DirFS("../parser/testdata")
 
-	gen := New(testFS, config.WithRawOutput())
+	gen := New(testFS, nil, config.WithRawOutput())
 
 	ctx := context.Background()
 	blog, err := gen.Generate(ctx)
@@ -184,7 +184,7 @@ func TestGenerate_ContextCanceled(t *testing.T) {
 	t.Parallel()
 
 	testFS := os.DirFS("testdata")
-	gen := New(testFS, config.WithRawOutput())
+	gen := New(testFS, nil, config.WithRawOutput())
 
 	// Create a pre-canceled context
 	ctx, cancel := context.WithCancel(context.Background())
@@ -210,7 +210,7 @@ func TestGenerate_ContextTimeout(t *testing.T) {
 	t.Parallel()
 
 	testFS := os.DirFS("testdata")
-	gen := New(testFS, config.WithRawOutput())
+	gen := New(testFS, nil, config.WithRawOutput())
 
 	// Create a context with very short timeout (1 nanosecond - guaranteed to expire)
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Nanosecond)
@@ -239,7 +239,7 @@ func TestGenerate_WithoutRawOutput(t *testing.T) {
 	t.Parallel()
 
 	testFS := os.DirFS("testdata")
-	gen := New(testFS) // No RawOutput option
+	gen := New(testFS, nil) // No RawOutput option
 
 	ctx := context.Background()
 	blog, err := gen.Generate(ctx)
@@ -259,7 +259,7 @@ func TestDebugConfig(t *testing.T) {
 	t.Parallel()
 
 	testFS := os.DirFS("testdata")
-	gen := New(testFS, config.WithRawOutput())
+	gen := New(testFS, nil, config.WithRawOutput())
 
 	ctx := context.Background()
 
@@ -280,13 +280,13 @@ func TestWithRawOutput(t *testing.T) {
 	testFS := os.DirFS("testdata")
 
 	// Without option
-	genWithout := New(testFS)
+	genWithout := New(testFS, nil)
 	if genWithout.RawOutput.RawOutput {
 		t.Error("Generator without config.WithRawOutput() has RawOutput = true, want false")
 	}
 
 	// With option
-	genWith := New(testFS, config.WithRawOutput())
+	genWith := New(testFS, nil, config.WithRawOutput())
 	if !genWith.RawOutput.RawOutput {
 		t.Error("Generator with config.WithRawOutput() has RawOutput = false, want true")
 	}
@@ -297,7 +297,7 @@ func TestAssembleRawBlog(t *testing.T) {
 	t.Parallel()
 
 	testFS := os.DirFS("testdata")
-	gen := New(testFS, config.WithRawOutput())
+	gen := New(testFS, nil, config.WithRawOutput())
 
 	ctx := context.Background()
 	blog, err := gen.Generate(ctx)
@@ -371,12 +371,12 @@ func TestGenerator_String(t *testing.T) {
 	}{
 		{
 			name:      "with RawOutput true",
-			gen:       New(testFS, config.WithRawOutput()),
+			gen:       New(testFS, nil, config.WithRawOutput()),
 			wantEmpty: false,
 		},
 		{
 			name:      "with RawOutput false",
-			gen:       New(testFS),
+			gen:       New(testFS, nil),
 			wantEmpty: false,
 		},
 	}
