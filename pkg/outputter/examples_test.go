@@ -34,12 +34,12 @@ func Example() {
 
 	// Create a DirectoryWriter and write the blog
 	writer := outputter.NewDirectoryWriter(tempDir)
-	if err := writer.HandleGeneratedBlog(blog); err != nil {
+	if err := writer.HandleGeneratedBlog(context.Background(), blog); err != nil {
 		log.Fatal(err)
 	}
 
 	// Verify files were created
-	files := []string{"index.html", "hello-world.html", "tags/intro.html"}
+	files := []string{"index.html", "posts/hello-world.html", "tags/intro.html"}
 	for _, file := range files {
 		path := filepath.Join(tempDir, file)
 		if _, err := os.Stat(path); err == nil {
@@ -49,7 +49,7 @@ func Example() {
 
 	// Output:
 	// index.html created
-	// hello-world.html created
+	// posts/hello-world.html created
 	// tags/intro.html created
 }
 
@@ -104,7 +104,7 @@ func ExampleDirectoryWriter_HandleGeneratedBlog() {
 
 	// Write to disk
 	writer := outputter.NewDirectoryWriter(tempDir)
-	if err := writer.HandleGeneratedBlog(blog); err != nil {
+	if err := writer.HandleGeneratedBlog(context.Background(), blog); err != nil {
 		log.Fatal(err)
 	}
 
@@ -162,24 +162,24 @@ This is a simple blog post.
 
 	// Output the blog to disk with RawOutput to match generator settings
 	writer := outputter.NewDirectoryWriter(outputDir, config.WithRawOutput())
-	if err := writer.HandleGeneratedBlog(blog); err != nil {
+	if err := writer.HandleGeneratedBlog(context.Background(), blog); err != nil {
 		log.Fatal(err)
 	}
 
 	// Verify the output
 	indexPath := filepath.Join(outputDir, "index.html")
-	postPath = filepath.Join(outputDir, "getting-started.html")
+	postPath = filepath.Join(outputDir, "posts", "getting-started.html")
 
 	if _, err := os.Stat(indexPath); err == nil {
 		fmt.Println("index.html created")
 	}
 	if _, err := os.Stat(postPath); err == nil {
-		fmt.Println("getting-started.html created")
+		fmt.Println("posts/getting-started.html created")
 	}
 
 	// Output:
 	// index.html created
-	// getting-started.html created
+	// posts/getting-started.html created
 }
 
 // Example_rawOutputMode demonstrates using RawOutput mode to skip
@@ -204,7 +204,7 @@ func Example_rawOutputMode() {
 
 	// Write with RawOutput enabled - tags directory won't be created
 	writer := outputter.NewDirectoryWriter(tempDir, config.WithRawOutput())
-	if err := writer.HandleGeneratedBlog(blog); err != nil {
+	if err := writer.HandleGeneratedBlog(context.Background(), blog); err != nil {
 		log.Fatal(err)
 	}
 
@@ -212,8 +212,8 @@ func Example_rawOutputMode() {
 	if _, err := os.Stat(filepath.Join(tempDir, "index.html")); err == nil {
 		fmt.Println("index.html created")
 	}
-	if _, err := os.Stat(filepath.Join(tempDir, "post.html")); err == nil {
-		fmt.Println("post.html created")
+	if _, err := os.Stat(filepath.Join(tempDir, "posts", "post.html")); err == nil {
+		fmt.Println("posts/post.html created")
 	}
 	if _, err := os.Stat(filepath.Join(tempDir, "tags")); os.IsNotExist(err) {
 		fmt.Println("tags directory not created (as expected)")
@@ -221,7 +221,7 @@ func Example_rawOutputMode() {
 
 	// Output:
 	// index.html created
-	// post.html created
+	// posts/post.html created
 	// tags directory not created (as expected)
 }
 
@@ -242,7 +242,7 @@ func Example_multipleWrites() {
 		Index: []byte("Index V1"),
 		Tags:  make(map[string][]byte),
 	}
-	if err := writer.HandleGeneratedBlog(blog1); err != nil {
+	if err := writer.HandleGeneratedBlog(context.Background(), blog1); err != nil {
 		log.Fatal(err)
 	}
 	fmt.Println("First write completed")
@@ -253,13 +253,13 @@ func Example_multipleWrites() {
 		Index: []byte("Index V2"),
 		Tags:  make(map[string][]byte),
 	}
-	if err := writer.HandleGeneratedBlog(blog2); err != nil {
+	if err := writer.HandleGeneratedBlog(context.Background(), blog2); err != nil {
 		log.Fatal(err)
 	}
 	fmt.Println("Second write completed")
 
 	// Read final content
-	content, _ := os.ReadFile(filepath.Join(tempDir, "post.html"))
+	content, _ := os.ReadFile(filepath.Join(tempDir, "posts", "post.html"))
 	fmt.Printf("Final content: %s\n", string(content))
 
 	// Output:

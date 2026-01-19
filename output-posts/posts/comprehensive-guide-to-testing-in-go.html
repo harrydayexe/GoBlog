@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Master testing in Go with unit tests, table-driven tests, benchmarks, and mocking strategies">
+
+    <title>Comprehensive Guide to Testing in Go | GoBlog</title>
+
+    
+    <meta property="og:title" content="Comprehensive Guide to Testing in Go">
+    <meta property="og:description" content="Master testing in Go with unit tests, table-driven tests, benchmarks, and mocking strategies">
+    <meta property="og:type" content="website">
+
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    
+    <style>
+         
+        .prose img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 0.5rem;
+            margin: 1.5rem 0;
+        }
+
+        .prose pre {
+            background-color: #1e293b;
+            color: #e2e8f0;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            overflow-x: auto;
+        }
+
+        .prose code {
+            background-color: #f1f5f9;
+            color: #dc2626;
+            padding: 0.125rem 0.25rem;
+            border-radius: 0.25rem;
+            font-size: 0.875em;
+        }
+
+        .prose pre code {
+            background-color: transparent;
+            color: inherit;
+            padding: 0;
+        }
+
+        .prose a {
+            color: #2563eb;
+            text-decoration: underline;
+        }
+
+        .prose a:hover {
+            color: #1d4ed8;
+        }
+    </style>
+</head>
+
+<body class="h-full flex flex-col bg-gray-50">
+    
+<header class="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between items-center h-16">
+            
+            <div class="flex-shrink-0">
+                <a href="/" class="text-2xl font-bold text-gray-900 hover:text-blue-600 transition-colors">
+                    GoBlog
+                </a>
+            </div>
+
+            
+            <nav class="flex space-x-8">
+                <a href="/" class="text-gray-700 hover:text-blue-600 font-medium transition-colors">
+                    Home
+                </a>
+                <a href="/tags" class="text-gray-700 hover:text-blue-600 font-medium transition-colors">
+                    Tags
+                </a>
+            </nav>
+        </div>
+    </div>
+</header>
+
+
+    <main class="flex-grow">
+        <article class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+            
+            <header class="mb-8">
+                
+                <time datetime="2026-01-05" class="text-sm text-gray-500">
+                    January 5, 2026
+                </time>
+
+                
+                <h1 class="mt-2 text-4xl font-bold text-gray-900 leading-tight">
+                    Comprehensive Guide to Testing in Go
+                </h1>
+
+                
+                
+                <p class="mt-4 text-xl text-gray-600">
+                    Master testing in Go with unit tests, table-driven tests, benchmarks, and mocking strategies
+                </p>
+                
+
+                
+                
+                <div class="mt-6 flex flex-wrap gap-2">
+                    
+                    <a href="/tags/go.html" class="inline-block px-3 py-1 text-sm font-medium text-blue-700 bg-blue-100 rounded-full hover:bg-blue-200 transition-colors">
+                        #go
+                    </a>
+                    
+                    <a href="/tags/testing.html" class="inline-block px-3 py-1 text-sm font-medium text-blue-700 bg-blue-100 rounded-full hover:bg-blue-200 transition-colors">
+                        #testing
+                    </a>
+                    
+                    <a href="/tags/best-practices.html" class="inline-block px-3 py-1 text-sm font-medium text-blue-700 bg-blue-100 rounded-full hover:bg-blue-200 transition-colors">
+                        #best-practices
+                    </a>
+                    
+                    <a href="/tags/tutorial.html" class="inline-block px-3 py-1 text-sm font-medium text-blue-700 bg-blue-100 rounded-full hover:bg-blue-200 transition-colors">
+                        #tutorial
+                    </a>
+                    
+                </div>
+                
+            </header>
+
+            
+            <div class="prose prose-lg max-w-none">
+                <h1 id="comprehensive-guide-to-testing-in-go">Comprehensive Guide to Testing in Go</h1>
+<p>Testing is a first-class citizen in Go. The built-in <code>testing</code> package provides everything you need to write comprehensive tests.</p>
+<h2 id="basic-unit-tests">Basic Unit Tests</h2>
+<p>Test files end with <code>_test.go</code> and test functions start with <code>Test</code>:</p>
+<pre><code class="language-go">// math.go
+package math
+
+func Add(a, b int) int {
+    return a + b
+}
+
+// math_test.go
+package math
+
+import &quot;testing&quot;
+
+func TestAdd(t *testing.T) {
+    result := Add(2, 3)
+    expected := 5
+
+    if result != expected {
+        t.Errorf(&quot;Add(2, 3) = %d; want %d&quot;, result, expected)
+    }
+}
+</code></pre>
+<h2 id="table-driven-tests">Table-Driven Tests</h2>
+<p>The idiomatic Go way to test multiple scenarios:</p>
+<pre><code class="language-go">func TestAdd(t *testing.T) {
+    tests := []struct {
+        name     string
+        a, b     int
+        expected int
+    }{
+        {&quot;positive numbers&quot;, 2, 3, 5},
+        {&quot;negative numbers&quot;, -2, -3, -5},
+        {&quot;mixed signs&quot;, -2, 3, 1},
+        {&quot;zeros&quot;, 0, 0, 0},
+    }
+
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            result := Add(tt.a, tt.b)
+            if result != tt.expected {
+                t.Errorf(&quot;got %d, want %d&quot;, result, tt.expected)
+            }
+        })
+    }
+}
+</code></pre>
+<h2 id="test-helpers">Test Helpers</h2>
+<p>Use helper functions to reduce duplication:</p>
+<pre><code class="language-go">func assertEqual(t *testing.T, got, want int) {
+    t.Helper() // Marks this as a helper function
+    if got != want {
+        t.Errorf(&quot;got %d, want %d&quot;, got, want)
+    }
+}
+
+func TestSomething(t *testing.T) {
+    assertEqual(t, Add(2, 3), 5)
+}
+</code></pre>
+<h2 id="benchmarks">Benchmarks</h2>
+<p>Measure performance with benchmark tests:</p>
+<pre><code class="language-go">func BenchmarkAdd(b *testing.B) {
+    for i := 0; i &lt; b.N; i++ {
+        Add(2, 3)
+    }
+}
+</code></pre>
+<p>Run with <code>go test -bench=.</code></p>
+<h2 id="test-coverage">Test Coverage</h2>
+<p>Check your test coverage:</p>
+<pre><code class="language-bash">go test -cover
+go test -coverprofile=coverage.out
+go tool cover -html=coverage.out
+</code></pre>
+<h2 id="mocking">Mocking</h2>
+<p>Go doesn't have built-in mocking, but interfaces make it easy:</p>
+<pre><code class="language-go">type UserRepository interface {
+    GetUser(id int) (*User, error)
+}
+
+type MockUserRepository struct {
+    GetUserFunc func(id int) (*User, error)
+}
+
+func (m *MockUserRepository) GetUser(id int) (*User, error) {
+    return m.GetUserFunc(id)
+}
+
+func TestUserService(t *testing.T) {
+    mock := &amp;MockUserRepository{
+        GetUserFunc: func(id int) (*User, error) {
+            return &amp;User{ID: id, Name: &quot;Test&quot;}, nil
+        },
+    }
+
+    service := NewUserService(mock)
+    // Test using mock...
+}
+</code></pre>
+<h2 id="test-fixtures">Test Fixtures</h2>
+<p>Use test fixtures for complex setup:</p>
+<pre><code class="language-go">func TestMain(m *testing.M) {
+    // Setup
+    setup()
+
+    // Run tests
+    code := m.Run()
+
+    // Teardown
+    teardown()
+
+    os.Exit(code)
+}
+</code></pre>
+<h2 id="integration-tests">Integration Tests</h2>
+<p>Use build tags to separate integration tests:</p>
+<pre><code class="language-go">//go:build integration
+// +build integration
+
+package myapp
+
+func TestDatabaseIntegration(t *testing.T) {
+    // Integration test code
+}
+</code></pre>
+<p>Run with: <code>go test -tags=integration</code></p>
+<p>Testing is fundamental to writing reliable Go code. Master these patterns and your code will be robust and maintainable!</p>
+
+            </div>
+
+            
+            <div class="mt-12 pt-8 border-t border-gray-200">
+                <a href="/" class="text-blue-600 hover:text-blue-800 font-medium inline-flex items-center">
+                    <svg class="mr-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                    </svg>
+                    Back to Home
+                </a>
+            </div>
+        </article>
+    </main>
+
+    
+<footer class="bg-white border-t border-gray-200 mt-auto">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="text-center text-gray-600">
+            <p>&copy; 2026 GoBlog. All rights reserved.</p>
+            <p class="mt-2 text-sm">
+                Powered by <a href="https://github.com/harryday/goblog" class="text-blue-600 hover:text-blue-800 underline">GoBlog</a>
+            </p>
+        </div>
+    </div>
+</footer>
+
+</body>
+</html>

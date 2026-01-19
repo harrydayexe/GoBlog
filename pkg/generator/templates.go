@@ -86,3 +86,11 @@ func (tr *TemplateRenderer) RenderTag(data models.TagPageData) ([]byte, error) {
 	slog.Debug("Rendered tag page " + data.Tag)
 	return buf.Bytes(), err
 }
+
+// RenderTagsIndex renders the tags index page.
+func (tr *TemplateRenderer) RenderTagsIndex(data models.TagsIndexPageData) ([]byte, error) {
+	var buf bytes.Buffer
+	err := tr.templates.ExecuteTemplate(&buf, "pages/tags-index.tmpl", data)
+	slog.Debug("Rendered tags index page", slog.Int("total tags", data.TotalTags))
+	return buf.Bytes(), err
+}

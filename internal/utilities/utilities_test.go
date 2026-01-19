@@ -334,11 +334,12 @@ func TestCliErrorHandler_NonInputDirectoryError(t *testing.T) {
 	}()
 	<-doneErr
 
-	// Verify no output (handler does nothing for non-InputDirectoryError)
+	// Verify behavior (handler writes to stderr for non-InputDirectoryError)
 	if bufOut.Len() > 0 {
 		t.Errorf("expected no stdout output, got: %q", bufOut.String())
 	}
-	if bufErr.Len() > 0 {
-		t.Errorf("expected no stderr output, got: %q", bufErr.String())
+	// For non-InputDirectoryError, the handler writes the error to stderr
+	if !strings.Contains(bufErr.String(), "some random error") {
+		t.Errorf("expected stderr to contain error message, got: %q", bufErr.String())
 	}
 }
