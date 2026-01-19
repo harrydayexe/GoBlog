@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Learn how Go&#39;s concurrency primitives - goroutines and channels - make concurrent programming simple and elegant">
+
+    <title>Understanding Concurrency in Go | GoBlog</title>
+
+    
+    <meta property="og:title" content="Understanding Concurrency in Go">
+    <meta property="og:description" content="Learn how Go&#39;s concurrency primitives - goroutines and channels - make concurrent programming simple and elegant">
+    <meta property="og:type" content="website">
+
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    
+    <style>
+         
+        .prose img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 0.5rem;
+            margin: 1.5rem 0;
+        }
+
+        .prose pre {
+            background-color: #1e293b;
+            color: #e2e8f0;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            overflow-x: auto;
+        }
+
+        .prose code {
+            background-color: #f1f5f9;
+            color: #dc2626;
+            padding: 0.125rem 0.25rem;
+            border-radius: 0.25rem;
+            font-size: 0.875em;
+        }
+
+        .prose pre code {
+            background-color: transparent;
+            color: inherit;
+            padding: 0;
+        }
+
+        .prose a {
+            color: #2563eb;
+            text-decoration: underline;
+        }
+
+        .prose a:hover {
+            color: #1d4ed8;
+        }
+    </style>
+</head>
+
+<body class="h-full flex flex-col bg-gray-50">
+    
+<header class="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between items-center h-16">
+            
+            <div class="flex-shrink-0">
+                <a href="/" class="text-2xl font-bold text-gray-900 hover:text-blue-600 transition-colors">
+                    GoBlog
+                </a>
+            </div>
+
+            
+            <nav class="flex space-x-8">
+                <a href="/" class="text-gray-700 hover:text-blue-600 font-medium transition-colors">
+                    Home
+                </a>
+                <a href="/tags" class="text-gray-700 hover:text-blue-600 font-medium transition-colors">
+                    Tags
+                </a>
+            </nav>
+        </div>
+    </div>
+</header>
+
+
+    <main class="flex-grow">
+        <article class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+            
+            <header class="mb-8">
+                
+                <time datetime="2026-01-10" class="text-sm text-gray-500">
+                    January 10, 2026
+                </time>
+
+                
+                <h1 class="mt-2 text-4xl font-bold text-gray-900 leading-tight">
+                    Understanding Concurrency in Go
+                </h1>
+
+                
+                
+                <p class="mt-4 text-xl text-gray-600">
+                    Learn how Go&#39;s concurrency primitives - goroutines and channels - make concurrent programming simple and elegant
+                </p>
+                
+
+                
+                
+                <div class="mt-6 flex flex-wrap gap-2">
+                    
+                    <a href="/tags/go.html" class="inline-block px-3 py-1 text-sm font-medium text-blue-700 bg-blue-100 rounded-full hover:bg-blue-200 transition-colors">
+                        #go
+                    </a>
+                    
+                    <a href="/tags/concurrency.html" class="inline-block px-3 py-1 text-sm font-medium text-blue-700 bg-blue-100 rounded-full hover:bg-blue-200 transition-colors">
+                        #concurrency
+                    </a>
+                    
+                    <a href="/tags/tutorial.html" class="inline-block px-3 py-1 text-sm font-medium text-blue-700 bg-blue-100 rounded-full hover:bg-blue-200 transition-colors">
+                        #tutorial
+                    </a>
+                    
+                    <a href="/tags/advanced.html" class="inline-block px-3 py-1 text-sm font-medium text-blue-700 bg-blue-100 rounded-full hover:bg-blue-200 transition-colors">
+                        #advanced
+                    </a>
+                    
+                </div>
+                
+            </header>
+
+            
+            <div class="prose prose-lg max-w-none">
+                <h1 id="understanding-concurrency-in-go">Understanding Concurrency in Go</h1>
+<p>One of Go's most powerful features is its built-in support for concurrent programming through goroutines and channels.</p>
+<h2 id="goroutines-lightweight-threads">Goroutines: Lightweight Threads</h2>
+<p>A goroutine is a lightweight thread managed by the Go runtime. Starting a goroutine is as simple as adding the <code>go</code> keyword:</p>
+<pre><code class="language-go">func main() {
+    go doSomething()  // Runs concurrently
+    doSomethingElse() // Runs in main goroutine
+}
+</code></pre>
+<h2 id="channels-communication-between-goroutines">Channels: Communication Between Goroutines</h2>
+<p>Channels provide a way for goroutines to communicate with each other:</p>
+<pre><code class="language-go">func main() {
+    messages := make(chan string)
+
+    go func() {
+        messages &lt;- &quot;ping&quot;
+    }()
+
+    msg := &lt;-messages
+    fmt.Println(msg)
+}
+</code></pre>
+<h2 id="buffered-channels">Buffered Channels</h2>
+<p>Channels can be buffered to allow sending multiple values without blocking:</p>
+<pre><code class="language-go">ch := make(chan int, 2)
+ch &lt;- 1
+ch &lt;- 2
+// These don't block because buffer has capacity
+</code></pre>
+<h2 id="select-statement">Select Statement</h2>
+<p>The <code>select</code> statement lets you wait on multiple channel operations:</p>
+<pre><code class="language-go">select {
+case msg1 := &lt;-ch1:
+    fmt.Println(&quot;Received&quot;, msg1)
+case msg2 := &lt;-ch2:
+    fmt.Println(&quot;Received&quot;, msg2)
+case &lt;-time.After(time.Second):
+    fmt.Println(&quot;Timeout&quot;)
+}
+</code></pre>
+<h2 id="common-patterns">Common Patterns</h2>
+<h3 id="worker-pool">Worker Pool</h3>
+<pre><code class="language-go">func worker(id int, jobs &lt;-chan int, results chan&lt;- int) {
+    for j := range jobs {
+        results &lt;- j * 2
+    }
+}
+
+func main() {
+    jobs := make(chan int, 100)
+    results := make(chan int, 100)
+
+    // Start 3 workers
+    for w := 1; w &lt;= 3; w++ {
+        go worker(w, jobs, results)
+    }
+
+    // Send jobs
+    for j := 1; j &lt;= 5; j++ {
+        jobs &lt;- j
+    }
+    close(jobs)
+
+    // Collect results
+    for a := 1; a &lt;= 5; a++ {
+        &lt;-results
+    }
+}
+</code></pre>
+<h2 id="best-practices">Best Practices</h2>
+<ol>
+<li>Always close channels when you're done sending</li>
+<li>Use <code>sync.WaitGroup</code> for synchronization</li>
+<li>Be careful of deadlocks - ensure goroutines can complete</li>
+<li>Use <code>context</code> for cancellation and timeouts</li>
+</ol>
+<p>Concurrency in Go is powerful but requires careful thought about data flow and synchronization!</p>
+
+            </div>
+
+            
+            <div class="mt-12 pt-8 border-t border-gray-200">
+                <a href="/" class="text-blue-600 hover:text-blue-800 font-medium inline-flex items-center">
+                    <svg class="mr-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                    </svg>
+                    Back to Home
+                </a>
+            </div>
+        </article>
+    </main>
+
+    
+<footer class="bg-white border-t border-gray-200 mt-auto">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="text-center text-gray-600">
+            <p>&copy; 2026 GoBlog. All rights reserved.</p>
+            <p class="mt-2 text-sm">
+                Powered by <a href="https://github.com/harryday/goblog" class="text-blue-600 hover:text-blue-800 underline">GoBlog</a>
+            </p>
+        </div>
+    </div>
+</footer>
+
+</body>
+</html>

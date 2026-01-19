@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io/fs"
 	"log/slog"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/harrydayexe/GoBlog/v2/pkg/config"
@@ -140,6 +142,12 @@ func (g *Generator) assembleRawBlog(posts models.PostList) *GeneratedBlog {
 
 func (g *Generator) assembleBlogWithTemplates(ctx context.Context, posts models.PostList) (*GeneratedBlog, error) {
 	g.logger.DebugContext(ctx, "Rendering posts with templates")
+
+	// Check if renderer is available
+	if g.renderer == nil {
+		return nil, fmt.Errorf("template renderer is nil: cannot render templates without a template renderer")
+	}
+
 	blog := NewEmptyGeneratedBlog()
 
 	// Sort posts by date descending
@@ -207,6 +215,38 @@ func (g *Generator) assembleBlogWithTemplates(ctx context.Context, posts models.
 
 		blog.Tags[tag] = rendered
 	}
+
+	// Render tags index page
+	var tagInfos []models.TagInfo
+	for _, tag := range allTags {
+		tagPosts := posts.FilterByTag(tag)
+		tagInfos = append(tagInfos, models.TagInfo{
+			Name:      tag,
+			PostCount: len(tagPosts),
+		})
+	}
+
+	// Sort tags alphabetically (case-insensitive)
+	sort.Slice(tagInfos, func(i, j int) bool {
+		return strings.ToLower(tagInfos[i].Name) < strings.ToLower(tagInfos[j].Name)
+	})
+
+	tagsIndexData := models.TagsIndexPageData{
+		BaseData: models.BaseData{
+			SiteTitle:   g.SiteTitle.SiteTitle,
+			PageTitle:   "All Tags",
+			Description: "Browse all topics covered in this blog",
+			Year:        time.Now().Year(),
+		},
+		Tags:      tagInfos,
+		TotalTags: len(tagInfos),
+	}
+
+	tagsIndex, err := g.renderer.RenderTagsIndex(tagsIndexData)
+	if err != nil {
+		return nil, fmt.Errorf("failed to render tags index: %w", err)
+	}
+	blog.TagsIndex = tagsIndex
 
 	return blog, nil
 }

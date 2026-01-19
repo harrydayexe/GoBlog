@@ -1,6 +1,7 @@
 package outputter
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -69,7 +70,7 @@ func TestDirectoryWriter_HandleGeneratedBlog_Success(t *testing.T) {
 		},
 	}
 
-	err := writer.HandleGeneratedBlog(blog)
+	err := writer.HandleGeneratedBlog(context.Background(), blog)
 	if err != nil {
 		t.Fatalf("HandleGeneratedBlog failed: %v", err)
 	}
@@ -86,7 +87,7 @@ func TestDirectoryWriter_HandleGeneratedBlog_Success(t *testing.T) {
 
 	// Verify post files exist
 	for slug, expectedContent := range blog.Posts {
-		postPath := filepath.Join(outputDir, slug+".html")
+		postPath := filepath.Join(outputDir, "posts", slug+".html")
 		content, err := os.ReadFile(postPath)
 		if err != nil {
 			t.Errorf("Failed to read %s: %v", postPath, err)
@@ -129,7 +130,7 @@ func TestDirectoryWriter_HandleGeneratedBlog_RawOutput(t *testing.T) {
 		},
 	}
 
-	err := writer.HandleGeneratedBlog(blog)
+	err := writer.HandleGeneratedBlog(context.Background(), blog)
 	if err != nil {
 		t.Fatalf("HandleGeneratedBlog failed: %v", err)
 	}
@@ -144,7 +145,7 @@ func TestDirectoryWriter_HandleGeneratedBlog_RawOutput(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(outputDir, "index.html")); err != nil {
 		t.Errorf("index.html should exist: %v", err)
 	}
-	if _, err := os.Stat(filepath.Join(outputDir, "post-1.html")); err != nil {
+	if _, err := os.Stat(filepath.Join(outputDir, "posts", "post-1.html")); err != nil {
 		t.Errorf("post-1.html should exist: %v", err)
 	}
 }
@@ -159,7 +160,7 @@ func TestDirectoryWriter_HandleGeneratedBlog_EmptyBlog(t *testing.T) {
 	blog := generator.NewEmptyGeneratedBlog()
 	blog.Index = []byte("<h1>Empty Blog</h1>")
 
-	err := writer.HandleGeneratedBlog(blog)
+	err := writer.HandleGeneratedBlog(context.Background(), blog)
 	if err != nil {
 		t.Fatalf("HandleGeneratedBlog failed with empty blog: %v", err)
 	}
@@ -191,7 +192,7 @@ func TestDirectoryWriter_CreatesIndexFile(t *testing.T) {
 		Tags:  make(map[string][]byte),
 	}
 
-	err := writer.HandleGeneratedBlog(blog)
+	err := writer.HandleGeneratedBlog(context.Background(), blog)
 	if err != nil {
 		t.Fatalf("HandleGeneratedBlog failed: %v", err)
 	}
@@ -238,14 +239,14 @@ func TestDirectoryWriter_WritesPostFiles(t *testing.T) {
 		Tags:  make(map[string][]byte),
 	}
 
-	err := writer.HandleGeneratedBlog(blog)
+	err := writer.HandleGeneratedBlog(context.Background(), blog)
 	if err != nil {
 		t.Fatalf("HandleGeneratedBlog failed: %v", err)
 	}
 
 	// Verify each post file exists with .html extension
 	for slug := range posts {
-		expectedPath := filepath.Join(outputDir, slug+".html")
+		expectedPath := filepath.Join(outputDir, "posts", slug+".html")
 		if _, err := os.Stat(expectedPath); err != nil {
 			t.Errorf("Post file %s should exist: %v", expectedPath, err)
 		}
@@ -272,7 +273,7 @@ func TestDirectoryWriter_WritesTagFiles(t *testing.T) {
 		Tags:  tags,
 	}
 
-	err := writer.HandleGeneratedBlog(blog)
+	err := writer.HandleGeneratedBlog(context.Background(), blog)
 	if err != nil {
 		t.Fatalf("HandleGeneratedBlog failed: %v", err)
 	}
@@ -314,7 +315,7 @@ func TestDirectoryWriter_HandleGeneratedBlog_InvalidPath(t *testing.T) {
 		Tags:  make(map[string][]byte),
 	}
 
-	err := writer.HandleGeneratedBlog(blog)
+	err := writer.HandleGeneratedBlog(context.Background(), blog)
 	if err == nil {
 		t.Error("Expected error with invalid path containing null byte, got nil")
 	}
@@ -351,7 +352,7 @@ func TestDirectoryWriter_HandleGeneratedBlog_NoPermissions(t *testing.T) {
 		Tags:  make(map[string][]byte),
 	}
 
-	err := writer.HandleGeneratedBlog(blog)
+	err := writer.HandleGeneratedBlog(context.Background(), blog)
 	if err == nil {
 		t.Error("Expected error when writing to read-only directory, got nil")
 	}
@@ -402,7 +403,7 @@ func TestDirectoryWriter_OverwritesExistingFiles(t *testing.T) {
 		Tags:  map[string][]byte{"tag": []byte("original tag")},
 	}
 
-	err := writer.HandleGeneratedBlog(blog1)
+	err := writer.HandleGeneratedBlog(context.Background(), blog1)
 	if err != nil {
 		t.Fatalf("First HandleGeneratedBlog failed: %v", err)
 	}
@@ -414,7 +415,7 @@ func TestDirectoryWriter_OverwritesExistingFiles(t *testing.T) {
 		Tags:  map[string][]byte{"tag": []byte("updated tag")},
 	}
 
-	err = writer.HandleGeneratedBlog(blog2)
+	err = writer.HandleGeneratedBlog(context.Background(), blog2)
 	if err != nil {
 		t.Fatalf("Second HandleGeneratedBlog failed: %v", err)
 	}
@@ -425,7 +426,7 @@ func TestDirectoryWriter_OverwritesExistingFiles(t *testing.T) {
 		t.Errorf("index.html not updated correctly")
 	}
 
-	postContent, _ := os.ReadFile(filepath.Join(outputDir, "post.html"))
+	postContent, _ := os.ReadFile(filepath.Join(outputDir, "posts", "post.html"))
 	if string(postContent) != "updated content" {
 		t.Errorf("post.html not updated correctly")
 	}
@@ -458,14 +459,14 @@ func TestDirectoryWriter_HandlesSpecialCharactersInSlugs(t *testing.T) {
 		},
 	}
 
-	err := writer.HandleGeneratedBlog(blog)
+	err := writer.HandleGeneratedBlog(context.Background(), blog)
 	if err != nil {
 		t.Fatalf("HandleGeneratedBlog failed with special characters: %v", err)
 	}
 
 	// Verify all files were created
 	for slug := range blog.Posts {
-		path := filepath.Join(outputDir, slug+".html")
+		path := filepath.Join(outputDir, "posts", slug+".html")
 		if _, err := os.Stat(path); err != nil {
 			t.Errorf("Post file %s should exist: %v", path, err)
 		}
@@ -530,7 +531,7 @@ func TestDirectoryWriter_Integration(t *testing.T) {
 		},
 	}
 
-	err := writer.HandleGeneratedBlog(blog)
+	err := writer.HandleGeneratedBlog(context.Background(), blog)
 	if err != nil {
 		t.Fatalf("Integration test failed: %v", err)
 	}
@@ -538,8 +539,8 @@ func TestDirectoryWriter_Integration(t *testing.T) {
 	// Verify the complete structure exists
 	expectedFiles := []string{
 		"index.html",
-		"introduction-to-go.html",
-		"web-development-tips.html",
+		"posts/introduction-to-go.html",
+		"posts/web-development-tips.html",
 		"tags/golang.html",
 		"tags/webdev.html",
 	}
