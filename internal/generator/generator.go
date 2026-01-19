@@ -9,6 +9,7 @@ import (
 	"github.com/harrydayexe/GoBlog/v2/pkg/config"
 	"github.com/harrydayexe/GoBlog/v2/pkg/generator"
 	"github.com/harrydayexe/GoBlog/v2/pkg/outputter"
+	"github.com/harrydayexe/GoBlog/v2/pkg/templates"
 	"github.com/urfave/cli/v3"
 )
 
@@ -35,24 +36,25 @@ func NewGeneratorCommand(ctx context.Context, c *cli.Command) error {
 	}
 
 	templateDirPath := c.String(TemplateDirFlagName)
-	if templateDirPath != "" {
+	var templateDir fs.FS
+	if templateDirPath == "" {
+		templateDir = templates.Default
+	} else {
 		templateDirPath, err = utilities.GetDirectoryFromInput(templateDirPath, false)
 		if err != nil {
 			return nil
 		}
 
-		templateDir := os.DirFS(templateDirPath)
-
-		opts = append(opts, config.WithTemplatesDir(templateDir))
+		templateDir = os.DirFS(templateDirPath)
 	}
 
 	handler := outputter.NewDirectoryWriter(outputDir, opts...)
 
-	return runGenerate(ctx, postsFsys, opts, handler)
+	return runGenerate(ctx, postsFsys, templateDir, opts, handler)
 }
 
-func runGenerate(ctx context.Context, postsFsys fs.FS, opts []config.Option, handler outputter.Outputter) error {
-	gen := generator.New(postsFsys, opts...)
+func runGenerate(ctx context.Context, postsFsys fs.FS, templatesFsys fs.FS, opts []config.Option, handler outputter.Outputter) error {
+	gen := generator.New(postsFsys, templatesFsys, opts...)
 	gen.DebugConfig(ctx)
 
 	blog, err := gen.Generate(ctx)

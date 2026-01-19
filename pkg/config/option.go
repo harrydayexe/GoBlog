@@ -1,7 +1,5 @@
 package config
 
-import "io/fs"
-
 // Option represents a configuration option that can be applied to
 // generator or outputter instances during construction.
 //
@@ -12,8 +10,7 @@ import "io/fs"
 // This type should not be constructed directly by users. Instead, use the
 // provided option functions like WithRawOutput() and WithTemplatesDir().
 type Option struct {
-	WithRawOutputFunc    func(v *RawOutput)
-	WithTemplatesDirFunc func(v *TemplatesDir)
+	WithRawOutputFunc func(v *RawOutput)
 }
 
 // RawOutput is a configuration type that controls whether HTML output
@@ -45,38 +42,6 @@ func WithRawOutput() Option {
 	return Option{
 		WithRawOutputFunc: func(v *RawOutput) {
 			v.RawOutput = true
-		},
-	}
-}
-
-// TemplatesDir is a configuration type that specifies the filesystem
-// containing template files for rendering blog pages.
-//
-// The filesystem should contain template files used by the generator
-// to render blog posts, tag pages, and the index page. If not specified,
-// the generator will use default templates.
-//
-// This type is typically embedded in generator configuration structs and
-// should be set using the WithTemplatesDir() option function.
-type TemplatesDir struct{ TemplatesDir fs.FS }
-
-// WithTemplatesDir returns an Option that sets a custom template filesystem.
-//
-// The provided filesystem should contain the template files that the generator
-// will use to render blog pages. This allows you to customize the appearance
-// of your blog by providing your own templates instead of using the defaults.
-//
-// The templatesDir parameter must be a valid fs.FS implementation containing
-// the necessary template files.
-//
-// Example usage:
-//
-//	templateFS := os.DirFS("custom-templates/")
-//	gen := generator.New(postsFS, config.WithTemplatesDir(templateFS))
-func WithTemplatesDir(templatesDir fs.FS) Option {
-	return Option{
-		WithTemplatesDirFunc: func(v *TemplatesDir) {
-			v.TemplatesDir = templatesDir
 		},
 	}
 }
