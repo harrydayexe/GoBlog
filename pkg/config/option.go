@@ -47,8 +47,19 @@ func WithRawOutput() Option {
 	}
 }
 
+// SiteTitle is a configuration type that holds the site's title.
+//
+// This type is typically embedded in generator configuration structs
+// and should be set using the WithSiteTitle() option function.
 type SiteTitle struct{ SiteTitle string }
 
+// WithSiteTitle returns an Option that sets the site title.
+//
+// The site title is used in generated HTML pages and templates.
+//
+// Example usage:
+//
+//	gen := generator.New(fsys, renderer, config.WithSiteTitle("My Blog"))
 func WithSiteTitle(title string) Option {
 	return Option{
 		WithSiteTitleFunc: func(v *SiteTitle) {
