@@ -11,3 +11,6 @@ const OutputDirArgName = "output-dir"
 
 // TemplateDirArgName is the CLI flag name for setting a template directory
 const TemplateDirFlagName = "template-dir"
+
+// BlogRootFlagName is the CLI flag name for setting a blog root path
+const BlogRootFlagName = "root-path"
