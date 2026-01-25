@@ -7,7 +7,7 @@ type IndexPageData struct {
 
 	// Posts is the list of posts to display, typically sorted by date descending.
 	// Use range to iterate: {{range .Posts}}...{{end}}
-	Posts []*Post
+	Posts PostList
 
 	// TotalPosts is the total number of posts in the blog.
 	TotalPosts int

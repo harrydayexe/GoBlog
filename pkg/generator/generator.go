@@ -184,6 +184,13 @@ func (g *Generator) assembleBlogWithTemplates(ctx context.Context, posts models.
 		blog.Posts[post.Slug] = rendered
 	}
 
+	// Enrich posts with BlogRoot for index page
+	indexPosts := make([]*models.Post, len(posts))
+	for i, post := range posts {
+		indexPosts[i] = post
+		indexPosts[i].BlogRoot = g.BlogRoot.BlogRoot
+	}
+
 	// Render index page
 	indexData := models.IndexPageData{
 		BaseData: models.BaseData{
@@ -193,8 +200,8 @@ func (g *Generator) assembleBlogWithTemplates(ctx context.Context, posts models.
 			Year:        time.Now().Year(),
 			BlogRoot:    g.BlogRoot.BlogRoot,
 		},
-		Posts:      posts,
-		TotalPosts: len(posts),
+		Posts:      indexPosts,
+		TotalPosts: len(indexPosts),
 	}
 
 	index, err := g.renderer.RenderIndex(indexData)
@@ -207,6 +214,11 @@ func (g *Generator) assembleBlogWithTemplates(ctx context.Context, posts models.
 	allTags := posts.GetAllTags()
 	for _, tag := range allTags {
 		tagPosts := posts.FilterByTag(tag)
+
+		// Enrich tag posts with BlogRoot
+		for _, post := range tagPosts {
+			post.BlogRoot = g.BlogRoot.BlogRoot
+		}
 
 		tagData := models.TagPageData{
 			BaseData: models.BaseData{

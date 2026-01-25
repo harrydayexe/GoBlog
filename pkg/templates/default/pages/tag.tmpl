@@ -32,7 +32,7 @@
                 <h3 class="mt-4 text-lg font-medium text-gray-900">No posts found</h3>
                 <p class="mt-2 text-gray-500">There are no posts with the tag "{{.Tag}}".</p>
                 <div class="mt-6">
-                    <a href="/" class="text-blue-600 hover:text-blue-800 font-medium inline-flex items-center">
+                    <a href="{{.BlogRoot}}" class="text-blue-600 hover:text-blue-800 font-medium inline-flex items-center">
                         <svg class="mr-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
                         </svg>
@@ -45,7 +45,7 @@
             <!-- Back Navigation -->
             {{if .Posts}}
             <div class="mt-12 pt-8 border-t border-gray-200">
-                <a href="/" class="text-blue-600 hover:text-blue-800 font-medium inline-flex items-center">
+                <a href="{{.BlogRoot}}" class="text-blue-600 hover:text-blue-800 font-medium inline-flex items-center">
                     <svg class="mr-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
                     </svg>
