@@ -19,4 +19,9 @@ type BaseData struct {
 	// Year is the current year, useful for copyright notices.
 	// Example: 2026
 	Year int
+
+	// BlogRoot is the path to the root of the blog, useful for hyper links
+	// Default: "/"
+	// Example: "/blog/"
+	BlogRoot string
 }

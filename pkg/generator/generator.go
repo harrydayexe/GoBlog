@@ -25,6 +25,7 @@ type Generator struct {
 
 	config.RawOutput
 	config.SiteTitle
+	config.BlogRoot
 	ParserConfig parser.Config // The config to use when parsing
 
 	logger   *slog.Logger
@@ -33,8 +34,12 @@ type Generator struct {
 
 func (c Generator) String() string {
 	return fmt.Sprintf(`Generator Config
-- RawOutput           %t`,
+- RawOutput           %t,
+- SiteTitle           %s,
+- BlogRoot            %s`,
 		c.RawOutput,
+		c.SiteTitle,
+		c.BlogRoot,
 	)
 }
 
@@ -51,6 +56,9 @@ func New(posts fs.FS, renderer *TemplateRenderer, opts ...config.Option) *Genera
 		PostsDir: posts,
 		logger:   logger,
 		renderer: renderer,
+		BlogRoot: config.BlogRoot{
+			BlogRoot: "/",
+		},
 	}
 
 	// Run options on config
@@ -59,6 +67,8 @@ func New(posts fs.FS, renderer *TemplateRenderer, opts ...config.Option) *Genera
 			opt.WithRawOutputFunc(&gen.RawOutput)
 		} else if opt.WithSiteTitleFunc != nil {
 			opt.WithSiteTitleFunc(&gen.SiteTitle)
+		} else if opt.WithBlogRootFunc != nil {
+			opt.WithBlogRootFunc(&gen.BlogRoot)
 		}
 	}
 
@@ -161,6 +171,7 @@ func (g *Generator) assembleBlogWithTemplates(ctx context.Context, posts models.
 				PageTitle:   post.Title,
 				Description: post.Description,
 				Year:        time.Now().Year(),
+				BlogRoot:    g.BlogRoot.BlogRoot,
 			},
 			Post: post,
 		}
@@ -180,6 +191,7 @@ func (g *Generator) assembleBlogWithTemplates(ctx context.Context, posts models.
 			PageTitle:   "Home",
 			Description: "Recent blog posts",
 			Year:        time.Now().Year(),
+			BlogRoot:    g.BlogRoot.BlogRoot,
 		},
 		Posts:      posts,
 		TotalPosts: len(posts),
@@ -202,6 +214,7 @@ func (g *Generator) assembleBlogWithTemplates(ctx context.Context, posts models.
 				PageTitle:   "Tag: " + tag,
 				Description: fmt.Sprintf("Posts tagged with %s", tag),
 				Year:        time.Now().Year(),
+				BlogRoot:    g.BlogRoot.BlogRoot,
 			},
 			Tag:       tag,
 			Posts:     tagPosts,
@@ -237,6 +250,7 @@ func (g *Generator) assembleBlogWithTemplates(ctx context.Context, posts models.
 			PageTitle:   "All Tags",
 			Description: "Browse all topics covered in this blog",
 			Year:        time.Now().Year(),
+			BlogRoot:    g.BlogRoot.BlogRoot,
 		},
 		Tags:      tagInfos,
 		TotalTags: len(tagInfos),
