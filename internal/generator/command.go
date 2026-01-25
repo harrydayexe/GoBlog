@@ -35,5 +35,10 @@ var GeneratorCommand cli.Command = cli.Command{
 			Aliases: []string{"t"},
 			Usage:   "directory of templates to use when rendering",
 		},
+		&cli.StringFlag{
+			Name:    BlogRootFlagName,
+			Aliases: []string{"p"},
+			Usage:   "root path of the blog, defaults to '/'",
+		},
 	},
 }

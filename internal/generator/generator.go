@@ -5,6 +5,8 @@ import (
 	"io/fs"
 	"log/slog"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/harrydayexe/GoBlog/v2/internal/utilities"
 	"github.com/harrydayexe/GoBlog/v2/pkg/config"
@@ -49,6 +51,16 @@ func NewGeneratorCommand(ctx context.Context, c *cli.Command) error {
 		}
 
 		templateDir = os.DirFS(templateDirPath)
+	}
+
+	blogRootString := c.String(BlogRootFlagName)
+	if blogRootString != "" {
+		blogRootClean := filepath.Clean(blogRootString)
+		blogRoot := strings.TrimPrefix(blogRootClean, ".")
+		if !strings.HasSuffix(blogRoot, "/") {
+			blogRoot += "/"
+		}
+		opts = append(opts, config.WithBlogRoot(blogRoot))
 	}
 
 	renderer, err := generator.NewTemplateRenderer(templateDir)
