@@ -29,7 +29,7 @@
                 {{if .Post.Tags}}
                 <div class="mt-6 flex flex-wrap gap-2">
                     {{range .Post.Tags}}
-                    <a href="/tags/{{.}}.html" class="inline-block px-3 py-1 text-sm font-medium text-blue-700 bg-blue-100 rounded-full hover:bg-blue-200 transition-colors">
+                    <a href="{{$.BaseData.BlogRoot}}tags/{{.}}.html" class="inline-block px-3 py-1 text-sm font-medium text-blue-700 bg-blue-100 rounded-full hover:bg-blue-200 transition-colors">
                         #{{.}}
                     </a>
                     {{end}}
@@ -44,7 +44,7 @@
 
             <!-- Back Navigation -->
             <div class="mt-12 pt-8 border-t border-gray-200">
-                <a href="/" class="text-blue-600 hover:text-blue-800 font-medium inline-flex items-center">
+                <a href="{{.BaseData.BlogRoot}}" class="text-blue-600 hover:text-blue-800 font-medium inline-flex items-center">
                     <svg class="mr-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
                     </svg>

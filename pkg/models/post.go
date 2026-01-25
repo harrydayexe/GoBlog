@@ -23,6 +23,7 @@ type Post struct {
 	RawContent  string        // Original markdown content
 	SourcePath  string        // Path to source markdown file
 	PublishDate time.Time     // Formatted publish date
+	BlogRoot    string        // Blog root path for URLs (e.g., "/" or "/blog/")
 }
 
 // Validate checks if the post has all required fields.
