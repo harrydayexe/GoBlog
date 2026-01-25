@@ -108,6 +108,27 @@ func ExampleWithRawOutput() {
 	// Generated posts: 3
 }
 
+// ExampleWithBlogRoot demonstrates using the WithBlogRoot option for subdirectory deployment.
+func ExampleWithBlogRoot() {
+	fsys := os.DirFS("testdata")
+
+	// Set blog root for deployment at /blog/ subdirectory
+	// This ensures all links in templates use /blog/ as the base path
+	gen := generator.New(fsys, nil, config.WithBlogRoot("/blog/"), config.WithRawOutput())
+
+	ctx := context.Background()
+	blog, err := gen.Generate(ctx)
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
+
+	fmt.Println("Blog root configured for subdirectory")
+	fmt.Printf("Generated posts: %d\n", len(blog.Posts))
+	// Output: Blog root configured for subdirectory
+	// Generated posts: 3
+}
+
 // ExampleGeneratedBlog demonstrates working with a GeneratedBlog.
 func ExampleGeneratedBlog() {
 	fsys := os.DirFS("testdata")

@@ -179,6 +179,84 @@ When `RawOutput` is enabled, the `GeneratedBlog` structure contains:
 
 The HTML content is clean, semantic HTML generated from your Markdown without any surrounding structure like `<html>`, `<head>`, or `<body>` tags. This gives you complete control over how to integrate the content into your site.
 
+### Blog Root Configuration
+
+When deploying your blog at a subdirectory rather than the root of your domain (e.g., `example.com/blog/` instead of `example.com/`), you need to configure the blog root path. This ensures all generated links in templates use the correct base path.
+
+#### Using Blog Root with the CLI
+
+```bash
+# Generate blog for deployment at /blog/ subdirectory
+goblog gen posts/ output/ --root-path /blog/
+
+# Or use the short flag
+goblog gen posts/ output/ -p /blog/
+
+# Serve blog locally with custom root path
+goblog serve posts/ --root-path /blog/ --port 8080
+```
+
+When blog root is configured:
+- All internal links (navigation, post links, tag links) will use the specified root path
+- Links are generated as `/blog/posts/my-post.html` instead of `/posts/my-post.html`
+- Home links point to `/blog/` instead of `/`
+- Tag links use `/blog/tags/tag-name.html` instead of `/tags/tag-name.html`
+
+#### Using Blog Root with the Go API
+
+```go
+package main
+
+import (
+    "context"
+    "os"
+
+    "github.com/harrydayexe/GoBlog/v2/pkg/config"
+    "github.com/harrydayexe/GoBlog/v2/pkg/generator"
+    "github.com/harrydayexe/GoBlog/v2/pkg/outputter"
+)
+
+func main() {
+    // Create generator with blog root for subdirectory deployment
+    fsys := os.DirFS("posts/")
+    renderer, _ := generator.NewTemplateRenderer(templates.Default)
+    gen := generator.New(fsys, renderer, config.WithBlogRoot("/blog/"))
+
+    // Generate the blog
+    blog, err := gen.Generate(context.Background())
+    if err != nil {
+        panic(err)
+    }
+
+    // Write to disk - all links will use /blog/ prefix
+    writer := outputter.NewDirectoryWriter("output/")
+    writer.HandleGeneratedBlog(context.Background(), blog)
+}
+```
+
+#### Common Use Cases
+
+**Root Deployment (Default)**:
+```bash
+# Blog at example.com/
+goblog gen posts/ output/
+# Links: /posts/slug.html, /tags/tag.html, /
+```
+
+**Subdirectory Deployment**:
+```bash
+# Blog at example.com/blog/
+goblog gen posts/ output/ --root-path /blog/
+# Links: /blog/posts/slug.html, /blog/tags/tag.html, /blog/
+```
+
+**Nested Subdirectory**:
+```bash
+# Blog at example.com/docs/blog/
+goblog gen posts/ output/ --root-path /docs/blog/
+# Links: /docs/blog/posts/slug.html, /docs/blog/tags/tag.html, /docs/blog/
+```
+
 ## Docker Usage 
 
 ```bash

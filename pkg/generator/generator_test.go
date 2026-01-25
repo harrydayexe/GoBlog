@@ -673,6 +673,81 @@ func TestGenerate_WithTemplates(t *testing.T) {
 	}
 }
 
+// TestGenerate_WithCustomBlogRoot tests that BlogRoot is correctly applied in template output.
+func TestGenerate_WithCustomBlogRoot(t *testing.T) {
+	t.Parallel()
+
+	testFS := os.DirFS("testdata")
+	renderer, err := NewTemplateRenderer(os.DirFS("../templates/default"))
+	if err != nil {
+		t.Fatalf("NewTemplateRenderer() error = %v", err)
+	}
+
+	// Create generator with custom blog root
+	gen := New(testFS, renderer, config.WithBlogRoot("/blog/"))
+
+	ctx := context.Background()
+	blog, err := gen.Generate(ctx)
+
+	if err != nil {
+		t.Fatalf("Generate() with custom BlogRoot error = %v", err)
+	}
+
+	if blog == nil {
+		t.Fatal("Generate() returned nil blog")
+	}
+
+	// Verify posts contain /blog/ in links
+	foundPostWithTags := false
+	for slug, content := range blog.Posts {
+		htmlContent := string(content)
+
+		// Post content should contain /blog/ in navigation links
+		if !contains(htmlContent, `href="/blog/"`) {
+			t.Errorf("Post %q does not contain home link with /blog/ root", slug)
+		}
+
+		// Check if this post has tag links (only posts with tags will have them)
+		if contains(htmlContent, `href="/blog/tags/`) {
+			foundPostWithTags = true
+		}
+	}
+
+	// Verify at least one post has tag links
+	if !foundPostWithTags {
+		t.Error("No posts contain tag links with /blog/ root")
+	}
+
+	// Verify index contains /blog/ in links
+	indexContent := string(blog.Index)
+	if !contains(indexContent, `href="/blog/posts/`) {
+		t.Error("Index does not contain post links with /blog/ root")
+	}
+	if !contains(indexContent, `href="/blog/tags/`) {
+		t.Error("Index does not contain tag links with /blog/ root")
+	}
+
+	// Verify tag pages contain /blog/ in links
+	for tagName, content := range blog.Tags {
+		tagContent := string(content)
+		if !contains(tagContent, `href="/blog/"`) {
+			t.Errorf("Tag page %q does not contain home link with /blog/ root", tagName)
+		}
+		if !contains(tagContent, `href="/blog/posts/`) {
+			t.Errorf("Tag page %q does not contain post links with /blog/ root", tagName)
+		}
+	}
+
+	// Verify tags index contains /blog/ in links
+	tagsIndexContent := string(blog.TagsIndex)
+	if !contains(tagsIndexContent, `href="/blog/tags/`) {
+		t.Error("Tags index does not contain tag links with /blog/ root")
+	}
+	if !contains(tagsIndexContent, `href="/blog/"`) {
+		t.Error("Tags index does not contain home link with /blog/ root")
+	}
+}
+
 // TestGenerate_NilRenderer tests that generation fails gracefully with nil renderer.
 func TestGenerate_NilRenderer(t *testing.T) {
 	t.Parallel()
@@ -716,6 +791,27 @@ func TestWithSiteTitle(t *testing.T) {
 	if genCustom.SiteTitle.SiteTitle != "My Custom Blog" {
 		t.Errorf("Generator with WithSiteTitle() has SiteTitle = %q, want %q",
 			genCustom.SiteTitle.SiteTitle, "My Custom Blog")
+	}
+}
+
+// TestWithBlogRoot tests that the WithBlogRoot option is applied correctly.
+func TestWithBlogRoot(t *testing.T) {
+	t.Parallel()
+
+	testFS := os.DirFS("testdata")
+
+	// Without option - should use default
+	genDefault := New(testFS, nil)
+	if genDefault.BlogRoot.BlogRoot != "/" {
+		t.Errorf("Generator without WithBlogRoot() has BlogRoot = %q, want %q",
+			genDefault.BlogRoot.BlogRoot, "/")
+	}
+
+	// With option - should use provided blog root
+	genCustom := New(testFS, nil, config.WithBlogRoot("/blog/"))
+	if genCustom.BlogRoot.BlogRoot != "/blog/" {
+		t.Errorf("Generator with WithBlogRoot() has BlogRoot = %q, want %q",
+			genCustom.BlogRoot.BlogRoot, "/blog/")
 	}
 }
 
