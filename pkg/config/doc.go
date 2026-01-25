@@ -30,6 +30,11 @@
 // to use for rendering blog pages. This allows you to provide your own
 // template files instead of using the defaults.
 //
+// WithBlogRoot(path string) sets the root path for the blog when deploying
+// at a subdirectory rather than domain root. For example, use "/blog/" when
+// deploying at example.com/blog/. This ensures all generated links in templates
+// use the correct base path. Default is "/" for root deployment.
+//
 // # Usage Examples
 //
 // Basic usage with a single option:
@@ -43,6 +48,12 @@
 //	gen := generator.New(fsys,
 //	    config.WithRawOutput(),
 //	    config.WithTemplatesDir(templateFS),
+//	)
+//
+// Configuring blog root for subdirectory deployment:
+//
+//	gen := generator.New(fsys,
+//	    config.WithBlogRoot("/blog/"),
 //	)
 //
 // # Concurrency

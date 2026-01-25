@@ -3,6 +3,7 @@ package generator
 import (
 	"context"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/harrydayexe/GoBlog/v2/pkg/config"
@@ -266,4 +267,115 @@ description: A test
 	if err != nil && err != context.Canceled {
 		t.Errorf("runGenerate() with canceled context error = %v, want nil or context.Canceled", err)
 	}
+}
+
+// TestRunGenerate_WithBlogRoot tests generation with custom blog root path.
+func TestRunGenerate_WithBlogRoot(t *testing.T) {
+	t.Parallel()
+
+	tempDir := t.TempDir()
+
+	testPost := `---
+title: Blog Root Test
+date: 2024-01-15
+description: Testing blog root
+tags: [test, go]
+---
+
+# Blog Root Test
+
+Testing the blog root feature.
+`
+	postsDir := tempDir + "/posts"
+	err := os.MkdirAll(postsDir, 0755)
+	if err != nil {
+		t.Fatalf("Failed to create posts dir: %v", err)
+	}
+
+	err = os.WriteFile(postsDir+"/blogroot.md", []byte(testPost), 0644)
+	if err != nil {
+		t.Fatalf("Failed to write test post: %v", err)
+	}
+
+	outputDir := tempDir + "/output"
+	err = os.MkdirAll(outputDir, 0755)
+	if err != nil {
+		t.Fatalf("Failed to create output dir: %v", err)
+	}
+
+	postsFsys := os.DirFS(postsDir)
+	renderer, err := generator.NewTemplateRenderer(os.DirFS("../../pkg/templates/default"))
+	if err != nil {
+		t.Fatalf("Failed to create renderer: %v", err)
+	}
+
+	// Generate with custom blog root
+	opts := []config.Option{config.WithBlogRoot("/blog/")}
+	handler := outputter.NewDirectoryWriter(outputDir, opts...)
+
+	ctx := context.Background()
+	err = runGenerate(ctx, postsFsys, renderer, opts, handler)
+
+	if err != nil {
+		t.Fatalf("runGenerate() with blog root error = %v, want nil", err)
+	}
+
+	// Read and verify index.html contains /blog/ in links
+	indexPath := outputDir + "/index.html"
+	indexContent, err := os.ReadFile(indexPath)
+	if err != nil {
+		t.Fatalf("Failed to read index.html: %v", err)
+	}
+
+	indexHTML := string(indexContent)
+
+	// Verify blog root is used in post links
+	if !containsString(indexHTML, `href="/blog/posts/`) {
+		t.Error("index.html does not contain post links with /blog/ root")
+	}
+
+	// Verify blog root is used in tag links
+	if !containsString(indexHTML, `href="/blog/tags/`) {
+		t.Error("index.html does not contain tag links with /blog/ root")
+	}
+
+	// Verify blog root is used in home link
+	if !containsString(indexHTML, `href="/blog/"`) {
+		t.Error("index.html does not contain home link with /blog/ root")
+	}
+
+	// List files in posts directory to find the generated post
+	postsPath := outputDir + "/posts"
+	postFiles, err := os.ReadDir(postsPath)
+	if err != nil {
+		t.Fatalf("Failed to read posts directory: %v", err)
+	}
+
+	if len(postFiles) == 0 {
+		t.Fatal("No post files generated in posts directory")
+	}
+
+	// Read and verify the first post page contains /blog/ in links
+	postPath := postsPath + "/" + postFiles[0].Name()
+	postContent, err := os.ReadFile(postPath)
+	if err != nil {
+		t.Fatalf("Failed to read post file: %v", err)
+	}
+
+	postHTML := string(postContent)
+
+	// Verify blog root is used in navigation
+	if !containsString(postHTML, `href="/blog/"`) {
+		t.Error("Post page does not contain home link with /blog/ root")
+	}
+
+	// Verify blog root is used in tag links
+	if !containsString(postHTML, `href="/blog/tags/`) {
+		t.Error("Post page does not contain tag links with /blog/ root")
+	}
+}
+
+// containsString checks if a string contains a substring (helper function).
+func containsString(s, substr string) bool {
+	return strings.Contains(s, substr)
 }
