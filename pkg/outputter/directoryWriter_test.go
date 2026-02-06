@@ -15,10 +15,10 @@ func TestNewDirectoryWriter(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name        string
-		outputDir   string
-		opts        []config.Option
-		wantRawOut  bool
+		name       string
+		outputDir  string
+		opts       []config.Option
+		wantRawOut bool
 	}{
 		{
 			name:       "without options",
@@ -447,15 +447,15 @@ func TestDirectoryWriter_HandlesSpecialCharactersInSlugs(t *testing.T) {
 
 	blog := &generator.GeneratedBlog{
 		Posts: map[string][]byte{
-			"post-with-dashes":     []byte("content1"),
+			"post-with-dashes":      []byte("content1"),
 			"post_with_underscores": []byte("content2"),
-			"post.with.dots":       []byte("content3"),
+			"post.with.dots":        []byte("content3"),
 		},
 		Index: []byte("index"),
 		Tags: map[string][]byte{
-			"c++":      []byte("cpp tag"),
-			"c#":       []byte("csharp tag"),
-			"go-lang":  []byte("golang tag"),
+			"c++":     []byte("cpp tag"),
+			"c#":      []byte("csharp tag"),
+			"go-lang": []byte("golang tag"),
 		},
 	}
 
