@@ -12,9 +12,9 @@ func TestErrorType_IsFatalError(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name       string
-		errorType  ErrorType
-		wantFatal  bool
+		name      string
+		errorType ErrorType
+		wantFatal bool
 	}{
 		{
 			name:      "TypeHint is not fatal",
@@ -45,9 +45,9 @@ func TestInputDirectoryError_Error(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name      string
-		err       *InputDirectoryError
-		wantPrefix string
+		name         string
+		err          *InputDirectoryError
+		wantPrefix   string
 		wantContains string
 	}{
 		{
@@ -56,7 +56,7 @@ func TestInputDirectoryError_Error(t *testing.T) {
 				Type: TypeHint,
 				Msg:  "please specify a path",
 			},
-			wantPrefix: "hint:",
+			wantPrefix:   "hint:",
 			wantContains: "please specify a path",
 		},
 		{
@@ -65,7 +65,7 @@ func TestInputDirectoryError_Error(t *testing.T) {
 				Type: TypeError,
 				Msg:  "path is not a directory",
 			},
-			wantPrefix: "error:",
+			wantPrefix:   "error:",
 			wantContains: "path is not a directory",
 		},
 		{
@@ -74,7 +74,7 @@ func TestInputDirectoryError_Error(t *testing.T) {
 				Type: ErrorType(999), // Invalid type
 				Msg:  "some message",
 			},
-			wantPrefix: "some message",
+			wantPrefix:   "some message",
 			wantContains: "some message",
 		},
 	}
