@@ -24,7 +24,7 @@ func TestNew(t *testing.T) {
 	tests := []struct {
 		name    string
 		posts   fs.FS
-		opts    []config.Option
+		opts    []config.GeneratorOption
 		wantNil bool
 	}{
 		{
@@ -36,7 +36,7 @@ func TestNew(t *testing.T) {
 		{
 			name:    "with valid filesystem and RawOutput option",
 			posts:   testFS,
-			opts:    []config.Option{config.WithRawOutput()},
+			opts:    []config.GeneratorOption{config.WithRawOutput()},
 			wantNil: false,
 		},
 	}

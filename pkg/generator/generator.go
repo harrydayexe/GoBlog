@@ -49,7 +49,7 @@ func (c Generator) String() string {
 //
 // Options can be provided to customize behavior such as template directories,
 // posts per page, and other generation parameters.
-func New(posts fs.FS, renderer *TemplateRenderer, opts ...config.Option) *Generator {
+func New(posts fs.FS, renderer *TemplateRenderer, opts ...config.GeneratorOption) *Generator {
 	logger := slog.Default()
 
 	gen := Generator{

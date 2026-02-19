@@ -55,7 +55,7 @@ This is a test post.
 	}
 
 	handler := outputter.NewDirectoryWriter(outputDir)
-	opts := []config.Option{}
+	opts := []config.GeneratorOption{}
 
 	// Run generate
 	ctx := context.Background()
@@ -115,7 +115,7 @@ tags: [test]
 		t.Fatalf("Failed to create renderer: %v", err)
 	}
 
-	opts := []config.Option{config.WithRawOutput()}
+	opts := []config.GeneratorOption{config.WithRawOutput()}
 	handler := outputter.NewDirectoryWriter(outputDir, opts...)
 
 	ctx := context.Background()
@@ -157,7 +157,7 @@ func TestRunGenerate_EmptyPosts(t *testing.T) {
 	}
 
 	handler := outputter.NewDirectoryWriter(outputDir)
-	opts := []config.Option{}
+	opts := []config.GeneratorOption{}
 
 	ctx := context.Background()
 	err = runGenerate(ctx, postsFsys, renderer, opts, handler)
@@ -205,7 +205,7 @@ No description or date.
 	}
 
 	handler := outputter.NewDirectoryWriter(outputDir)
-	opts := []config.Option{}
+	opts := []config.GeneratorOption{}
 
 	ctx := context.Background()
 	err = runGenerate(ctx, postsFsys, renderer, opts, handler)
@@ -254,7 +254,7 @@ description: A test
 	}
 
 	handler := outputter.NewDirectoryWriter(outputDir)
-	opts := []config.Option{}
+	opts := []config.GeneratorOption{}
 
 	// Create a pre-canceled context
 	ctx, cancel := context.WithCancel(context.Background())
@@ -310,7 +310,7 @@ Testing the blog root feature.
 	}
 
 	// Generate with custom blog root
-	opts := []config.Option{config.WithBlogRoot("/blog/")}
+	opts := []config.GeneratorOption{config.WithBlogRoot("/blog/")}
 	handler := outputter.NewDirectoryWriter(outputDir, opts...)
 
 	ctx := context.Background()

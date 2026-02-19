@@ -31,7 +31,7 @@ func NewGeneratorCommand(ctx context.Context, c *cli.Command) error {
 		return err
 	}
 
-	opts := []config.Option{}
+	opts := []config.GeneratorOption{}
 
 	rawOutputFlag := c.Bool(RawOutputFlagName)
 	if rawOutputFlag {
@@ -73,7 +73,7 @@ func NewGeneratorCommand(ctx context.Context, c *cli.Command) error {
 	return runGenerate(ctx, postsFsys, renderer, opts, handler)
 }
 
-func runGenerate(ctx context.Context, postsFsys fs.FS, renderer *generator.TemplateRenderer, opts []config.Option, handler outputter.Outputter) error {
+func runGenerate(ctx context.Context, postsFsys fs.FS, renderer *generator.TemplateRenderer, opts []config.GeneratorOption, handler outputter.Outputter) error {
 	gen := generator.New(postsFsys, renderer, opts...)
 	gen.DebugConfig(ctx)
 

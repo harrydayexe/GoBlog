@@ -1,15 +1,15 @@
 package config
 
-// Option represents a configuration option that can be applied to
+// GeneratorOption represents a configuration option that can be applied to
 // generator or outputter instances during construction.
 //
 // Options use the functional options pattern, where each option function
-// returns an Option struct containing one or more function pointers that
+// returns an GeneratorOption struct containing one or more function pointers that
 // modify specific configuration fields.
 //
 // This type should not be constructed directly by users. Instead, use the
 // provided option functions like WithRawOutput() and WithTemplatesDir().
-type Option struct {
+type GeneratorOption struct {
 	WithRawOutputFunc func(v *RawOutput)
 	WithSiteTitleFunc func(v *SiteTitle)
 	WithBlogRootFunc  func(v *BlogRoot)
@@ -40,8 +40,8 @@ type RawOutput struct{ RawOutput bool }
 //
 //	gen := generator.New(fsys, config.WithRawOutput())
 //	writer := outputter.NewDirectoryWriter("output/", config.WithRawOutput())
-func WithRawOutput() Option {
-	return Option{
+func WithRawOutput() GeneratorOption {
+	return GeneratorOption{
 		WithRawOutputFunc: func(v *RawOutput) {
 			v.RawOutput = true
 		},
@@ -61,8 +61,8 @@ type SiteTitle struct{ SiteTitle string }
 // Example usage:
 //
 //	gen := generator.New(fsys, renderer, config.WithSiteTitle("My Blog"))
-func WithSiteTitle(title string) Option {
-	return Option{
+func WithSiteTitle(title string) GeneratorOption {
+	return GeneratorOption{
 		WithSiteTitleFunc: func(v *SiteTitle) {
 			v.SiteTitle = title
 		},
@@ -82,8 +82,8 @@ type BlogRoot struct{ BlogRoot string }
 // Example usage:
 //
 //	gen := generator.New(fsys, renderer, config.WithBlogRoot("/blog/"))
-func WithBlogRoot(root string) Option {
-	return Option{
+func WithBlogRoot(root string) GeneratorOption {
+	return GeneratorOption{
 		WithBlogRootFunc: func(v *BlogRoot) {
 			v.BlogRoot = root
 		},

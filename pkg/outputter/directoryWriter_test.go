@@ -17,7 +17,7 @@ func TestNewDirectoryWriter(t *testing.T) {
 	tests := []struct {
 		name       string
 		outputDir  string
-		opts       []config.Option
+		opts       []config.GeneratorOption
 		wantRawOut bool
 	}{
 		{
@@ -29,7 +29,7 @@ func TestNewDirectoryWriter(t *testing.T) {
 		{
 			name:       "with RawOutput option",
 			outputDir:  "/tmp/blog-raw",
-			opts:       []config.Option{config.WithRawOutput()},
+			opts:       []config.GeneratorOption{config.WithRawOutput()},
 			wantRawOut: true,
 		},
 	}

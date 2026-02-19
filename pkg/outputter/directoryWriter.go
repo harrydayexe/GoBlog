@@ -40,7 +40,7 @@ type DirectoryWriter struct {
 // This is the recommended constructor for most use cases. Use
 // NewDirectoryWriterWithConfig when you need to provide an explicit
 // DirectoryWriterConfig struct.
-func NewDirectoryWriter(outputDir string, opts ...config.Option) DirectoryWriter {
+func NewDirectoryWriter(outputDir string, opts ...config.GeneratorOption) DirectoryWriter {
 	logger := slog.Default()
 
 	dw := DirectoryWriter{
