@@ -10,9 +10,16 @@ package config
 // This type should not be constructed directly by users. Instead, use the
 // provided option functions like WithRawOutput() and WithTemplatesDir().
 type GeneratorOption struct {
+	BaseOption
+
 	WithRawOutputFunc func(v *RawOutput)
 	WithSiteTitleFunc func(v *SiteTitle)
-	WithBlogRootFunc  func(v *BlogRoot)
+}
+
+func WithBaseOption(baseOption BaseOption) GeneratorOption {
+	return GeneratorOption{
+		BaseOption: baseOption,
+	}
 }
 
 // RawOutput is a configuration type that controls whether HTML output
@@ -65,27 +72,6 @@ func WithSiteTitle(title string) GeneratorOption {
 	return GeneratorOption{
 		WithSiteTitleFunc: func(v *SiteTitle) {
 			v.SiteTitle = title
-		},
-	}
-}
-
-// BlogRoot is a configuration type that holds the blog's root path
-//
-// This type is typically embedded in generator configuration structs
-// and should be set using the WithBlogRoot() option function.
-type BlogRoot struct{ BlogRoot string }
-
-// WithBlogRoot returns an Option that sets the blog's root path.
-//
-// The blog root is used in generated HTML pages and templates.
-//
-// Example usage:
-//
-//	gen := generator.New(fsys, renderer, config.WithBlogRoot("/blog/"))
-func WithBlogRoot(root string) GeneratorOption {
-	return GeneratorOption{
-		WithBlogRootFunc: func(v *BlogRoot) {
-			v.BlogRoot = root
 		},
 	}
 }

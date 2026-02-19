@@ -60,7 +60,7 @@ func NewGeneratorCommand(ctx context.Context, c *cli.Command) error {
 		if !strings.HasSuffix(blogRoot, "/") {
 			blogRoot += "/"
 		}
-		opts = append(opts, config.WithBlogRoot(blogRoot))
+		opts = append(opts, config.WithBaseOption(config.WithBlogRoot(blogRoot)))
 	}
 
 	renderer, err := generator.NewTemplateRenderer(templateDir)
