@@ -10,12 +10,26 @@ import (
 	"github.com/harrydayexe/GoBlog/v2/pkg/generator"
 )
 
+// HandlerConfig holds configuration options for the blog HTTP handler.
+// It embeds config.BlogRoot to specify the root path where the blog is served.
 type HandlerConfig struct {
 	config.BlogRoot
 
 	logger *slog.Logger
 }
 
+// Handler creates an HTTP handler that serves the generated blog content.
+// It accepts a GeneratedBlog and optional configuration options to customize
+// the handler behavior, such as setting a custom blog root path.
+//
+// The handler serves the following routes (assuming default root "/"):
+//   - GET / and GET /posts - serves the blog index page
+//   - GET /posts/{postName} - serves individual blog posts
+//   - GET /tags - serves the tags index page
+//   - GET /tags/{postName} - serves tag-specific pages
+//
+// The handler is safe for concurrent use by multiple goroutines.
+// It does not modify the GeneratedBlog instance.
 func Handler(blog *generator.GeneratedBlog, opts ...config.BaseOption) http.Handler {
 	cfg := HandlerConfig{
 		BlogRoot: config.BlogRoot("/"),
