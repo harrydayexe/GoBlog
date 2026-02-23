@@ -13,32 +13,32 @@ import (
 	"time"
 
 	"github.com/harrydayexe/GoBlog/v2/pkg/config"
+	"github.com/harrydayexe/GoBlog/v2/pkg/generator"
 )
-
-type ServerConfig struct {
-	config.Port
-}
 
 type Server struct {
 	logger   *slog.Logger
 	postsDir fs.FS
-	config   *ServerConfig
+	config.Port
+	config.Host
+	generator *generator.Generator
 
 	handler http.Handler
 }
 
-func New(logger *slog.Logger, posts fs.FS, opts ...config.ServerOption) *Server {
+func New(logger *slog.Logger, posts fs.FS, generator *generator.Generator, opts ...config.ServerOption) *Server {
 	srv := &Server{
-		logger:   logger,
-		postsDir: posts,
-		config: &ServerConfig{
-			Port: 80,
-		},
+		logger:    logger,
+		postsDir:  posts,
+		Port:      80,
+		generator: generator,
 	}
 
 	for _, opt := range opts {
 		if opt.WithPortFunc != nil {
-			opt.WithPortFunc(&srv.config.Port)
+			opt.WithPortFunc(&srv.Port)
+		} else if opt.WithHostFunc != nil {
+			opt.WithHostFunc(&srv.Host)
 		}
 	}
 
@@ -50,7 +50,7 @@ func (s *Server) Run(ctx context.Context, stdout io.Writer) error {
 	defer cancel()
 
 	httpServer := &http.Server{
-		Addr:    fmt.Sprintf(":%d", s.config.Port),
+		Addr:    fmt.Sprintf("%s:%d", s.Host, s.Port),
 		Handler: s.handler,
 	}
 
@@ -81,5 +81,10 @@ func (s *Server) Run(ctx context.Context, stdout io.Writer) error {
 
 func (s *Server) UpdatePosts(posts fs.FS) error {
 	s.postsDir = posts
+	return nil
+}
+
+func (s *Server) refreshHandler() error {
+
 	return nil
 }
