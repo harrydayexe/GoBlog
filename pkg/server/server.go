@@ -20,11 +20,29 @@ type ServerConfig struct {
 }
 
 type Server struct {
+	logger   *slog.Logger
 	postsDir fs.FS
-	handler  http.Handler
-	config   ServerConfig
+	config   *ServerConfig
 
-	logger *slog.Logger
+	handler http.Handler
+}
+
+func New(logger *slog.Logger, posts fs.FS, opts ...config.ServerOption) *Server {
+	srv := &Server{
+		logger:   logger,
+		postsDir: posts,
+		config: &ServerConfig{
+			Port: 80,
+		},
+	}
+
+	for _, opt := range opts {
+		if opt.WithPortFunc != nil {
+			opt.WithPortFunc(&srv.config.Port)
+		}
+	}
+
+	return srv
 }
 
 func (s *Server) Run(ctx context.Context, stdout io.Writer) error {
@@ -59,4 +77,9 @@ func (s *Server) Run(ctx context.Context, stdout io.Writer) error {
 	wg.Wait()
 	return nil
 
+}
+
+func (s *Server) UpdatePosts(posts fs.FS) error {
+	s.postsDir = posts
+	return nil
 }
