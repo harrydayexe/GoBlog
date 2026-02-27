@@ -35,3 +35,7 @@ func WithBlogRoot(root string) BaseOption {
 		},
 	}
 }
+
+func (o BlogRoot) AsOption() BaseOption {
+	return WithBlogRoot(string(o))
+}

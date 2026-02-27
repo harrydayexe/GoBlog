@@ -63,6 +63,7 @@ func New(logger *slog.Logger, posts fs.FS, opts config.ServerConfig) (*Server, e
 		}
 	}
 
+	logger.Debug("Server created successfully")
 	return srv, nil
 }
 
@@ -102,6 +103,7 @@ func (s *Server) Run(ctx context.Context, stdout io.Writer) error {
 
 func (s *Server) UpdatePosts(posts fs.FS, ctx context.Context) error {
 	s.postsDir = posts
+	s.refreshHandler(ctx)
 	return nil
 }
 
@@ -116,7 +118,7 @@ func (s *Server) refreshHandler(ctx context.Context) error {
 
 	s.logger.DebugContext(ctx, "Creating New Handler for Server")
 
-	handler := Handler(blog, config.WithBlogRoot(string(s.BlogRoot)))
+	handler := Handler(blog, s.BlogRoot.AsOption())
 
 	s.handler = handler
 

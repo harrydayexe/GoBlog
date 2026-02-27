@@ -1,5 +1,7 @@
 package config
 
+import "github.com/princjef/gomarkdoc/testData/lang/function"
+
 // GeneratorOption represents a configuration option that can be applied to
 // generator or outputter instances during construction.
 //
@@ -55,6 +57,17 @@ func WithRawOutput() GeneratorOption {
 	}
 }
 
+func (o RawOutput) AsOption() GeneratorOption {
+	if bool(o.RawOutput) {
+		return WithRawOutput()
+	}
+	return GeneratorOption{
+		WithRawOutputFunc: func(v *RawOutput) {
+			v.RawOutput = false
+		},
+	}
+}
+
 // SiteTitle is a configuration type that holds the site's title.
 //
 // This type is typically embedded in generator configuration structs
@@ -74,4 +87,8 @@ func WithSiteTitle(title string) GeneratorOption {
 			v.SiteTitle = title
 		},
 	}
+}
+
+func (o SiteTitle) AsOption() GeneratorOption {
+	return WithSiteTitle(o.SiteTitle)
 }
