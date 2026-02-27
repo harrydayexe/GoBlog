@@ -1,7 +1,5 @@
 package config
 
-import "github.com/princjef/gomarkdoc/testData/lang/function"
-
 // GeneratorOption represents a configuration option that can be applied to
 // generator or outputter instances during construction.
 //
