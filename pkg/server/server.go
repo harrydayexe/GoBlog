@@ -32,6 +32,7 @@ import (
 // All methods are safe for concurrent use by multiple goroutines.
 type Server struct {
 	logger   *slog.Logger
+	mu       sync.RWMutex // protects postsDir
 	postsDir fs.FS
 
 	config.BlogRoot
@@ -135,7 +136,10 @@ func (s *Server) Run(ctx context.Context, stdout io.Writer) error {
 		Handler: s,
 	}
 
-	go func() {
+	var wg sync.WaitGroup
+
+	// Track ListenAndServe goroutine
+	wg.Go(func() {
 		s.logger.Info(
 			"server listening",
 			slog.String("address", httpServer.Addr),
@@ -143,9 +147,9 @@ func (s *Server) Run(ctx context.Context, stdout io.Writer) error {
 		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			fmt.Fprintf(os.Stderr, "error listening and serving: %s\n", err)
 		}
-	}()
+	})
 
-	var wg sync.WaitGroup
+	// Track shutdown goroutine
 	wg.Go(func() {
 		<-ctx.Done()
 
@@ -172,7 +176,11 @@ func (s *Server) Run(ctx context.Context, stdout io.Writer) error {
 // If handler refresh fails, an error is returned and the previous handler
 // remains active, continuing to serve the old content.
 func (s *Server) UpdatePosts(posts fs.FS, ctx context.Context) error {
+	s.mu.Lock()
 	s.postsDir = posts
+	s.generator.PostsDir = posts
+	s.mu.Unlock()
+
 	if err := s.refreshHandler(ctx); err != nil {
 		return fmt.Errorf("failed to refresh handler: %w", err)
 	}
@@ -200,7 +208,7 @@ func (s *Server) refreshHandler(ctx context.Context) error {
 
 	s.logger.DebugContext(ctx, "Creating New Handler for Server")
 
-	handler := Handler(blog, s.BlogRoot.AsOption())
+	handler := Handler(blog, s.logger, s.BlogRoot.AsOption())
 
 	s.handler.Store(handler)
 

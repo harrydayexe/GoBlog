@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"html/template"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 )
@@ -154,14 +155,9 @@ func (pl PostList) FilterByTag(tag string) PostList {
 // This method modifies the PostList directly rather than returning a new one.
 // Posts with equal dates maintain their relative order (stable sort).
 func (pl PostList) SortByDate() {
-	// Simple bubble sort - fine for blog posts
-	for i := range pl {
-		for j := i + 1; j < len(pl); j++ {
-			if pl[i].Date.Before(pl[j].Date) {
-				pl[i], pl[j] = pl[j], pl[i]
-			}
-		}
-	}
+	sort.Slice(pl, func(i, j int) bool {
+		return pl[i].Date.After(pl[j].Date)
+	})
 }
 
 // GetAllTags returns a unique list of all tags across all posts in the collection.

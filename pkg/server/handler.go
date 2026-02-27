@@ -19,20 +19,22 @@ type HandlerConfig struct {
 }
 
 // Handler creates an HTTP handler that serves the generated blog content.
-// It accepts a GeneratedBlog and optional configuration options to customize
-// the handler behavior, such as setting a custom blog root path.
+// It accepts a GeneratedBlog, a logger for error reporting, and optional
+// configuration options to customize the handler behavior, such as setting
+// a custom blog root path.
 //
 // The handler serves the following routes (assuming default root "/"):
 //   - GET / and GET /posts - serves the blog index page
 //   - GET /posts/{postName} - serves individual blog posts
 //   - GET /tags - serves the tags index page
-//   - GET /tags/{postName} - serves tag-specific pages
+//   - GET /tags/{tagName} - serves tag-specific pages
 //
 // The handler is safe for concurrent use by multiple goroutines.
 // It does not modify the GeneratedBlog instance.
-func Handler(blog *generator.GeneratedBlog, opts ...config.BaseOption) http.Handler {
+func Handler(blog *generator.GeneratedBlog, logger *slog.Logger, opts ...config.BaseOption) http.Handler {
 	cfg := HandlerConfig{
 		BlogRoot: config.BlogRoot("/"),
+		logger:   logger,
 	}
 
 	for _, opt := range opts {
@@ -55,50 +57,66 @@ func generateHandler(cfg HandlerConfig, blog *generator.GeneratedBlog) http.Hand
 	mux := http.NewServeMux()
 
 	root := fmt.Sprintf("GET %s/", cfg.BlogRoot)
-	mux.Handle(root+"posts", handleIndex(blog))
-	mux.Handle(root, handleIndex(blog))
-	mux.Handle(root+"posts/{postName}", handlePost(blog))
+	mux.Handle(root+"posts", handleIndex(cfg, blog))
+	mux.Handle(root, handleIndex(cfg, blog))
+	mux.Handle(root+"posts/{postName}", handlePost(cfg, blog))
 
-	mux.Handle(root+"tags", handleTagsIndex(blog))
-	mux.Handle(root+"tags/{postName}", handlePost(blog))
+	mux.Handle(root+"tags", handleTagsIndex(cfg, blog))
+	mux.Handle(root+"tags/{tagName}", handleTag(cfg, blog))
 
 	return mux
 }
 
-func handleIndex(blog *generator.GeneratedBlog) http.Handler {
+func handleIndex(cfg HandlerConfig, blog *generator.GeneratedBlog) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write(blog.Index)
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		if _, err := w.Write(blog.Index); err != nil {
+			cfg.logger.ErrorContext(r.Context(), "failed to write index", "error", err)
+			return
+		}
 	})
 }
 
-func handlePost(blog *generator.GeneratedBlog) http.Handler {
+func handlePost(cfg HandlerConfig, blog *generator.GeneratedBlog) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		postName := r.PathValue("postName")
 		bits, prs := blog.Posts[postName]
 		if !prs {
-			w.WriteHeader(404)
+			w.WriteHeader(http.StatusNotFound)
 			return
 		}
 
-		w.Write(bits)
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		if _, err := w.Write(bits); err != nil {
+			cfg.logger.ErrorContext(r.Context(), "failed to write post", "error", err, "post", postName)
+			return
+		}
 	})
 }
 
-func handleTagsIndex(blog *generator.GeneratedBlog) http.Handler {
+func handleTagsIndex(cfg HandlerConfig, blog *generator.GeneratedBlog) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write(blog.TagsIndex)
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		if _, err := w.Write(blog.TagsIndex); err != nil {
+			cfg.logger.ErrorContext(r.Context(), "failed to write tags index", "error", err)
+			return
+		}
 	})
 }
 
-func handleTag(blog *generator.GeneratedBlog) http.Handler {
+func handleTag(cfg HandlerConfig, blog *generator.GeneratedBlog) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		postName := r.PathValue("tagName")
-		bits, prs := blog.Tags[postName]
+		tagName := r.PathValue("tagName")
+		bits, prs := blog.Tags[tagName]
 		if !prs {
-			w.WriteHeader(404)
+			w.WriteHeader(http.StatusNotFound)
 			return
 		}
 
-		w.Write(bits)
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		if _, err := w.Write(bits); err != nil {
+			cfg.logger.ErrorContext(r.Context(), "failed to write tag page", "error", err, "tag", tagName)
+			return
+		}
 	})
 }

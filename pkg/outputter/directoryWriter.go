@@ -82,9 +82,13 @@ func NewDirectoryWriter(outputDir string, opts ...config.GeneratorOption) Direct
 //   - Any file write operation fails (e.g., insufficient permissions)
 //   - The filesystem is full or read-only
 //
+// # Partial Write Behavior
+//
 // If an error occurs partway through writing, some files may have been
-// created successfully while others were not. The output directory may
-// be in a partial state.
+// created successfully while others were not. The output directory will be
+// left in a partial state and may require manual cleanup. To ensure atomic
+// writes, consider writing to a temporary directory first and renaming it
+// on success.
 func (dw DirectoryWriter) HandleGeneratedBlog(ctx context.Context, blog *generator.GeneratedBlog) error {
 	dw.logger.InfoContext(ctx, "Writing blog to directory")
 	if err := writeMapToFiles(blog.Posts, filepath.Join(dw.outputDir, "posts")); err != nil {
