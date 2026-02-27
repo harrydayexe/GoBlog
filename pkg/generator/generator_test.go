@@ -684,7 +684,7 @@ func TestGenerate_WithCustomBlogRoot(t *testing.T) {
 	}
 
 	// Create generator with custom blog root
-	gen := New(testFS, renderer, config.WithBlogRoot("/blog/"))
+	gen := New(testFS, renderer, config.WithBaseOption(config.WithBlogRoot("/blog/")))
 
 	ctx := context.Background()
 	blog, err := gen.Generate(ctx)
@@ -802,16 +802,16 @@ func TestWithBlogRoot(t *testing.T) {
 
 	// Without option - should use default
 	genDefault := New(testFS, nil)
-	if genDefault.BlogRoot.BlogRoot != "/" {
+	if genDefault.BlogRoot != "/" {
 		t.Errorf("Generator without WithBlogRoot() has BlogRoot = %q, want %q",
-			genDefault.BlogRoot.BlogRoot, "/")
+			genDefault.BlogRoot, "/")
 	}
 
 	// With option - should use provided blog root
-	genCustom := New(testFS, nil, config.WithBlogRoot("/blog/"))
-	if genCustom.BlogRoot.BlogRoot != "/blog/" {
+	genCustom := New(testFS, nil, config.WithBaseOption(config.WithBlogRoot("/blog/")))
+	if genCustom.BlogRoot != "/blog/" {
 		t.Errorf("Generator with WithBlogRoot() has BlogRoot = %q, want %q",
-			genCustom.BlogRoot.BlogRoot, "/blog/")
+			genCustom.BlogRoot, "/blog/")
 	}
 }
 

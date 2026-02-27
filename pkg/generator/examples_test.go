@@ -114,7 +114,7 @@ func ExampleWithBlogRoot() {
 
 	// Set blog root for deployment at /blog/ subdirectory
 	// This ensures all links in templates use /blog/ as the base path
-	gen := generator.New(fsys, nil, config.WithBlogRoot("/blog/"), config.WithRawOutput())
+	gen := generator.New(fsys, nil, config.WithBaseOption(config.WithBlogRoot("/blog/")), config.WithRawOutput())
 
 	ctx := context.Background()
 	blog, err := gen.Generate(ctx)
