@@ -29,9 +29,7 @@ type BlogRoot string
 func WithBlogRoot(root string) BaseOption {
 	return BaseOption{
 		WithBlogRootFunc: func(v *BlogRoot) {
-			// HACK: Silly hack as you can't do &BlogRoot(root) all at once
-			x := BlogRoot(root)
-			v = &x
+			*v = BlogRoot(root)
 		},
 	}
 }
