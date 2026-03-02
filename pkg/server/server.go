@@ -16,6 +16,7 @@ import (
 	"github.com/harrydayexe/GoBlog/v2/pkg/config"
 	"github.com/harrydayexe/GoBlog/v2/pkg/generator"
 	"github.com/harrydayexe/GoBlog/v2/pkg/templates"
+	"github.com/harrydayexe/GoWebUtilities/middleware"
 )
 
 // Server is an HTTP server that serves generated blog content with support
@@ -39,8 +40,9 @@ type Server struct {
 	config.Port
 	config.Host
 
-	handler   atomic.Value // stores http.Handler
-	generator *generator.Generator
+	handler    atomic.Value           // stores http.Handler
+	middleware []middleware.Middleware // middleware chain
+	generator  *generator.Generator
 }
 
 // New creates a new Server instance with the specified configuration.
@@ -85,6 +87,8 @@ func New(logger *slog.Logger, posts fs.FS, opts config.ServerConfig) (*Server, e
 			opt.WithHostFunc(&srv.Host)
 		} else if opt.WithBlogRootFunc != nil {
 			opt.WithBlogRootFunc(&srv.BlogRoot)
+		} else if opt.WithMiddlewareFunc != nil {
+			opt.WithMiddlewareFunc(&srv.middleware)
 		}
 	}
 
@@ -209,6 +213,12 @@ func (s *Server) refreshHandler(ctx context.Context) error {
 	s.logger.DebugContext(ctx, "Creating New Handler for Server")
 
 	handler := Handler(blog, s.logger, s.BlogRoot.AsOption())
+
+	// Apply middleware stack if configured
+	if len(s.middleware) > 0 {
+		stack := middleware.CreateStack(s.middleware...)
+		handler = stack(handler)
+	}
 
 	s.handler.Store(handler)
 

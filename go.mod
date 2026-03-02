@@ -5,6 +5,7 @@ go 1.25.4
 require (
 	github.com/alecthomas/chroma/v2 v2.22.0
 	github.com/fatih/color v1.18.0
+	github.com/harrydayexe/GoWebUtilities v1.3.1
 	github.com/urfave/cli/v3 v3.6.1
 	github.com/yuin/goldmark v1.7.16
 	github.com/yuin/goldmark-highlighting/v2 v2.0.0-20230729083705-37449abec8cc

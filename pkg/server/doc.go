@@ -37,6 +37,58 @@
 //	    log.Fatal(err)
 //	}
 //
+// # Middleware
+//
+// The server supports pluggable HTTP middleware for cross-cutting concerns
+// like logging, metrics, authentication, or rate limiting. Middleware uses
+// the standard pattern from github.com/harrydayexe/GoWebUtilities/middleware.
+//
+// Adding middleware to a server:
+//
+//	import (
+//	    "github.com/harrydayexe/GoBlog/v2/pkg/config"
+//	    "github.com/harrydayexe/GoBlog/v2/pkg/server"
+//	    "github.com/harrydayexe/GoWebUtilities/logging"
+//	    "github.com/harrydayexe/GoWebUtilities/middleware"
+//	)
+//
+//	// Create server with built-in logging middleware
+//	cfg := config.ServerConfig{
+//	    Server: []config.BaseServerOption{
+//	        config.WithPort(8080),
+//	        config.WithMiddleware(logging.New(logger)),
+//	    },
+//	}
+//
+//	srv, err := server.New(logger, postsFS, cfg)
+//
+// Custom middleware can be added following the standard pattern:
+//
+//	func customMiddleware(h http.Handler) http.Handler {
+//	    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+//	        // Pre-request logic
+//	        h.ServeHTTP(w, r)
+//	        // Post-request logic
+//	    })
+//	}
+//
+//	cfg := config.ServerConfig{
+//	    Server: []config.BaseServerOption{
+//	        config.WithMiddleware(
+//	            logging.New(logger),     // Built-in
+//	            customMiddleware,        // Custom
+//	        ),
+//	    },
+//	}
+//
+// Middleware are applied in order: the first middleware in the list is
+// executed first (outermost wrapper). The middleware chain is reapplied
+// whenever the handler is refreshed via UpdatePosts().
+//
+// Any middleware compatible with the standard http.Handler interface
+// can be used, including third-party middleware packages following the
+// func(http.Handler) http.Handler pattern.
+//
 // # Live Content Updates
 //
 // Update blog content while server is running:

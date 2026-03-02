@@ -310,7 +310,7 @@ Testing the blog root feature.
 	}
 
 	// Generate with custom blog root
-	opts := []config.GeneratorOption{config.WithBlogRoot("/blog/")}
+	opts := []config.GeneratorOption{config.WithBaseOption(config.WithBlogRoot("/blog/"))}
 	handler := outputter.NewDirectoryWriter(outputDir, opts...)
 
 	ctx := context.Background()
