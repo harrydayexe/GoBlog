@@ -50,6 +50,8 @@ func Handler(blog *generator.GeneratedBlog, logger *slog.Logger, opts ...config.
 		cfg.BlogRoot = config.BlogRoot("/" + trimmed)
 	}
 
+	logger.Debug("HandlerConfig set", slog.String("BlogRoot", string(cfg.BlogRoot)))
+
 	return generateHandler(cfg, blog)
 }
 
@@ -57,6 +59,7 @@ func generateHandler(cfg HandlerConfig, blog *generator.GeneratedBlog) http.Hand
 	mux := http.NewServeMux()
 
 	root := fmt.Sprintf("GET %s/", cfg.BlogRoot)
+	cfg.logger.Debug("mux root set", slog.String("root", root))
 	mux.Handle(root+"posts", handleIndex(cfg, blog))
 	mux.Handle(root, handleIndex(cfg, blog))
 	mux.Handle(root+"posts/{postName}", handlePost(cfg, blog))
