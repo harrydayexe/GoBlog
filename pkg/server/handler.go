@@ -72,6 +72,8 @@ func generateHandler(cfg HandlerConfig, blog *generator.GeneratedBlog) http.Hand
 
 func handleIndex(cfg HandlerConfig, blog *generator.GeneratedBlog) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		cfg.logger.DebugContext(r.Context(), "handling index page")
+
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		if _, err := w.Write(blog.Index); err != nil {
 			cfg.logger.ErrorContext(r.Context(), "failed to write index", "error", err)
@@ -82,12 +84,16 @@ func handleIndex(cfg HandlerConfig, blog *generator.GeneratedBlog) http.Handler 
 
 func handlePost(cfg HandlerConfig, blog *generator.GeneratedBlog) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		cfg.logger.DebugContext(r.Context(), "handling post page")
+
 		postName := r.PathValue("postName")
 		bits, prs := blog.Posts[postName]
 		if !prs {
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
+
+		cfg.logger.DebugContext(r.Context(), "resolved post name", slog.String("postName", postName))
 
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		if _, err := w.Write(bits); err != nil {
@@ -99,6 +105,8 @@ func handlePost(cfg HandlerConfig, blog *generator.GeneratedBlog) http.Handler {
 
 func handleTagsIndex(cfg HandlerConfig, blog *generator.GeneratedBlog) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		cfg.logger.DebugContext(r.Context(), "handling tag index")
+
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		if _, err := w.Write(blog.TagsIndex); err != nil {
 			cfg.logger.ErrorContext(r.Context(), "failed to write tags index", "error", err)
@@ -109,12 +117,16 @@ func handleTagsIndex(cfg HandlerConfig, blog *generator.GeneratedBlog) http.Hand
 
 func handleTag(cfg HandlerConfig, blog *generator.GeneratedBlog) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		cfg.logger.DebugContext(r.Context(), "handling tag page")
+
 		tagName := r.PathValue("tagName")
 		bits, prs := blog.Tags[tagName]
 		if !prs {
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
+
+		cfg.logger.DebugContext(r.Context(), "resolved tag name", slog.String("tagName", tagName))
 
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		if _, err := w.Write(bits); err != nil {
