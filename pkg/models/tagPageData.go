@@ -1,7 +1,7 @@
 package models
 
-// TagPageData is passed to tag page templates.
-// It shows all posts with a specific tag.
+// TagPageData is the data passed to pages/tag.tmpl by
+// generator.TemplateRenderer.RenderTag. It shows all posts with a specific tag.
 type TagPageData struct {
 	BaseData
 

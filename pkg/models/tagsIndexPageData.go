@@ -8,7 +8,8 @@ type TagInfo struct {
 	PostCount int
 }
 
-// TagsIndexPageData contains data for rendering the tags index page.
+// TagsIndexPageData is the data passed to pages/tags-index.tmpl by
+// generator.TemplateRenderer.RenderTagsIndex.
 type TagsIndexPageData struct {
 	BaseData
 	// Tags is the list of all tags with their post counts.

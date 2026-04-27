@@ -10,15 +10,46 @@ import (
 	"github.com/harrydayexe/GoBlog/v2/pkg/models"
 )
 
-// TemplateRenderer handles template loading and rendering.
+// TemplateRenderer parses a tree of HTML templates from an fs.FS and renders
+// each page type (post, index, tag, tags-index) into HTML.
+//
+// Create a renderer once via [NewTemplateRenderer]; the resulting value is
+// safe for concurrent use by multiple goroutines. The internal
+// *template.Template is not exposed — callers customise rendering by
+// supplying a different fs.FS rather than mutating the renderer.
 type TemplateRenderer struct {
 	templates *template.Template
 }
 
-// NewTemplateRenderer creates a new template renderer from a filesystem.
-// templatesFS should point to a directory containing layouts/, pages/, and partials/.
+// NewTemplateRenderer parses every *.tmpl file under templatesFS and returns
+// a renderer ready to produce HTML for each page type.
+//
+// templatesFS must contain the following top-level directories:
+//
+//	pages/    required — must contain post.tmpl, index.tmpl, tag.tmpl,
+//	          and tags-index.tmpl
+//	partials/ required — each file must {{define}} one named block;
+//	          the default templates expect "head", "header", "footer",
+//	          and "post-card"
+//	layouts/  optional — loaded but not executed by any Render* method;
+//	          pages are self-contained documents that inline partials directly
+//
+// Each *.tmpl file is registered under its full glob path as the template
+// name (e.g. "pages/post.tmpl", "partials/head.tmpl"). Pages reference
+// partials by their defined name ({{template "head" .}}), and Render*
+// methods invoke pages by their path.
+//
+// The following helpers are available in every template's FuncMap:
+//
+//	formatDate(t time.Time) string   formats t as "January 2, 2006"
+//	shortDate(t time.Time) string    formats t as "Jan 2, 2006"
+//	year() int                       returns the current calendar year
+//
+// Pass [github.com/harrydayexe/GoBlog/v2/pkg/templates.Default] to use the
+// built-in templates, or any fs.FS (e.g. os.DirFS("./mytemplates")) for a
+// custom theme. Returns an error if any template fails to parse.
 func NewTemplateRenderer(templatesFS fs.FS) (*TemplateRenderer, error) {
-	// Define custom template functions
+	// helpers available to all templates
 	funcMap := template.FuncMap{
 		"formatDate": func(t time.Time) string {
 			return t.Format("January 2, 2006")
@@ -63,7 +94,9 @@ func NewTemplateRenderer(templatesFS fs.FS) (*TemplateRenderer, error) {
 	return &TemplateRenderer{templates: tmpl}, nil
 }
 
-// renderPost renders a single post page.
+// RenderPost renders a single post page by executing pages/post.tmpl with
+// the supplied [models.PostPageData]. Returns the rendered HTML or any error
+// from template execution.
 func (tr *TemplateRenderer) RenderPost(data models.PostPageData) ([]byte, error) {
 	var buf bytes.Buffer
 	err := tr.templates.ExecuteTemplate(&buf, "pages/post.tmpl", data)
@@ -71,7 +104,9 @@ func (tr *TemplateRenderer) RenderPost(data models.PostPageData) ([]byte, error)
 	return buf.Bytes(), err
 }
 
-// renderIndex renders the index/homepage.
+// RenderIndex renders the index/homepage by executing pages/index.tmpl with
+// the supplied [models.IndexPageData]. Returns the rendered HTML or any error
+// from template execution.
 func (tr *TemplateRenderer) RenderIndex(data models.IndexPageData) ([]byte, error) {
 	var buf bytes.Buffer
 	err := tr.templates.ExecuteTemplate(&buf, "pages/index.tmpl", data)
@@ -79,7 +114,9 @@ func (tr *TemplateRenderer) RenderIndex(data models.IndexPageData) ([]byte, erro
 	return buf.Bytes(), err
 }
 
-// renderTag renders a tag page.
+// RenderTag renders a tag page by executing pages/tag.tmpl with the supplied
+// [models.TagPageData]. Returns the rendered HTML or any error from template
+// execution.
 func (tr *TemplateRenderer) RenderTag(data models.TagPageData) ([]byte, error) {
 	var buf bytes.Buffer
 	err := tr.templates.ExecuteTemplate(&buf, "pages/tag.tmpl", data)
@@ -87,7 +124,9 @@ func (tr *TemplateRenderer) RenderTag(data models.TagPageData) ([]byte, error) {
 	return buf.Bytes(), err
 }
 
-// RenderTagsIndex renders the tags index page.
+// RenderTagsIndex renders the tags index page by executing
+// pages/tags-index.tmpl with the supplied [models.TagsIndexPageData]. Returns
+// the rendered HTML or any error from template execution.
 func (tr *TemplateRenderer) RenderTagsIndex(data models.TagsIndexPageData) ([]byte, error) {
 	var buf bytes.Buffer
 	err := tr.templates.ExecuteTemplate(&buf, "pages/tags-index.tmpl", data)

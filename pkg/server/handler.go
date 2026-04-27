@@ -50,7 +50,8 @@ func Handler(blog *generator.GeneratedBlog, logger *slog.Logger, opts ...config.
 		cfg.BlogRoot = config.BlogRoot("/" + trimmed)
 	}
 
-	logger.Debug("HandlerConfig set", slog.String("BlogRoot", string(cfg.BlogRoot)))
+	logger.Debug("handlerConfig set", slog.String("BlogRoot", string(cfg.BlogRoot)))
+	logger.Debug("blog index page", slog.String("index", string(blog.Index)))
 
 	return generateHandler(cfg, blog)
 }
@@ -72,7 +73,7 @@ func generateHandler(cfg HandlerConfig, blog *generator.GeneratedBlog) http.Hand
 
 func handleIndex(cfg HandlerConfig, blog *generator.GeneratedBlog) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		cfg.logger.DebugContext(r.Context(), "handling index page")
+		cfg.logger.DebugContext(r.Context(), "handling index page", slog.String("index", string(blog.Index)))
 
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		if _, err := w.Write(blog.Index); err != nil {

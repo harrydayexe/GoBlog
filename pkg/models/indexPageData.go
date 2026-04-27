@@ -1,7 +1,7 @@
 package models
 
-// IndexPageData is passed to the index page template.
-// It shows a list of recent blog posts.
+// IndexPageData is the data passed to pages/index.tmpl by
+// generator.TemplateRenderer.RenderIndex. It shows a list of recent blog posts.
 type IndexPageData struct {
 	BaseData
 

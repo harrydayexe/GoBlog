@@ -257,6 +257,101 @@ goblog gen posts/ output/ --root-path /docs/blog/
 # Links: /docs/blog/posts/slug.html, /docs/blog/tags/tag.html, /docs/blog/
 ```
 
+### Custom Templates
+
+GoBlog ships with built-in templates (`templates.Default`) but you can supply
+any `fs.FS` — e.g. `os.DirFS("./mytheme")` — to `generator.NewTemplateRenderer`
+for a fully custom theme.
+
+#### Required directory layout
+
+Your template root must contain:
+
+```
+mytheme/
+  pages/
+    post.tmpl          receives models.PostPageData
+    index.tmpl         receives models.IndexPageData
+    tag.tmpl           receives models.TagPageData
+    tags-index.tmpl    receives models.TagsIndexPageData
+  partials/
+    head.tmpl          must {{define "head"}}
+    header.tmpl        must {{define "header"}}
+    footer.tmpl        must {{define "footer"}}
+    post-card.tmpl     must {{define "post-card"}}
+  layouts/             optional — loaded but not executed by default
+```
+
+Each page template is a complete HTML document. It pulls in partials with:
+
+```html
+{{template "head" .}}
+{{template "header" .}}
+{{template "footer" .}}
+```
+
+The `post-card` partial is referenced inside `index.tmpl` and `tag.tmpl` when
+ranging over a list of posts.
+
+#### Template data
+
+Every page template receives a struct that embeds
+[`models.BaseData`](https://pkg.go.dev/github.com/harrydayexe/GoBlog/v2/pkg/models#BaseData)
+(`SiteTitle`, `PageTitle`, `Description`, `Year`, `BlogRoot`), plus
+page-specific fields:
+
+| Template | Data struct | Extra fields |
+|---|---|---|
+| `pages/post.tmpl` | [`PostPageData`](https://pkg.go.dev/github.com/harrydayexe/GoBlog/v2/pkg/models#PostPageData) | `.Post *Post` |
+| `pages/index.tmpl` | [`IndexPageData`](https://pkg.go.dev/github.com/harrydayexe/GoBlog/v2/pkg/models#IndexPageData) | `.Posts PostList`, `.TotalPosts int` |
+| `pages/tag.tmpl` | [`TagPageData`](https://pkg.go.dev/github.com/harrydayexe/GoBlog/v2/pkg/models#TagPageData) | `.Tag string`, `.Posts []*Post`, `.PostCount int` |
+| `pages/tags-index.tmpl` | [`TagsIndexPageData`](https://pkg.go.dev/github.com/harrydayexe/GoBlog/v2/pkg/models#TagsIndexPageData) | `.Tags []TagInfo`, `.TotalTags int` |
+
+#### Template helpers (FuncMap)
+
+| Name | Signature | Example output |
+|---|---|---|
+| `formatDate` | `func(t time.Time) string` | `"January 2, 2006"` |
+| `shortDate` | `func(t time.Time) string` | `"Jan 2, 2006"` |
+| `year` | `func() int` | `2025` |
+
+#### Go API example
+
+```go
+package main
+
+import (
+    "context"
+    "os"
+
+    "github.com/harrydayexe/GoBlog/v2/pkg/config"
+    "github.com/harrydayexe/GoBlog/v2/pkg/generator"
+    "github.com/harrydayexe/GoBlog/v2/pkg/outputter"
+)
+
+func main() {
+    // Use a custom template directory
+    renderer, err := generator.NewTemplateRenderer(os.DirFS("./mytheme"))
+    if err != nil {
+        panic(err)
+    }
+
+    fsys := os.DirFS("posts/")
+    gen := generator.New(fsys, renderer, config.WithBlogRoot("/blog/"))
+
+    blog, err := gen.Generate(context.Background())
+    if err != nil {
+        panic(err)
+    }
+
+    writer := outputter.NewDirectoryWriter("output/")
+    writer.HandleGeneratedBlog(context.Background(), blog)
+}
+```
+
+To use the built-in templates instead, replace `os.DirFS("./mytheme")` with
+`templates.Default` (from `github.com/harrydayexe/GoBlog/v2/pkg/templates`).
+
 ## Docker Usage 
 
 ```bash

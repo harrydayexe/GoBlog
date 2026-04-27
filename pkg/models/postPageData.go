@@ -1,7 +1,8 @@
 package models
 
-// PostPageData is passed to the post page template.
-// It renders a single blog post with all its metadata.
+// PostPageData is the data passed to pages/post.tmpl by
+// generator.TemplateRenderer.RenderPost. It renders a single blog post with
+// all its metadata.
 type PostPageData struct {
 	BaseData
 
