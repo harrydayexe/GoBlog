@@ -5,7 +5,7 @@ import (
 	"io/fs"
 	"log/slog"
 	"os"
-	"path/filepath"
+	"path"
 	"strings"
 
 	"github.com/harrydayexe/GoBlog/v2/internal/utilities"
@@ -47,12 +47,16 @@ func NewServeCommand(ctx context.Context, c *cli.Command) error {
 
 	blogRootString := c.String(BlogRootFlagName)
 	if blogRootString != "" {
-		blogRootClean := filepath.Clean(blogRootString)
-		blogRoot := strings.TrimPrefix(blogRootClean, ".")
+		blogRoot := path.Clean(blogRootString)
+		blogRoot = strings.TrimPrefix(blogRoot, ".")
+		if !strings.HasPrefix(blogRoot, "/") {
+			blogRoot = "/" + blogRoot
+		}
 		if !strings.HasSuffix(blogRoot, "/") {
 			blogRoot += "/"
 		}
 		cfg.Server = append(cfg.Server, config.BaseServerOption{BaseOption: config.WithBlogRoot(blogRoot)})
+		cfg.Gen = append(cfg.Gen, config.WithBaseOption(config.WithBlogRoot(blogRoot)))
 	}
 
 	return runServe(ctx, slog.Default(), postsFsys, cfg)
@@ -63,5 +67,5 @@ func runServe(ctx context.Context, logger *slog.Logger, posts fs.FS, cfg config.
 	if err != nil {
 		return err
 	}
-	return srv.Run(ctx, os.Stdout)
+	return srv.Run(ctx)
 }

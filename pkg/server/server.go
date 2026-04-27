@@ -3,7 +3,6 @@ package server
 import (
 	"context"
 	"fmt"
-	"io"
 	"io/fs"
 	"log/slog"
 	"net/http"
@@ -11,6 +10,7 @@ import (
 	"os/signal"
 	"sync"
 	"sync/atomic"
+	"syscall"
 	"time"
 
 	"github.com/harrydayexe/GoBlog/v2/pkg/config"
@@ -33,7 +33,7 @@ import (
 // All methods are safe for concurrent use by multiple goroutines.
 type Server struct {
 	logger   *slog.Logger
-	mu       sync.RWMutex // protects postsDir
+	mu       sync.RWMutex // protects postsDir and generator during refreshHandler
 	postsDir fs.FS
 
 	config.BlogRoot
@@ -76,7 +76,7 @@ func New(logger *slog.Logger, posts fs.FS, opts config.ServerConfig) (*Server, e
 	srv := &Server{
 		logger:    logger,
 		postsDir:  posts,
-		Port:      80,
+		Port:      8080,
 		generator: gen,
 	}
 
@@ -92,7 +92,10 @@ func New(logger *slog.Logger, posts fs.FS, opts config.ServerConfig) (*Server, e
 		}
 	}
 
-	// Initialize handler before returning
+	// Sync the resolved BlogRoot to the generator so rendered links use the correct prefix.
+	gen.BlogRoot = srv.BlogRoot
+
+	// Initialize handler before returning. Server is not yet published so no lock needed.
 	if err := srv.refreshHandler(context.Background()); err != nil {
 		return nil, fmt.Errorf("failed to initialize handler: %w", err)
 	}
@@ -121,18 +124,19 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 // Run starts the HTTP server and blocks until interrupted via context cancellation
-// or OS signal (SIGINT). It handles graceful shutdown with a 10-second timeout.
+// or OS signal (SIGINT, SIGTERM, SIGHUP). It handles graceful shutdown with a
+// 10-second timeout.
 //
 // The server uses atomic handler swapping, allowing UpdatePosts to be called
 // while the server is running without interrupting in-flight requests.
 //
 // Run is safe for concurrent use, though typically only called once per Server.
-// It captures OS interrupt signals (Ctrl+C) and initiates graceful shutdown.
+// It captures OS signals and initiates graceful shutdown.
 //
-// Returns an error only if server initialization fails. Shutdown errors are
+// Returns an error if the server fails to bind or listen. Shutdown errors are
 // logged to stderr but don't prevent clean exit.
-func (s *Server) Run(ctx context.Context, stdout io.Writer) error {
-	ctx, cancel := signal.NotifyContext(ctx, os.Interrupt)
+func (s *Server) Run(ctx context.Context) error {
+	ctx, cancel := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM, syscall.SIGHUP)
 	defer cancel()
 
 	httpServer := &http.Server{
@@ -142,14 +146,17 @@ func (s *Server) Run(ctx context.Context, stdout io.Writer) error {
 
 	var wg sync.WaitGroup
 
-	// Track ListenAndServe goroutine
+	// Track ListenAndServe goroutine. On bind/listen failure, cancel ctx so the
+	// shutdown goroutine wakes and wg.Wait() can return.
+	var listenErr error
 	wg.Go(func() {
 		s.logger.Info(
 			"server listening",
 			slog.String("address", httpServer.Addr),
 		)
 		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			fmt.Fprintf(os.Stderr, "error listening and serving: %s\n", err)
+			listenErr = err
+			cancel()
 		}
 	})
 
@@ -166,7 +173,7 @@ func (s *Server) Run(ctx context.Context, stdout io.Writer) error {
 	})
 
 	wg.Wait()
-	return nil
+	return listenErr
 }
 
 // UpdatePosts updates the posts directory and refreshes the HTTP handler with
@@ -181,10 +188,9 @@ func (s *Server) Run(ctx context.Context, stdout io.Writer) error {
 // remains active, continuing to serve the old content.
 func (s *Server) UpdatePosts(posts fs.FS, ctx context.Context) error {
 	s.mu.Lock()
+	defer s.mu.Unlock()
 	s.postsDir = posts
 	s.generator.PostsDir = posts
-	s.mu.Unlock()
-
 	if err := s.refreshHandler(ctx); err != nil {
 		return fmt.Errorf("failed to refresh handler: %w", err)
 	}
@@ -195,9 +201,8 @@ func (s *Server) UpdatePosts(posts fs.FS, ctx context.Context) error {
 // It generates fresh blog content from the current posts directory, creates a new
 // handler with the updated content, and swaps it in atomically.
 //
-// refreshHandler is safe to call concurrently with ServeHTTP. The atomic store
-// ensures that in-flight requests either see the old handler or the new handler,
-// but never an inconsistent state.
+// Callers must either hold s.mu or be the sole goroutine accessing the server
+// (e.g. during New before the Server is published).
 //
 // Returns an error if blog generation fails. In case of error, the previous
 // handler remains active and continues serving requests.

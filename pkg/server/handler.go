@@ -51,7 +51,7 @@ func Handler(blog *generator.GeneratedBlog, logger *slog.Logger, opts ...config.
 	}
 
 	logger.Debug("handlerConfig set", slog.String("BlogRoot", string(cfg.BlogRoot)))
-	logger.Debug("blog index page", slog.String("index", string(blog.Index)))
+	logger.Debug("blog index page", slog.Int("bytes", len(blog.Index)))
 
 	return generateHandler(cfg, blog)
 }
@@ -62,7 +62,7 @@ func generateHandler(cfg HandlerConfig, blog *generator.GeneratedBlog) http.Hand
 	root := fmt.Sprintf("GET %s/", cfg.BlogRoot)
 	cfg.logger.Debug("mux root set", slog.String("root", root))
 	mux.Handle(root+"posts", handleIndex(cfg, blog))
-	mux.Handle(root, handleIndex(cfg, blog))
+	mux.Handle(root+"{$}", handleIndex(cfg, blog))
 	mux.Handle(root+"posts/{postName}", handlePost(cfg, blog))
 
 	mux.Handle(root+"tags", handleTagsIndex(cfg, blog))
@@ -73,7 +73,7 @@ func generateHandler(cfg HandlerConfig, blog *generator.GeneratedBlog) http.Hand
 
 func handleIndex(cfg HandlerConfig, blog *generator.GeneratedBlog) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		cfg.logger.DebugContext(r.Context(), "handling index page", slog.String("index", string(blog.Index)))
+		cfg.logger.DebugContext(r.Context(), "handling index page", slog.Int("bytes", len(blog.Index)))
 
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		if _, err := w.Write(blog.Index); err != nil {
@@ -87,7 +87,7 @@ func handlePost(cfg HandlerConfig, blog *generator.GeneratedBlog) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		cfg.logger.DebugContext(r.Context(), "handling post page")
 
-		postName := r.PathValue("postName")
+		postName := strings.TrimSuffix(r.PathValue("postName"), ".html")
 		bits, prs := blog.Posts[postName]
 		if !prs {
 			w.WriteHeader(http.StatusNotFound)
@@ -120,7 +120,7 @@ func handleTag(cfg HandlerConfig, blog *generator.GeneratedBlog) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		cfg.logger.DebugContext(r.Context(), "handling tag page")
 
-		tagName := r.PathValue("tagName")
+		tagName := strings.TrimSuffix(r.PathValue("tagName"), ".html")
 		bits, prs := blog.Tags[tagName]
 		if !prs {
 			w.WriteHeader(http.StatusNotFound)
