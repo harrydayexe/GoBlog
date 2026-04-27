@@ -16,6 +16,10 @@ type GeneratorOption struct {
 	WithSiteTitleFunc func(v *SiteTitle)
 }
 
+// WithBaseOption wraps a BaseOption as a GeneratorOption so it can be passed
+// to generator constructors that accept GeneratorOption values.
+// Use this when you have a BaseOption (e.g. from WithBlogRoot) and need to
+// supply it alongside other GeneratorOptions.
 func WithBaseOption(baseOption BaseOption) GeneratorOption {
 	return GeneratorOption{
 		BaseOption: baseOption,
@@ -45,8 +49,11 @@ type RawOutput struct{ RawOutput bool }
 //
 // Example usage:
 //
-//	gen := generator.New(fsys, config.WithRawOutput())
+//	gen := generator.New(fsys, nil, config.WithRawOutput())
 //	writer := outputter.NewDirectoryWriter("output/", config.WithRawOutput())
+//
+// When using WithRawOutput on the generator, no template renderer is needed
+// because templates are bypassed entirely; pass nil as the renderer.
 func WithRawOutput() GeneratorOption {
 	return GeneratorOption{
 		WithRawOutputFunc: func(v *RawOutput) {

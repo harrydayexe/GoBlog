@@ -16,15 +16,26 @@
 //		"github.com/harrydayexe/GoBlog/v2/pkg/config"
 //	)
 //
-//	// Create generator with posts from a directory
+//	// Create a generator using the built-in templates:
+//
+//	import "github.com/harrydayexe/GoBlog/v2/pkg/templates"
+//
 //	fsys := os.DirFS("posts/")
-//	gen := generator.New(fsys, nil, config.WithRawOutput())
+//	renderer, err := generator.NewTemplateRenderer(templates.Default)
+//	if err != nil {
+//		log.Fatal(err)
+//	}
+//	gen := generator.New(fsys, renderer)
 //
 //	// Generate the blog
 //	blog, err := gen.Generate(context.Background())
 //	if err != nil {
 //		log.Fatal(err)
 //	}
+//
+// In raw output mode no templates are applied, so the renderer may be nil:
+//
+//	gen := generator.New(fsys, nil, config.WithRawOutput())
 //
 // # Output
 //

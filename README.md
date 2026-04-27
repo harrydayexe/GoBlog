@@ -147,9 +147,9 @@ import (
 )
 
 func main() {
-    // Create generator with raw output enabled
+    // Create generator with raw output enabled (no renderer needed in raw mode)
     fsys := os.DirFS("posts/")
-    gen := generator.New(fsys, config.WithRawOutput())
+    gen := generator.New(fsys, nil, config.WithRawOutput())
 
     // Generate the blog
     blog, err := gen.Generate(context.Background())
@@ -165,7 +165,7 @@ func main() {
 
     // Write to disk with raw output mode
     writer := outputter.NewDirectoryWriter("output/", config.WithRawOutput())
-    writer.HandleGeneratedBlog(blog)
+    writer.HandleGeneratedBlog(context.Background(), blog)
 }
 ```
 

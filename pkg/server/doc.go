@@ -22,7 +22,7 @@
 //	postsFS := os.DirFS("posts/")
 //
 //	cfg := config.ServerConfig{
-//	    Server: []config.ServerOption{
+//	    Server: []config.BaseServerOption{
 //	        config.WithPort(8080),
 //	    },
 //	}

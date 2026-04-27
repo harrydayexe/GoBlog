@@ -10,7 +10,7 @@
 // Configuration is applied through Option values that can be passed to
 // constructors. Each option function modifies specific configuration fields:
 //
-//	gen := generator.New(postsFS, config.WithRawOutput())
+//	gen := generator.New(postsFS, nil, config.WithRawOutput())
 //	writer := outputter.NewDirectoryWriter("output/", config.WithRawOutput())
 //
 // Options are implemented as structs containing functions that modify
@@ -40,19 +40,20 @@
 // Basic usage with a single option:
 //
 //	fsys := os.DirFS("posts/")
-//	gen := generator.New(fsys, config.WithRawOutput())
+//	gen := generator.New(fsys, nil, config.WithRawOutput())
 //
 // Multiple options can be combined:
 //
-//	templateFS := os.DirFS("templates/")
-//	gen := generator.New(fsys,
+//	renderer, _ := generator.NewTemplateRenderer(templates.Default)
+//	gen := generator.New(fsys, renderer,
 //	    config.WithRawOutput(),
-//	    config.WithTemplatesDir(templateFS),
+//	    config.WithSiteTitle("My Blog"),
 //	)
 //
 // Configuring blog root for subdirectory deployment:
 //
-//	gen := generator.New(fsys,
+//	renderer, _ := generator.NewTemplateRenderer(templates.Default)
+//	gen := generator.New(fsys, renderer,
 //	    config.WithBlogRoot("/blog/"),
 //	)
 //

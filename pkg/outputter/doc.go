@@ -12,15 +12,21 @@
 //
 // Create a DirectoryWriter and use it to write generated blog content:
 //
+//	import "github.com/harrydayexe/GoBlog/v2/pkg/templates"
+//
 //	postsFS := os.DirFS("posts/")
-//	gen := generator.New(postsFS)
+//	renderer, err := generator.NewTemplateRenderer(templates.Default)
+//	if err != nil {
+//	    log.Fatal(err)
+//	}
+//	gen := generator.New(postsFS, renderer)
 //	blog, err := gen.Generate(context.Background())
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
 //
 //	writer := outputter.NewDirectoryWriter("output/")
-//	if err := writer.HandleGeneratedBlog(blog); err != nil {
+//	if err := writer.HandleGeneratedBlog(context.Background(), blog); err != nil {
 //	    log.Fatal(err)
 //	}
 //
@@ -42,7 +48,7 @@
 // configuration:
 //
 //	writer := outputter.NewDirectoryWriter("output/",
-//	    config.WithRawOutput(true),
+//	    config.WithRawOutput(),
 //	)
 //
 // When RawOutput is enabled, the tags directory is not created.
