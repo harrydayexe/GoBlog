@@ -14,11 +14,7 @@ type Port int
 
 func WithPort(port int) BaseServerOption {
 	return BaseServerOption{
-		WithPortFunc: func(v *Port) {
-			// HACK: Silly hack as you can't do &BlogRoot(root) all at once
-			x := Port(port)
-			v = &x
-		},
+		WithPortFunc: func(v *Port) { *v = Port(port) },
 	}
 }
 
@@ -26,11 +22,7 @@ type Host string
 
 func WithHost(host string) BaseServerOption {
 	return BaseServerOption{
-		WithHostFunc: func(v *Host) {
-			// HACK: Silly hack as you can't do &BlogRoot(root) all at once
-			x := Host(host)
-			v = &x
-		},
+		WithHostFunc: func(v *Host) { *v = Host(host) },
 	}
 }
 
