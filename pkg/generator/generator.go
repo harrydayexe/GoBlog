@@ -26,6 +26,7 @@ type Generator struct {
 	config.RawOutput
 	config.SiteTitle
 	config.BlogRoot
+	config.Environment
 	ParserConfig parser.Config // The config to use when parsing
 
 	logger   *slog.Logger
@@ -36,10 +37,12 @@ func (c Generator) String() string {
 	return fmt.Sprintf(`Generator Config
 - RawOutput           %t,
 - SiteTitle           %s,
-- BlogRoot            %s`,
+- BlogRoot            %s,
+- Environment         %s`,
 		c.RawOutput,
 		c.SiteTitle,
 		c.BlogRoot,
+		c.Environment.Environment,
 	)
 }
 
@@ -67,6 +70,8 @@ func New(posts fs.FS, renderer *TemplateRenderer, opts ...config.GeneratorOption
 			opt.WithSiteTitleFunc(&gen.SiteTitle)
 		} else if opt.WithBlogRootFunc != nil {
 			opt.WithBlogRootFunc(&gen.BlogRoot)
+		} else if opt.WithEnvironmentFunc != nil {
+			opt.WithEnvironmentFunc(&gen.Environment)
 		}
 	}
 
@@ -74,6 +79,10 @@ func New(posts fs.FS, renderer *TemplateRenderer, opts ...config.GeneratorOption
 		gen.SiteTitle = config.SiteTitle{
 			SiteTitle: "GoBlog",
 		}
+	}
+
+	if gen.Environment.Environment == "" {
+		gen.Environment = config.Environment{Environment: "local"}
 	}
 
 	return &gen
@@ -170,6 +179,7 @@ func (g *Generator) assembleBlogWithTemplates(ctx context.Context, posts models.
 				Description: post.Description,
 				Year:        time.Now().Year(),
 				BlogRoot:    string(g.BlogRoot),
+				Environment: g.Environment.Environment,
 			},
 			Post: post,
 		}
@@ -197,6 +207,7 @@ func (g *Generator) assembleBlogWithTemplates(ctx context.Context, posts models.
 			Description: "Recent blog posts",
 			Year:        time.Now().Year(),
 			BlogRoot:    string(g.BlogRoot),
+			Environment: g.Environment.Environment,
 		},
 		Posts:      indexPosts,
 		TotalPosts: len(indexPosts),
@@ -225,6 +236,7 @@ func (g *Generator) assembleBlogWithTemplates(ctx context.Context, posts models.
 				Description: fmt.Sprintf("Posts tagged with %s", tag),
 				Year:        time.Now().Year(),
 				BlogRoot:    string(g.BlogRoot),
+				Environment: g.Environment.Environment,
 			},
 			Tag:       tag,
 			Posts:     tagPosts,
@@ -261,6 +273,7 @@ func (g *Generator) assembleBlogWithTemplates(ctx context.Context, posts models.
 			Description: "Browse all topics covered in this blog",
 			Year:        time.Now().Year(),
 			BlogRoot:    string(g.BlogRoot),
+			Environment: g.Environment.Environment,
 		},
 		Tags:      tagInfos,
 		TotalTags: len(tagInfos),
