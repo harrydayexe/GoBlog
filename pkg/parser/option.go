@@ -4,13 +4,14 @@ package parser
 type Option func(*Config)
 
 // WithCodeHighlightingStyle sets the code highlighting style for ringfenced
-// code blocks and enables code highlighting if it wasn't already
+// code blocks and enables code highlighting if it wasn't already.
 //
-// Note that currently Chroma is used under-the-hood, so you should refer to the styles in
-// their [documentation] and [source code]
+// Chroma is used under the hood. Available style names are listed in the
+// [chroma styles source]. The style name supplied here must match the style
+// used when generating the CSS stylesheet (see package documentation for how
+// to generate the stylesheet with chromahtml.WriteCSS).
 //
-// [documentation]: https://pkg.go.dev/github.com/alecthomas/chroma
-// [source code]: https://github.com/alecthomas/chroma/tree/master/styles
+// [chroma styles source]: https://github.com/alecthomas/chroma/tree/master/styles
 func WithCodeHighlightingStyle(style string) Option {
 	return func(c *Config) {
 		c.EnableCodeHighlighting = true
@@ -18,13 +19,13 @@ func WithCodeHighlightingStyle(style string) Option {
 	}
 }
 
-// WithCodeHighlighting enables the highlighting of ringfenced code blocks
+// WithCodeHighlighting enables or disables the highlighting of ringfenced
+// code blocks. Highlighting is enabled by default.
 //
-// Note that currently Chroma is used under-the-hood, so you should refer to the styles in
-// their [documentation] and [source code]
-//
-// [documentation]: https://pkg.go.dev/github.com/alecthomas/chroma
-// [source code]: https://github.com/alecthomas/chroma/
+// When enabled, the parser outputs CSS class names (e.g. .chroma, .k, .s)
+// rather than inline styles. A matching chroma stylesheet must be included
+// in your page — see the package documentation for how to generate one with
+// chromahtml.WriteCSS.
 func WithCodeHighlighting(enable bool) Option {
 	return func(c *Config) {
 		c.EnableCodeHighlighting = enable
