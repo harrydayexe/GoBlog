@@ -107,6 +107,30 @@ goblog serve posts/ --port 8080
 
 ## Advanced Features
 
+### Syntax Highlighting CSS
+
+The parser renders code blocks using **CSS classes** (via chroma's `html.WithClasses` option) rather than inline styles. This keeps the generated HTML clean but means you must include a matching stylesheet in your templates.
+
+Generate the stylesheet for any [chroma style](https://github.com/alecthomas/chroma/tree/master/styles) at startup and embed it in a `<style>` tag:
+
+```go
+import (
+    chromahtml "github.com/alecthomas/chroma/v2/formatters/html"
+    "github.com/alecthomas/chroma/v2/styles"
+    "strings"
+)
+
+formatter := chromahtml.New(chromahtml.WithClasses(true))
+style := styles.Get("monokai") // must match WithCodeHighlightingStyle
+var sb strings.Builder
+formatter.WriteCSS(&sb, style)
+chromaCSS := sb.String() // embed in a <style> tag in your template
+```
+
+The default style is `"monokai"`. Change it with `parser.WithCodeHighlightingStyle("dracula")` — just make sure to use the same name when generating the stylesheet.
+
+The CSS class names follow the Pygments short-name convention (`.k` for keyword, `.s` for string, `.nf` for function name, etc.). A full reference is in [chroma's types.go](https://github.com/alecthomas/chroma/blob/master/types.go).
+
 ### Raw Output Mode
 
 GoBlog supports raw HTML output mode for advanced use cases where you need direct access to the generated HTML without template wrappers. This is useful when:
