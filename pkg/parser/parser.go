@@ -59,9 +59,6 @@ func NewWithConfig(config *Config) *Parser {
 	if config.EnableCodeHighlighting {
 		extensions = append(extensions, highlighting.NewHighlighting(
 			highlighting.WithStyle(config.CodeHighlightingStyle),
-			highlighting.WithFormatOptions(
-				html.WithClasses(true),
-			),
 		))
 	}
 
