@@ -31,14 +31,16 @@ func main() {
 	}
 
 	cli.VersionPrinter = func(cmd *cli.Command) {
-		fmt.Printf("GoBlog version %s\nCommit %s\nDate %s\n", version, commit, date)
+		v, c, d := buildVersion()
+		fmt.Printf("GoBlog version %s\nCommit %s\nDate %s\n", v, c, d)
 	}
 
+	v, _, _ := buildVersion()
 	cmd := &cli.Command{
 		Name:                   "GoBlog",
 		Usage:                  "Create a blog feed from posts written in Markdown!",
 		UseShortOptionHandling: true,
-		Version:                "unknown",
+		Version:                v,
 		Commands: []*cli.Command{
 			&generator.GeneratorCommand,
 			&server.ServeCommand,

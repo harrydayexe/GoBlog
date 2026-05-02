@@ -12,6 +12,24 @@ The project is designed for developers who want a simple, Go-based solution for 
 
 ## Installation
 
+### CLI tool
+
+Install the `goblog` binary to `$GOPATH/bin` (ensure that directory is on your `$PATH`):
+
+```bash
+go install github.com/harrydayexe/GoBlog/v2/cmd/goblog@latest
+```
+
+To install from a local checkout instead, run from the repo root:
+
+```bash
+go install ./cmd/goblog
+```
+
+### Library
+
+Add GoBlog as a dependency in your Go module:
+
 ```bash
 go get github.com/harrydayexe/GoBlog/v2
 ```
@@ -26,21 +44,21 @@ The parser package reads Markdown files with YAML frontmatter and converts them 
 package main
 
 import (
+    "context"
     "fmt"
     "log"
+    "os"
 
     "github.com/harrydayexe/GoBlog/v2/pkg/parser"
 )
 
 func main() {
-    // Create a new parser with syntax highlighting enabled
-    p := parser.New(
-        parser.WithCodeHighlighting(true),
-        parser.WithCodeHighlightingStyle("monokai"),
-    )
+    // Create a new parser (syntax highlighting enabled by default)
+    p := parser.New()
 
     // Parse a single markdown file
-    post, err := p.ParseFile("posts/my-post.md")
+    postsFS := os.DirFS("posts/")
+    post, err := p.ParseFile(context.Background(), postsFS, "my-post.md")
     if err != nil {
         log.Fatal(err)
     }
@@ -55,7 +73,7 @@ func main() {
 
 ```go
 // Parse all markdown files in a directory
-posts, err := p.ParseDirectory("posts/")
+posts, err := p.ParseDirectory(context.Background(), postsFS)
 if err != nil {
     log.Fatal(err)
 }
@@ -98,12 +116,29 @@ func main() {
 ## CLI Usage
 
 ```bash
-# Generate static blog
-goblog gen posts/ output/
+# Generate static blog (alias: goblog g)
+goblog generate posts/ output/
 
 # Serve blog locally
 goblog serve posts/ --port 8080
 ```
+
+### `generate` flags
+
+| Flag | Short | Default | Description |
+|---|---|---|---|
+| `--raw` | `-r` | `false` | Output raw HTML without template wrapping |
+| `--root-path` | `-p` | `/` | Blog root path for subdirectory deployment |
+| `--template-dir` | `-t` | built-in | Path to a custom template directory |
+
+### `serve` flags
+
+| Flag | Short | Default | Description |
+|---|---|---|---|
+| `--port` | `-P` | `8080` | TCP port to listen on |
+| `--host` | `-H` | all interfaces | Host address to bind to |
+| `--root-path` | `-p` | `/` | Blog root path for subdirectory deployment |
+| `--template-dir` | `-t` | built-in | Path to a custom template directory |
 
 ## Advanced Features
 
@@ -121,15 +156,21 @@ import (
 )
 
 formatter := chromahtml.New(chromahtml.WithClasses(true))
-style := styles.Get("monokai") // must match WithCodeHighlightingStyle
+style := styles.Get("monokai") // choose any chroma style name
 var sb strings.Builder
 formatter.WriteCSS(&sb, style)
 chromaCSS := sb.String() // embed in a <style> tag in your template
 ```
 
-The default style is `"monokai"`. Change it with `parser.WithCodeHighlightingStyle("dracula")` — just make sure to use the same name when generating the stylesheet.
+There is currently no API to change the highlighter style from within GoBlog — pick whichever style you like when generating the stylesheet above and the CSS class names will match.
 
 The CSS class names follow the Pygments short-name convention (`.k` for keyword, `.s` for string, `.nf` for function name, etc.). A full reference is in [chroma's types.go](https://github.com/alecthomas/chroma/blob/master/types.go).
+
+Footnotes are disabled by default. Enable them with `parser.WithFootnote()`:
+
+```go
+p := parser.New(parser.WithFootnote())
+```
 
 ### Raw Output Mode
 
@@ -144,17 +185,17 @@ GoBlog supports raw HTML output mode for advanced use cases where you need direc
 
 ```bash
 # Generate raw HTML files without templates
-goblog gen posts/ output/ --raw
+goblog generate posts/ output/ --raw
 
 # Or use the short flag
-goblog gen posts/ output/ -r
+goblog generate posts/ output/ -r
 ```
 
 When raw output mode is enabled:
-- Individual post files contain only the parsed Markdown converted to HTML
+- Individual post files (under `posts/`) contain only the parsed Markdown converted to HTML
 - No template wrapping is applied to the content
 - The `tags/` directory is not created (tag pages are skipped)
-- The `index.html` file is still generated but contains raw HTML
+- `index.html` is still written by `DirectoryWriter` but its body is empty
 
 #### Using Raw Output with the Go API
 
@@ -197,9 +238,10 @@ func main() {
 
 When `RawOutput` is enabled, the `GeneratedBlog` structure contains:
 
-- **`Posts` map**: Keys are post slugs (derived from filenames), values are raw HTML byte slices containing only the Markdown content converted to HTML
-- **`Index` field**: Contains raw HTML bytes for the index page (currently empty in raw mode)
-- **`Tags` map**: Will be empty - tag pages are not generated in raw output mode
+- **`Posts` map**: Keys are post slugs (derived from post titles or filenames), values are raw HTML byte slices containing only the Markdown content converted to HTML
+- **`Index` field**: Empty in raw mode — no index page is generated
+- **`Tags` map**: Empty — tag pages are not generated in raw output mode
+- **`TagsIndex` field**: Empty — tags index is not generated in raw output mode
 
 The HTML content is clean, semantic HTML generated from your Markdown without any surrounding structure like `<html>`, `<head>`, or `<body>` tags. This gives you complete control over how to integrate the content into your site.
 
@@ -211,10 +253,10 @@ When deploying your blog at a subdirectory rather than the root of your domain (
 
 ```bash
 # Generate blog for deployment at /blog/ subdirectory
-goblog gen posts/ output/ --root-path /blog/
+goblog generate posts/ output/ --root-path /blog/
 
 # Or use the short flag
-goblog gen posts/ output/ -p /blog/
+goblog generate posts/ output/ -p /blog/
 
 # Serve blog locally with custom root path
 goblog serve posts/ --root-path /blog/ --port 8080
@@ -263,21 +305,21 @@ func main() {
 **Root Deployment (Default)**:
 ```bash
 # Blog at example.com/
-goblog gen posts/ output/
+goblog generate posts/ output/
 # Links: /posts/slug.html, /tags/tag.html, /
 ```
 
 **Subdirectory Deployment**:
 ```bash
 # Blog at example.com/blog/
-goblog gen posts/ output/ --root-path /blog/
+goblog generate posts/ output/ --root-path /blog/
 # Links: /blog/posts/slug.html, /blog/tags/tag.html, /blog/
 ```
 
 **Nested Subdirectory**:
 ```bash
 # Blog at example.com/docs/blog/
-goblog gen posts/ output/ --root-path /docs/blog/
+goblog generate posts/ output/ --root-path /docs/blog/
 # Links: /docs/blog/posts/slug.html, /docs/blog/tags/tag.html, /docs/blog/
 ```
 
@@ -321,7 +363,7 @@ ranging over a list of posts.
 
 Every page template receives a struct that embeds
 [`models.BaseData`](https://pkg.go.dev/github.com/harrydayexe/GoBlog/v2/pkg/models#BaseData)
-(`SiteTitle`, `PageTitle`, `Description`, `Year`, `BlogRoot`), plus
+(`SiteTitle`, `PageTitle`, `Description`, `Year`, `BlogRoot`, `Environment`), plus
 page-specific fields:
 
 | Template | Data struct | Extra fields |
@@ -376,7 +418,76 @@ func main() {
 To use the built-in templates instead, replace `os.DirFS("./mytheme")` with
 `templates.Default` (from `github.com/harrydayexe/GoBlog/v2/pkg/templates`).
 
-## Docker Usage 
+## Go Package Reference
+
+| Package | Summary |
+|---|---|
+| [`pkg/parser`](https://pkg.go.dev/github.com/harrydayexe/GoBlog/v2/pkg/parser) | Parse Markdown + YAML frontmatter into `Post` objects |
+| [`pkg/models`](https://pkg.go.dev/github.com/harrydayexe/GoBlog/v2/pkg/models) | Core data types: `Post`, `PostList`, page data structs |
+| [`pkg/generator`](https://pkg.go.dev/github.com/harrydayexe/GoBlog/v2/pkg/generator) | Convert a directory of posts into a `GeneratedBlog` in memory |
+| [`pkg/outputter`](https://pkg.go.dev/github.com/harrydayexe/GoBlog/v2/pkg/outputter) | Write a `GeneratedBlog` to disk; implement `Outputter` for custom destinations |
+| [`pkg/server`](https://pkg.go.dev/github.com/harrydayexe/GoBlog/v2/pkg/server) | HTTP server with atomic live-reload via `Server.UpdatePosts` |
+| [`pkg/config`](https://pkg.go.dev/github.com/harrydayexe/GoBlog/v2/pkg/config) | Functional options: `WithRawOutput`, `WithSiteTitle`, `WithBlogRoot`, `WithEnvironment`, `WithPort`, `WithHost`, `WithMiddleware` |
+| [`pkg/templates`](https://pkg.go.dev/github.com/harrydayexe/GoBlog/v2/pkg/templates) | Embedded default templates (`templates.Default`) |
+
+### Site title
+
+```go
+gen := generator.New(fsys, renderer, config.WithSiteTitle("My Blog"))
+```
+
+### Runtime environment
+
+GoBlog surfaces the environment to all templates as `{{.Environment}}`. Set it via the `ENVIRONMENT` env var (default `"local"`, valid values: `"local"`, `"test"`, `"production"`), or pass it directly:
+
+```go
+gen := generator.New(fsys, renderer, config.WithEnvironment("production"))
+```
+
+Use it in templates to gate environment-specific markup:
+
+```html
+{{if eq .Environment "production"}}<script src="/analytics.js"></script>{{end}}
+```
+
+### Serving programmatically
+
+`pkg/server` provides `Server`, which supports atomic handler hot-swapping — new posts can be loaded without restarting the process:
+
+```go
+cfg := config.ServerConfig{
+    Server: []config.BaseServerOption{
+        config.WithPort(8080),
+        config.WithMiddleware(logging.New(logger)),
+    },
+    Gen: []config.GeneratorOption{
+        config.WithSiteTitle("My Blog"),
+    },
+}
+
+srv, err := server.New(logger, os.DirFS("posts/"), cfg)
+if err != nil {
+    log.Fatal(err)
+}
+
+// Swap in new posts atomically while running:
+srv.UpdatePosts(os.DirFS("posts/"), context.Background())
+
+// Block until SIGINT/SIGTERM:
+srv.Run(context.Background())
+```
+
+### Custom output destination
+
+Implement the `outputter.Outputter` interface to write generated content anywhere (database, S3, etc.):
+
+```go
+type Outputter interface {
+    HandleGeneratedBlog(context.Context, *generator.GeneratedBlog) error
+}
+```
+
+## Docker Usage
 
 ```bash
 # Run blog server in container

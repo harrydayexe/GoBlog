@@ -8,7 +8,8 @@ package config
 // modify specific configuration fields.
 //
 // This type should not be constructed directly by users. Instead, use the
-// provided option functions like WithRawOutput() and WithTemplatesDir().
+// provided option functions like WithRawOutput(), WithSiteTitle(),
+// WithEnvironment(), and WithBaseOption().
 type GeneratorOption struct {
 	BaseOption
 

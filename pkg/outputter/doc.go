@@ -36,11 +36,13 @@
 //
 //	output/
 //	├── index.html           # Blog index page
-//	├── post-slug-1.html     # Individual post pages
-//	├── post-slug-2.html
+//	├── posts/               # Individual post pages
+//	│   ├── slug-1.html
+//	│   └── slug-2.html
 //	└── tags/                # Tag pages (unless RawOutput is enabled)
 //	    ├── tag-1.html
-//	    └── tag-2.html
+//	    ├── tag-2.html
+//	    └── index.html       # Tags index page
 //
 // # Configuration
 //
