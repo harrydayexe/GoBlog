@@ -25,11 +25,10 @@ func Example() {
 }
 
 // Example_withOptions demonstrates configuring the parser with custom options
-// such as syntax highlighting styles and footnote support.
+// such as enabling footnote support.
 func Example_withOptions() {
 	// Configure parser with custom options
 	p := New(
-		WithCodeHighlightingStyle("dracula"),
 		WithFootnote(),
 	)
 
@@ -105,26 +104,6 @@ func ExampleWithCodeHighlighting() {
 	fmt.Println("Highlighting disabled")
 	fmt.Println("Post parsed:", post.Title != "")
 	// Output: Highlighting disabled
-	// Post parsed: true
-}
-
-// ExampleWithCodeHighlightingStyle demonstrates using a custom syntax highlighting style.
-// The style names come from the Chroma library. Common styles include:
-// monokai, dracula, github, solarized-dark, solarized-light, and many others.
-func ExampleWithCodeHighlightingStyle() {
-	// Use a different syntax highlighting style
-	p := New(WithCodeHighlightingStyle("dracula"))
-
-	fsys := os.DirFS("testdata")
-	post, err := p.ParseFile(context.Background(), fsys, "with-code.md")
-	if err != nil {
-		fmt.Println("Error:", err)
-		return
-	}
-
-	fmt.Println("Custom highlighting style")
-	fmt.Println("Post parsed:", post.Title != "")
-	// Output: Custom highlighting style
 	// Post parsed: true
 }
 

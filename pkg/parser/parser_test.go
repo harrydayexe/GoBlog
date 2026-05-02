@@ -337,39 +337,6 @@ func TestNew_WithCodeHighlighting(t *testing.T) {
 	}
 }
 
-func TestNew_WithCodeHighlightingStyle(t *testing.T) {
-	t.Parallel()
-	fsys := os.DirFS("testdata")
-
-	// Test with custom style
-	p := New(WithCodeHighlightingStyle("dracula"))
-	post, err := p.ParseFile(context.Background(), fsys, "with-code.md")
-	if err != nil {
-		t.Fatalf("expected no error, got: %v", err)
-	}
-
-	// Should contain chroma classes (highlighting enabled)
-	if !strings.Contains(string(post.Content), "chroma") {
-		t.Error("expected chroma highlighting classes when style is set")
-	}
-
-	// Code content should be preserved
-	if !strings.Contains(string(post.Content), "Hello, World!") {
-		t.Error("expected code content to be preserved")
-	}
-
-	// Test with different style to ensure parser accepts it
-	p = New(WithCodeHighlightingStyle("monokai"))
-	post, err = p.ParseFile(context.Background(), fsys, "with-code.md")
-	if err != nil {
-		t.Fatalf("expected no error with monokai style, got: %v", err)
-	}
-
-	if !strings.Contains(string(post.Content), "chroma") {
-		t.Error("expected chroma highlighting classes with monokai style")
-	}
-}
-
 func TestNew_WithFootnote(t *testing.T) {
 	t.Parallel()
 	fsys := os.DirFS("testdata")
@@ -418,9 +385,9 @@ func TestNew_CombinedOptions(t *testing.T) {
 	t.Parallel()
 	fsys := os.DirFS("testdata")
 
-	// Test combining code highlighting style and footnotes
+	// Test combining code highlighting and footnotes
 	p := New(
-		WithCodeHighlightingStyle("monokai"),
+		WithCodeHighlighting(true),
 		WithFootnote(),
 	)
 
