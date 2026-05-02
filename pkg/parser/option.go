@@ -3,22 +3,6 @@ package parser
 // Option is a function which can update the parser config
 type Option func(*Config)
 
-// WithCodeHighlightingStyle sets the code highlighting style for ringfenced
-// code blocks and enables code highlighting if it wasn't already.
-//
-// Chroma is used under the hood. Available style names are listed in the
-// [chroma styles source]. The style name supplied here must match the style
-// used when generating the CSS stylesheet (see package documentation for how
-// to generate the stylesheet with chromahtml.WriteCSS).
-//
-// [chroma styles source]: https://github.com/alecthomas/chroma/tree/master/styles
-func WithCodeHighlightingStyle(style string) Option {
-	return func(c *Config) {
-		c.EnableCodeHighlighting = true
-		c.CodeHighlightingStyle = style
-	}
-}
-
 // WithCodeHighlighting enables or disables the highlighting of ringfenced
 // code blocks. Highlighting is enabled by default.
 //

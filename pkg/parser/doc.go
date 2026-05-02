@@ -35,15 +35,12 @@
 //	// Disable code highlighting
 //	p := parser.New(parser.WithCodeHighlighting(false))
 //
-//	// Change syntax highlighting style
-//	p := parser.New(parser.WithCodeHighlightingStyle("dracula"))
-//
 //	// Enable footnote support
 //	p := parser.New(parser.WithFootnote())
 //
 //	// Combine multiple options
 //	p := parser.New(
-//	    parser.WithCodeHighlightingStyle("monokai"),
+//	    parser.WithCodeHighlighting(true),
 //	    parser.WithFootnote(),
 //	)
 //
@@ -67,7 +64,7 @@
 //	)
 //
 //	formatter := chromahtml.New(chromahtml.WithClasses(true))
-//	style := styles.Get("monokai") // must match WithCodeHighlightingStyle
+//	style := styles.Get("monokai")
 //	var sb strings.Builder
 //	formatter.WriteCSS(&sb, style)
 //	chromaCSS := sb.String() // embed in a <style> tag in your template
