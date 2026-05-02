@@ -12,6 +12,24 @@ The project is designed for developers who want a simple, Go-based solution for 
 
 ## Installation
 
+### CLI tool
+
+Install the `goblog` binary to `$GOPATH/bin` (ensure that directory is on your `$PATH`):
+
+```bash
+go install github.com/harrydayexe/GoBlog/v2/cmd/goblog@latest
+```
+
+To install from a local checkout instead, run from the repo root:
+
+```bash
+go install ./cmd/goblog
+```
+
+### Library
+
+Add GoBlog as a dependency in your Go module:
+
 ```bash
 go get github.com/harrydayexe/GoBlog/v2
 ```
