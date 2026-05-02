@@ -37,9 +37,7 @@ type DirectoryWriter struct {
 //	    config.WithRawOutput(),
 //	)
 //
-// This is the recommended constructor for most use cases. Use
-// NewDirectoryWriterWithConfig when you need to provide an explicit
-// DirectoryWriterConfig struct.
+// This is the recommended constructor for most use cases.
 func NewDirectoryWriter(outputDir string, opts ...config.GeneratorOption) DirectoryWriter {
 	logger := slog.Default()
 

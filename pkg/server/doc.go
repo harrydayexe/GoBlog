@@ -33,7 +33,7 @@
 //	}
 //
 //	// Start serving (blocks until interrupted)
-//	if err := srv.Run(context.Background(), os.Stdout); err != nil {
+//	if err := srv.Run(context.Background()); err != nil {
 //	    log.Fatal(err)
 //	}
 //

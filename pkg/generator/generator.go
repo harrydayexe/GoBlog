@@ -50,8 +50,9 @@ func (c Generator) String() string {
 // It returns an error if the configuration is invalid or if required
 // resources cannot be initialized.
 //
-// Options can be provided to customize behavior such as template directories,
-// posts per page, and other generation parameters.
+// Optional config.GeneratorOption values control behavior: config.WithRawOutput,
+// config.WithSiteTitle, config.WithBlogRoot, config.WithEnvironment. The
+// template renderer is supplied as a positional argument, not an option.
 func New(posts fs.FS, renderer *TemplateRenderer, opts ...config.GeneratorOption) *Generator {
 	logger := slog.Default()
 

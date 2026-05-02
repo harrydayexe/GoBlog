@@ -11,19 +11,20 @@
 // Basic usage:
 //
 //	import (
+//		"context"
 //		"os"
-//		"github.com/harrydayexe/GoBlog/pkg/parser"
+//		"github.com/harrydayexe/GoBlog/v2/pkg/parser"
 //	)
 //
 //	// Parse a single file
 //	p := parser.New()
-//	post, err := p.ParseFile(os.DirFS("/path/to/posts"), "my-post.md")
+//	post, err := p.ParseFile(context.Background(), os.DirFS("/path/to/posts"), "my-post.md")
 //	if err != nil {
 //		// handle error
 //	}
 //
 //	// Parse all markdown files in a directory
-//	posts, err := p.ParseDirectory(os.DirFS("/path/to/posts"))
+//	posts, err := p.ParseDirectory(context.Background(), os.DirFS("/path/to/posts"))
 //	if err != nil {
 //		// handle error - may be ParseErrors with partial results
 //	}

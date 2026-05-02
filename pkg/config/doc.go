@@ -26,9 +26,12 @@
 // inserting it into page templates. When enabled in the outputter, the
 // tags directory is not created.
 //
-// WithTemplatesDir(fs.FS) specifies a custom filesystem containing templates
-// to use for rendering blog pages. This allows you to provide your own
-// template files instead of using the defaults.
+// WithSiteTitle(title string) sets the site title used in generated HTML
+// pages and templates.
+//
+// WithEnvironment(env string) sets the runtime environment ("local", "test",
+// or "production") surfaced to templates via models.BaseData.Environment.
+// Use config.EnvironmentConfig to read the value from the ENVIRONMENT env var.
 //
 // WithBlogRoot(path string) sets the root path for the blog when deploying
 // at a subdirectory rather than domain root. For example, use "/blog/" when
@@ -60,6 +63,6 @@
 // # Concurrency
 //
 // Option values are safe to create and use concurrently. Configuration
-// structs that embed RawOutput and TemplatesDir are safe to read
-// concurrently once created, but should not be modified after construction.
+// structs are safe to read concurrently once created, but should not be
+// modified after construction.
 package config
