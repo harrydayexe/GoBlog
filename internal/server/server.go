@@ -12,6 +12,7 @@ import (
 	"github.com/harrydayexe/GoBlog/v2/pkg/config"
 	"github.com/harrydayexe/GoBlog/v2/pkg/server"
 	"github.com/harrydayexe/GoBlog/v2/pkg/templates"
+	gwucfg "github.com/harrydayexe/GoWebUtilities/config"
 	"github.com/urfave/cli/v3"
 )
 
@@ -24,8 +25,14 @@ func NewServeCommand(ctx context.Context, c *cli.Command) error {
 	}
 	postsFsys := os.DirFS(inputPostsDir)
 
+	envCfg, err := gwucfg.ParseConfig[config.EnvironmentConfig]()
+	if err != nil {
+		return err
+	}
+
 	cfg := config.ServerConfig{}
 
+	cfg.Gen = append(cfg.Gen, config.WithEnvironment(string(envCfg.Environment)))
 	cfg.Server = append(cfg.Server, config.WithPort(c.Int(PortFlagName)))
 
 	if host := c.String(HostFlagName); host != "" {

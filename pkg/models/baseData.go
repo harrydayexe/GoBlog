@@ -24,4 +24,10 @@ type BaseData struct {
 	// Default: "/"
 	// Example: "/blog/"
 	BlogRoot string
+
+	// Environment is the runtime environment ("local", "test", or "production").
+	// Set via the ENVIRONMENT env var (default "local").
+	// Use in templates to gate environment-specific markup:
+	//   {{if eq .Environment "production"}}<script src="/analytics.js"></script>{{end}}
+	Environment string
 }

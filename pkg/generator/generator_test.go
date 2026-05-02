@@ -9,6 +9,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"testing/fstest"
 	"time"
 
 	"github.com/harrydayexe/GoBlog/v2/pkg/config"
@@ -882,6 +883,79 @@ Content about apples.
 	// Verify tags index contains sorted tags
 	if len(blog.TagsIndex) == 0 {
 		t.Error("Generate() should create tags index")
+	}
+}
+
+// TestWithEnvironment tests that the WithEnvironment option is applied correctly.
+func TestWithEnvironment(t *testing.T) {
+	t.Parallel()
+
+	testFS := os.DirFS("testdata")
+
+	// Without option — should default to "local"
+	genDefault := New(testFS, nil)
+	if genDefault.Environment.Environment != "local" {
+		t.Errorf("Generator without WithEnvironment() has Environment = %q, want %q",
+			genDefault.Environment.Environment, "local")
+	}
+
+	// With option — should use provided value
+	genCustom := New(testFS, nil, config.WithEnvironment("production"))
+	if genCustom.Environment.Environment != "production" {
+		t.Errorf("Generator with WithEnvironment(\"production\") has Environment = %q, want %q",
+			genCustom.Environment.Environment, "production")
+	}
+}
+
+// TestGenerate_EnvironmentInTemplateData verifies that the Environment value
+// set on the Generator is forwarded to BaseData and reachable inside templates.
+// It uses a minimal in-memory template that emits {{.Environment}} directly.
+func TestGenerate_EnvironmentInTemplateData(t *testing.T) {
+	t.Parallel()
+
+	// Minimal template set: pages/index.tmpl emits the Environment, others are stubs.
+	minimalFS := fstest.MapFS{
+		"pages/index.tmpl":      {Data: []byte(`{{.Environment}}`)},
+		"pages/post.tmpl":       {Data: []byte(`{{.Environment}}`)},
+		"pages/tag.tmpl":        {Data: []byte(`{{.Environment}}`)},
+		"pages/tags-index.tmpl": {Data: []byte(`{{.Environment}}`)},
+	}
+
+	renderer, err := NewTemplateRenderer(minimalFS)
+	if err != nil {
+		t.Fatalf("NewTemplateRenderer() error = %v", err)
+	}
+
+	testFS := os.DirFS("testdata")
+	gen := New(testFS, renderer, config.WithEnvironment("production"))
+
+	blog, err := gen.Generate(context.Background())
+	if err != nil {
+		t.Fatalf("Generate() error = %v", err)
+	}
+
+	// Index page should contain the environment value.
+	if !contains(string(blog.Index), "production") {
+		t.Errorf("Index page does not contain environment value %q; got: %s", "production", blog.Index)
+	}
+
+	// All post pages should carry the environment value.
+	for slug, content := range blog.Posts {
+		if !contains(string(content), "production") {
+			t.Errorf("Post %q does not contain environment value %q", slug, "production")
+		}
+	}
+
+	// All tag pages should carry the environment value.
+	for tag, content := range blog.Tags {
+		if !contains(string(content), "production") {
+			t.Errorf("Tag page %q does not contain environment value %q", tag, "production")
+		}
+	}
+
+	// Tags index should carry the environment value.
+	if !contains(string(blog.TagsIndex), "production") {
+		t.Errorf("Tags index does not contain environment value %q", "production")
 	}
 }
 

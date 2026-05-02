@@ -12,8 +12,9 @@ package config
 type GeneratorOption struct {
 	BaseOption
 
-	WithRawOutputFunc func(v *RawOutput)
-	WithSiteTitleFunc func(v *SiteTitle)
+	WithRawOutputFunc    func(v *RawOutput)
+	WithSiteTitleFunc    func(v *SiteTitle)
+	WithEnvironmentFunc  func(v *Environment)
 }
 
 // WithBaseOption wraps a BaseOption as a GeneratorOption so it can be passed
@@ -96,4 +97,29 @@ func WithSiteTitle(title string) GeneratorOption {
 
 func (o SiteTitle) AsOption() GeneratorOption {
 	return WithSiteTitle(o.SiteTitle)
+}
+
+// Environment is a configuration type holding the runtime environment name
+// (e.g. "local", "test", "production"). It is exposed to templates via
+// models.BaseData.Environment so users can branch on environment.
+type Environment struct{ Environment string }
+
+// WithEnvironment returns a GeneratorOption that sets the runtime environment
+// surfaced to all page templates via models.BaseData.Environment. Callers are
+// responsible for supplying a validated value (e.g. via gowebutilities
+// config.ParseConfig with EnvironmentConfig).
+//
+// Example usage:
+//
+//	gen := generator.New(fsys, renderer, config.WithEnvironment("production"))
+func WithEnvironment(env string) GeneratorOption {
+	return GeneratorOption{
+		WithEnvironmentFunc: func(v *Environment) {
+			v.Environment = env
+		},
+	}
+}
+
+func (o Environment) AsOption() GeneratorOption {
+	return WithEnvironment(o.Environment)
 }

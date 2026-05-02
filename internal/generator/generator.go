@@ -13,6 +13,7 @@ import (
 	"github.com/harrydayexe/GoBlog/v2/pkg/generator"
 	"github.com/harrydayexe/GoBlog/v2/pkg/outputter"
 	"github.com/harrydayexe/GoBlog/v2/pkg/templates"
+	gwucfg "github.com/harrydayexe/GoWebUtilities/config"
 	"github.com/urfave/cli/v3"
 )
 
@@ -31,7 +32,14 @@ func NewGeneratorCommand(ctx context.Context, c *cli.Command) error {
 		return err
 	}
 
-	opts := []config.GeneratorOption{}
+	envCfg, err := gwucfg.ParseConfig[config.EnvironmentConfig]()
+	if err != nil {
+		return err
+	}
+
+	opts := []config.GeneratorOption{
+		config.WithEnvironment(string(envCfg.Environment)),
+	}
 
 	rawOutputFlag := c.Bool(RawOutputFlagName)
 	if rawOutputFlag {

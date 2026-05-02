@@ -15,6 +15,8 @@ DATE := `date -u +%Y-%m-%dT%H:%M:%SZ`
 LDFLAGS := '-s -w -X main.version=' + VERSION + ' -X main.commit=' + COMMIT + ' -X main.date=' + DATE
 
 # Build binary for current OS/architecture
+[default]
+[group("dev")]
 build:
     @echo "Building {{BINARY_NAME}}..."
     @mkdir -p {{DIST_DIR}}
@@ -28,6 +30,7 @@ install:
     @echo "✓ Binary installed successfully"
 
 # Remove build artifacts
+[group("dev")]
 clean:
     @echo "Cleaning build artifacts..."
     rm -rf {{DIST_DIR}}
@@ -36,21 +39,22 @@ clean:
     @echo "✓ Clean complete"
 
 # Run all tests
+[group("dev")]
 test:
     go test ./...
 
 # Run tests with verbose output
+[group("dev")]
 test-verbose:
     go test -v ./...
 
-# Alias for test-verbose
-test-v: test-verbose
-
 # Run tests with race detector
+[group("dev")]
 test-race:
     go test -race ./...
 
 # Run tests with coverage profile
+[group("dev")]
 test-coverage:
     @echo "Running tests with coverage..."
     @mkdir -p {{COVERAGE_DIR}}
@@ -59,6 +63,7 @@ test-coverage:
     @go tool cover -func={{COVERAGE_DIR}}/coverage.out | tail -1
 
 # Generate HTML coverage report
+[group("dev")]
 coverage-html: test-coverage
     @echo "Generating HTML coverage report..."
     go tool cover -html={{COVERAGE_DIR}}/coverage.out -o {{COVERAGE_DIR}}/coverage.html
@@ -67,6 +72,7 @@ coverage-html: test-coverage
     @open {{COVERAGE_DIR}}/coverage.html 2>/dev/null || xdg-open {{COVERAGE_DIR}}/coverage.html 2>/dev/null || echo "Please open {{COVERAGE_DIR}}/coverage.html manually"
 
 # Run complete test suite (CI/CD simulation)
+[group("dev")]
 test-all:
     @echo "Running complete test suite (CI/CD workflow)..."
     @echo "\n=== Stage 1: go vet ==="
@@ -78,27 +84,33 @@ test-all:
     @echo "\n✓ All tests passed!"
 
 # Run go vet linter
+[group("lint")]
 vet:
     go vet ./...
 
 # Format all Go code
+[group("lint")]
 fmt:
     go fmt ./...
 
 # Check if code is formatted
+[group("lint")]
 fmt-check:
     @echo "Checking code formatting..."
     @test -z "$(gofmt -l .)" || (echo "Code is not formatted. Run 'just fmt'" && exit 1)
     @echo "✓ Code is properly formatted"
 
 # Run all linting checks
+[group("lint")]
 lint: vet fmt-check
 
 # Run generator command with arguments
+[group('run')]
 run-gen *ARGS:
     go run {{MAIN_PATH}} gen {{ARGS}}
 
 # Run serve command with optional arguments (defaults to example posts)
+[group('run')]
 run-serve *ARGS:
     #!/usr/bin/env bash
     if [ -z "{{ARGS}}" ]; then
