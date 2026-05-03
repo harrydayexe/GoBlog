@@ -150,6 +150,47 @@ func TestDirectoryWriter_HandleGeneratedBlog_RawOutput(t *testing.T) {
 	}
 }
 
+// TestDirectoryWriter_HandleGeneratedBlog_DisableTags verifies that no tags
+// directory is created when DisableTags is enabled, while posts and index
+// are still written normally.
+func TestDirectoryWriter_HandleGeneratedBlog_DisableTags(t *testing.T) {
+	t.Parallel()
+
+	outputDir := t.TempDir()
+	writer := NewDirectoryWriter(outputDir, config.WithDisableTags())
+
+	blog := &generator.GeneratedBlog{
+		Posts: map[string][]byte{
+			"post-1": []byte("<h1>Post 1</h1>"),
+		},
+		Index: []byte("<h1>Blog Index</h1>"),
+		// Tags map is intentionally populated to prove the writer ignores it.
+		Tags: map[string][]byte{
+			"golang": []byte("<h1>Golang Posts</h1>"),
+		},
+		TagsIndex: []byte("<h1>All Tags</h1>"),
+	}
+
+	err := writer.HandleGeneratedBlog(context.Background(), blog)
+	if err != nil {
+		t.Fatalf("HandleGeneratedBlog failed: %v", err)
+	}
+
+	// Verify tags directory does NOT exist.
+	tagsDir := filepath.Join(outputDir, "tags")
+	if _, err := os.Stat(tagsDir); !os.IsNotExist(err) {
+		t.Errorf("tags directory should not exist with DisableTags=true, but it does")
+	}
+
+	// Verify posts and index still exist.
+	if _, err := os.Stat(filepath.Join(outputDir, "index.html")); err != nil {
+		t.Errorf("index.html should exist: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(outputDir, "posts", "post-1.html")); err != nil {
+		t.Errorf("post-1.html should exist: %v", err)
+	}
+}
+
 // TestDirectoryWriter_HandleGeneratedBlog_EmptyBlog tests handling of empty input.
 func TestDirectoryWriter_HandleGeneratedBlog_EmptyBlog(t *testing.T) {
 	t.Parallel()

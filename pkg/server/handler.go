@@ -11,9 +11,11 @@ import (
 )
 
 // HandlerConfig holds configuration options for the blog HTTP handler.
-// It embeds config.BlogRoot to specify the root path where the blog is served.
+// It embeds config.BlogRoot to specify the root path where the blog is served,
+// and config.DisableTags to control whether tag routes are registered.
 type HandlerConfig struct {
 	config.BlogRoot
+	config.DisableTags
 
 	logger *slog.Logger
 }
@@ -21,17 +23,17 @@ type HandlerConfig struct {
 // Handler creates an HTTP handler that serves the generated blog content.
 // It accepts a GeneratedBlog, a logger for error reporting, and optional
 // configuration options to customize the handler behavior, such as setting
-// a custom blog root path.
+// a custom blog root path or disabling tag routes.
 //
 // The handler serves the following routes (assuming default root "/"):
 //   - GET / and GET /posts - serves the blog index page
 //   - GET /posts/{postName} - serves individual blog posts
-//   - GET /tags - serves the tags index page
-//   - GET /tags/{tagName} - serves tag-specific pages
+//   - GET /tags - serves the tags index page (unless DisableTags is set)
+//   - GET /tags/{tagName} - serves tag-specific pages (unless DisableTags is set)
 //
 // The handler is safe for concurrent use by multiple goroutines.
 // It does not modify the GeneratedBlog instance.
-func Handler(blog *generator.GeneratedBlog, logger *slog.Logger, opts ...config.BaseOption) http.Handler {
+func Handler(blog *generator.GeneratedBlog, logger *slog.Logger, opts ...config.GeneratorOption) http.Handler {
 	cfg := HandlerConfig{
 		BlogRoot: config.BlogRoot("/"),
 		logger:   logger,
@@ -40,6 +42,8 @@ func Handler(blog *generator.GeneratedBlog, logger *slog.Logger, opts ...config.
 	for _, opt := range opts {
 		if opt.WithBlogRootFunc != nil {
 			opt.WithBlogRootFunc(&cfg.BlogRoot)
+		} else if opt.WithDisableTagsFunc != nil {
+			opt.WithDisableTagsFunc(&cfg.DisableTags)
 		}
 	}
 
@@ -65,8 +69,10 @@ func generateHandler(cfg HandlerConfig, blog *generator.GeneratedBlog) http.Hand
 	mux.Handle(root+"{$}", handleIndex(cfg, blog))
 	mux.Handle(root+"posts/{postName}", handlePost(cfg, blog))
 
-	mux.Handle(root+"tags", handleTagsIndex(cfg, blog))
-	mux.Handle(root+"tags/{tagName}", handleTag(cfg, blog))
+	if !cfg.DisableTags.Disable {
+		mux.Handle(root+"tags", handleTagsIndex(cfg, blog))
+		mux.Handle(root+"tags/{tagName}", handleTag(cfg, blog))
+	}
 
 	return mux
 }

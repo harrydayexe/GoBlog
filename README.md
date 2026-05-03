@@ -128,6 +128,7 @@ goblog serve posts/ --port 8080
 | Flag | Short | Default | Description |
 |---|---|---|---|
 | `--raw` | `-r` | `false` | Output raw HTML without template wrapping |
+| `--disable-tags` | `-T` | `false` | Disable tag tracking and tag page generation |
 | `--root-path` | `-p` | `/` | Blog root path for subdirectory deployment |
 | `--template-dir` | `-t` | built-in | Path to a custom template directory |
 
@@ -137,6 +138,7 @@ goblog serve posts/ --port 8080
 |---|---|---|---|
 | `--port` | `-P` | `8080` | TCP port to listen on |
 | `--host` | `-H` | all interfaces | Host address to bind to |
+| `--disable-tags` | `-T` | `false` | Disable tag tracking and tag page generation |
 | `--root-path` | `-p` | `/` | Blog root path for subdirectory deployment |
 | `--template-dir` | `-t` | built-in | Path to a custom template directory |
 
@@ -244,6 +246,87 @@ When `RawOutput` is enabled, the `GeneratedBlog` structure contains:
 - **`TagsIndex` field**: Empty — tags index is not generated in raw output mode
 
 The HTML content is clean, semantic HTML generated from your Markdown without any surrounding structure like `<html>`, `<head>`, or `<body>` tags. This gives you complete control over how to integrate the content into your site.
+
+### Disable Tags Mode
+
+GoBlog can be configured to skip all tag-related output while still applying full templates to posts and the index page. This is useful when:
+
+- Your content is not taxonomy-driven and you don't need tag pages
+- You want a simpler site structure without a `/tags/` section
+- You are using a custom navigation scheme in place of GoBlog's built-in tag pages
+
+#### Using Disable Tags with the CLI
+
+```bash
+# Generate without tag pages
+goblog generate posts/ output/ --disable-tags
+
+# Or use the short flag
+goblog generate posts/ output/ -T
+
+# Also works with serve
+goblog serve posts/ --disable-tags
+```
+
+When disable tags mode is enabled:
+- Individual post files are rendered with full templates; with the default templates, per-post tag pills are hidden
+- The `tags/` directory is not created — no individual tag pages or tags index
+- `index.html` is rendered as normal; with the default templates, the "Tags" nav link in the header is hidden
+- The `/tags` and `/tags/{tag}` routes return 404 in serve mode
+
+#### Using Disable Tags with the Go API
+
+```go
+package main
+
+import (
+    "context"
+    "os"
+
+    "github.com/harrydayexe/GoBlog/v2/pkg/config"
+    "github.com/harrydayexe/GoBlog/v2/pkg/generator"
+    "github.com/harrydayexe/GoBlog/v2/pkg/outputter"
+    "github.com/harrydayexe/GoBlog/v2/pkg/templates"
+)
+
+func main() {
+    fsys := os.DirFS("posts/")
+    renderer, _ := generator.NewTemplateRenderer(templates.Default)
+    gen := generator.New(fsys, renderer, config.WithDisableTags())
+
+    blog, err := gen.Generate(context.Background())
+    if err != nil {
+        panic(err)
+    }
+
+    // blog.Tags is an empty map; blog.TagsIndex is nil
+    // blog.Posts and blog.Index contain fully-rendered HTML without tag UI
+
+    writer := outputter.NewDirectoryWriter("output/", config.WithDisableTags())
+    writer.HandleGeneratedBlog(context.Background(), blog)
+}
+```
+
+#### What to Expect from Disable Tags Output
+
+When `DisableTags` is enabled, the `GeneratedBlog` structure contains:
+
+- **`Posts` map**: Keys are post slugs, values are fully-templated HTML pages; with the default templates, tag pills are not rendered
+- **`Index` field**: Fully-templated index page; with the default templates, the "Tags" nav link is not rendered
+- **`Tags` map**: Empty — individual tag pages are not generated
+- **`TagsIndex` field**: Empty — the tags index page is not generated
+
+#### Custom Templates and TagsEnabled
+
+The `BaseData` struct passed to all templates includes a `TagsEnabled bool` field. Custom templates should use this field to conditionally render tag-related UI:
+
+```html
+{{if .TagsEnabled}}
+<a href="{{.BlogRoot}}tags">Tags</a>
+{{end}}
+```
+
+The built-in templates already respect this field. If you provide custom templates that unconditionally render tag links, those links will still appear even when `--disable-tags` is set — update them to gate on `{{.TagsEnabled}}`.
 
 ### Blog Root Configuration
 
@@ -370,8 +453,8 @@ page-specific fields:
 |---|---|---|
 | `pages/post.tmpl` | [`PostPageData`](https://pkg.go.dev/github.com/harrydayexe/GoBlog/v2/pkg/models#PostPageData) | `.Post *Post` |
 | `pages/index.tmpl` | [`IndexPageData`](https://pkg.go.dev/github.com/harrydayexe/GoBlog/v2/pkg/models#IndexPageData) | `.Posts PostList`, `.TotalPosts int` |
-| `pages/tag.tmpl` | [`TagPageData`](https://pkg.go.dev/github.com/harrydayexe/GoBlog/v2/pkg/models#TagPageData) | `.Tag string`, `.Posts []*Post`, `.PostCount int` |
-| `pages/tags-index.tmpl` | [`TagsIndexPageData`](https://pkg.go.dev/github.com/harrydayexe/GoBlog/v2/pkg/models#TagsIndexPageData) | `.Tags []TagInfo`, `.TotalTags int` |
+| `pages/tag.tmpl` | [`TagPageData`](https://pkg.go.dev/github.com/harrydayexe/GoBlog/v2/pkg/models#TagPageData) | `.Tag string`, `.Posts []*Post`, `.PostCount int` — not rendered when `--disable-tags` is set |
+| `pages/tags-index.tmpl` | [`TagsIndexPageData`](https://pkg.go.dev/github.com/harrydayexe/GoBlog/v2/pkg/models#TagsIndexPageData) | `.Tags []TagInfo`, `.TotalTags int` — not rendered when `--disable-tags` is set |
 
 #### Template helpers (FuncMap)
 
@@ -427,7 +510,7 @@ To use the built-in templates instead, replace `os.DirFS("./mytheme")` with
 | [`pkg/generator`](https://pkg.go.dev/github.com/harrydayexe/GoBlog/v2/pkg/generator) | Convert a directory of posts into a `GeneratedBlog` in memory |
 | [`pkg/outputter`](https://pkg.go.dev/github.com/harrydayexe/GoBlog/v2/pkg/outputter) | Write a `GeneratedBlog` to disk; implement `Outputter` for custom destinations |
 | [`pkg/server`](https://pkg.go.dev/github.com/harrydayexe/GoBlog/v2/pkg/server) | HTTP server with atomic live-reload via `Server.UpdatePosts` |
-| [`pkg/config`](https://pkg.go.dev/github.com/harrydayexe/GoBlog/v2/pkg/config) | Functional options: `WithRawOutput`, `WithSiteTitle`, `WithBlogRoot`, `WithEnvironment`, `WithPort`, `WithHost`, `WithMiddleware` |
+| [`pkg/config`](https://pkg.go.dev/github.com/harrydayexe/GoBlog/v2/pkg/config) | Functional options: `WithRawOutput`, `WithDisableTags`, `WithSiteTitle`, `WithBlogRoot`, `WithEnvironment`, `WithPort`, `WithHost`, `WithMiddleware` |
 | [`pkg/templates`](https://pkg.go.dev/github.com/harrydayexe/GoBlog/v2/pkg/templates) | Embedded default templates (`templates.Default`) |
 
 ### Site title

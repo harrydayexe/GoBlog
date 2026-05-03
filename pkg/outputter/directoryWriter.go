@@ -14,12 +14,14 @@ import (
 // as static HTML files to a filesystem directory.
 //
 // It creates an index.html file, individual post HTML files, and (unless
-// RawOutput is enabled) a tags subdirectory with tag pages and a tags index.
+// RawOutput or DisableTags is enabled) a tags subdirectory with tag pages
+// and a tags index.
 //
 // DirectoryWriter is safe for concurrent use, though concurrent writes to
 // the same output directory may result in filesystem race conditions.
 type DirectoryWriter struct {
 	config.RawOutput
+	config.DisableTags
 	outputDir string
 	logger    *slog.Logger
 }
@@ -36,6 +38,9 @@ type DirectoryWriter struct {
 //	writer := NewDirectoryWriter("/var/www/blog",
 //	    config.WithRawOutput(),
 //	)
+//	writer := NewDirectoryWriter("/var/www/blog",
+//	    config.WithDisableTags(),
+//	)
 //
 // This is the recommended constructor for most use cases.
 func NewDirectoryWriter(outputDir string, opts ...config.GeneratorOption) DirectoryWriter {
@@ -49,6 +54,8 @@ func NewDirectoryWriter(outputDir string, opts ...config.GeneratorOption) Direct
 	for _, opt := range opts {
 		if opt.WithRawOutputFunc != nil {
 			opt.WithRawOutputFunc(&dw.RawOutput)
+		} else if opt.WithDisableTagsFunc != nil {
+			opt.WithDisableTagsFunc(&dw.DisableTags)
 		}
 	}
 
@@ -63,14 +70,18 @@ func NewDirectoryWriter(outputDir string, opts ...config.GeneratorOption) Direct
 // The method creates the following structure in the output directory:
 //   - index.html: the main blog index page
 //   - posts/{slug}.html: individual post files, one per post
-//   - tags/{tag}.html: tag pages (only if RawOutput is false)
-//   - tags/index.html: tags index page (only if RawOutput is false)
+//   - tags/{tag}.html: tag pages (only if RawOutput and DisableTags are false)
+//   - tags/index.html: tags index page (only if RawOutput and DisableTags are false)
 //
 // When RawOutput mode is enabled (via config.WithRawOutput()), the tags/
 // directory is not created and individual post files contain only raw HTML
 // fragments without template wrappers. This is useful when you plan to
 // wrap the content with your own templates or integrate it into an existing
 // site structure.
+//
+// When DisableTags mode is enabled (via config.WithDisableTags()), the tags/
+// directory is not created. Posts and the index page are still written with
+// full templates.
 //
 // All necessary directories are created automatically with permissions 0755.
 // Files are written with permissions 0644.
@@ -98,8 +109,8 @@ func (dw DirectoryWriter) HandleGeneratedBlog(ctx context.Context, blog *generat
 		return err
 	}
 
-	// Only write tags and tags index if NOT in RawOutput mode
-	if !dw.RawOutput.RawOutput {
+	// Only write tags and tags index if NOT in RawOutput or DisableTags mode
+	if !dw.RawOutput.RawOutput && !dw.DisableTags.Disable {
 		if err := writeMapToFiles(blog.Tags, filepath.Join(dw.outputDir, "tags")); err != nil {
 			return err
 		}

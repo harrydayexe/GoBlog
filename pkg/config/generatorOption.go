@@ -8,14 +8,15 @@ package config
 // modify specific configuration fields.
 //
 // This type should not be constructed directly by users. Instead, use the
-// provided option functions like WithRawOutput(), WithSiteTitle(),
-// WithEnvironment(), and WithBaseOption().
+// provided option functions like WithRawOutput(), WithDisableTags(),
+// WithSiteTitle(), WithEnvironment(), and WithBaseOption().
 type GeneratorOption struct {
 	BaseOption
 
-	WithRawOutputFunc    func(v *RawOutput)
-	WithSiteTitleFunc    func(v *SiteTitle)
-	WithEnvironmentFunc  func(v *Environment)
+	WithRawOutputFunc   func(v *RawOutput)
+	WithDisableTagsFunc func(v *DisableTags)
+	WithSiteTitleFunc   func(v *SiteTitle)
+	WithEnvironmentFunc func(v *Environment)
 }
 
 // WithBaseOption wraps a BaseOption as a GeneratorOption so it can be passed
@@ -71,6 +72,50 @@ func (o RawOutput) AsOption() GeneratorOption {
 	return GeneratorOption{
 		WithRawOutputFunc: func(v *RawOutput) {
 			v.RawOutput = false
+		},
+	}
+}
+
+// DisableTags is a configuration type that controls whether tag pages are
+// generated and served.
+//
+// When Disable is true:
+//   - The generator skips rendering individual tag pages and the tags index
+//   - Post.Tags slices are cleared in the assembled blog so the default templates do not render tag pills
+//   - The outputter skips creating the tags directory
+//   - The HTTP server skips registering /tags routes
+//   - BaseData.TagsEnabled is set to false for all templates
+//
+// This type is typically embedded in generator, outputter, and server
+// configuration structs and should be set using the WithDisableTags() option function.
+type DisableTags struct{ Disable bool }
+
+// WithDisableTags returns a GeneratorOption that disables all tag-related output.
+//
+// When applied to a generator, it will skip rendering tag pages and the tags
+// index. Post tag slices are cleared so that the default templates do not
+// render per-post tag pills. When applied to an outputter, it will skip creating the tags
+// directory. When applied to the HTTP server, /tags routes are not registered.
+//
+// Example usage:
+//
+//	gen := generator.New(fsys, renderer, config.WithDisableTags())
+//	writer := outputter.NewDirectoryWriter("output/", config.WithDisableTags())
+func WithDisableTags() GeneratorOption {
+	return GeneratorOption{
+		WithDisableTagsFunc: func(v *DisableTags) {
+			v.Disable = true
+		},
+	}
+}
+
+func (o DisableTags) AsOption() GeneratorOption {
+	if o.Disable {
+		return WithDisableTags()
+	}
+	return GeneratorOption{
+		WithDisableTagsFunc: func(v *DisableTags) {
+			v.Disable = false
 		},
 	}
 }

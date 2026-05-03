@@ -14,9 +14,9 @@
                 <a href="{{.BlogRoot}}" class="text-gray-700 hover:text-blue-600 font-medium transition-colors">
                     Home
                 </a>
-                <a href="{{.BlogRoot}}tags" class="text-gray-700 hover:text-blue-600 font-medium transition-colors">
+                {{if .TagsEnabled}}<a href="{{.BlogRoot}}tags" class="text-gray-700 hover:text-blue-600 font-medium transition-colors">
                     Tags
-                </a>
+                </a>{{end}}
             </nav>
         </div>
     </div>

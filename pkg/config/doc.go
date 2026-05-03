@@ -26,6 +26,12 @@
 // inserting it into page templates. When enabled in the outputter, the
 // tags directory is not created.
 //
+// WithDisableTags() disables all tag-related output. When enabled, the
+// generator skips rendering tag pages and the tags index, post tag slices
+// are cleared, the outputter skips the tags directory, and the HTTP server
+// does not register /tags routes. Unlike WithRawOutput(), posts and the index
+// page are still rendered with full templates.
+//
 // WithSiteTitle(title string) sets the site title used in generated HTML
 // pages and templates.
 //

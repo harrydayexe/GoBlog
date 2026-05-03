@@ -33,6 +33,10 @@ func NewServeCommand(ctx context.Context, c *cli.Command) error {
 	cfg := config.ServerConfig{}
 
 	cfg.Gen = append(cfg.Gen, config.WithEnvironment(string(envCfg.Environment)))
+
+	if c.Bool(DisableTagsFlagName) {
+		cfg.Gen = append(cfg.Gen, config.WithDisableTags())
+	}
 	cfg.Server = append(cfg.Server, config.WithPort(c.Int(PortFlagName)))
 
 	if host := c.String(HostFlagName); host != "" {
