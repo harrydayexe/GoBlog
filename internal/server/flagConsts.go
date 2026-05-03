@@ -14,3 +14,6 @@ const TemplateDirFlagName = "template-dir"
 
 // BlogRootFlagName is the CLI flag name for setting a blog root path.
 const BlogRootFlagName = "root-path"
+
+// DisableTagsFlagName is the CLI flag name for disabling tag page generation.
+const DisableTagsFlagName = "disable-tags"

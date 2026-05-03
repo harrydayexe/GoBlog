@@ -40,5 +40,11 @@ var ServeCommand cli.Command = cli.Command{
 			Aliases: []string{"p"},
 			Usage:   "root path of the blog, defaults to '/'",
 		},
+		&cli.BoolFlag{
+			Name:    DisableTagsFlagName,
+			Aliases: []string{"T"},
+			Usage:   "disable tag tracking and tag page generation",
+			Value:   false,
+		},
 	},
 }

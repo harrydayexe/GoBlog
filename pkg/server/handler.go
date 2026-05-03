@@ -26,8 +26,12 @@ type HandlerConfig struct {
 // The handler serves the following routes (assuming default root "/"):
 //   - GET / and GET /posts - serves the blog index page
 //   - GET /posts/{postName} - serves individual blog posts
-//   - GET /tags - serves the tags index page
-//   - GET /tags/{tagName} - serves tag-specific pages
+//   - GET /tags - serves the tags index page (only if blog.TagsIndex is non-empty)
+//   - GET /tags/{tagName} - serves tag-specific pages (only if blog.Tags is non-empty)
+//
+// Tag routes are registered only when the blog contains tag content. When the
+// generator is configured with config.WithDisableTags(), blog.Tags and
+// blog.TagsIndex will be empty and the tag routes will not be registered.
 //
 // The handler is safe for concurrent use by multiple goroutines.
 // It does not modify the GeneratedBlog instance.
@@ -65,8 +69,10 @@ func generateHandler(cfg HandlerConfig, blog *generator.GeneratedBlog) http.Hand
 	mux.Handle(root+"{$}", handleIndex(cfg, blog))
 	mux.Handle(root+"posts/{postName}", handlePost(cfg, blog))
 
-	mux.Handle(root+"tags", handleTagsIndex(cfg, blog))
-	mux.Handle(root+"tags/{tagName}", handleTag(cfg, blog))
+	if len(blog.Tags) > 0 || len(blog.TagsIndex) > 0 {
+		mux.Handle(root+"tags", handleTagsIndex(cfg, blog))
+		mux.Handle(root+"tags/{tagName}", handleTag(cfg, blog))
+	}
 
 	return mux
 }

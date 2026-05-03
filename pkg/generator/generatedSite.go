@@ -21,6 +21,19 @@ package generator
 //
 // This mode is useful for embedding blog content into existing applications,
 // custom CMSs, or when you need to apply your own templates programmatically.
+//
+// # Disable Tags Mode
+//
+// When the generator is configured with config.WithDisableTags(), the content
+// in GeneratedBlog will omit all tag-related output while still applying full
+// templates to posts and the index:
+//   - Posts map contains fully templated HTML pages (with the default templates, tag pills are not rendered)
+//   - Tags map will be empty (tag pages are not generated)
+//   - TagsIndex will be nil (tags index is not generated)
+//   - Index contains the complete templated index page (with the default templates, the Tags nav link is not rendered)
+//
+// This mode is useful when the blog content is not taxonomy-driven or when a
+// custom navigation structure is used in place of GoBlog's built-in tag pages.
 type GeneratedBlog struct {
 	Posts     map[string][]byte // Posts maps a slug to raw HTML bytes for each post
 	Index     []byte            // Index contains the raw HTML for the blog index page

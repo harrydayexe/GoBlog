@@ -46,6 +46,10 @@ func NewGeneratorCommand(ctx context.Context, c *cli.Command) error {
 		opts = append(opts, config.WithRawOutput())
 	}
 
+	if c.Bool(DisableTagsFlagName) {
+		opts = append(opts, config.WithDisableTags())
+	}
+
 	templateDirPath := c.String(TemplateDirFlagName)
 	var templateDir fs.FS
 	if templateDirPath == "" {

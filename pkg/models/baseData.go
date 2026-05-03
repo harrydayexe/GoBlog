@@ -30,4 +30,15 @@ type BaseData struct {
 	// Use in templates to gate environment-specific markup:
 	//   {{if eq .Environment "production"}}<script src="/analytics.js"></script>{{end}}
 	Environment string
+
+	// TagsEnabled indicates whether tag features are active for this blog.
+	// When false, the default templates suppress tag-related navigation links
+	// and per-post tag pills. Custom templates should also gate tag UI on this
+	// field. The Go zero value is false; the Generator sets this to true unless
+	// config.WithDisableTags() is applied, so manual constructors must set it
+	// explicitly when tags should be visible.
+	//
+	// Custom templates should gate tag UI on this field:
+	//   {{if .TagsEnabled}}<a href="{{.BlogRoot}}tags">Tags</a>{{end}}
+	TagsEnabled bool
 }

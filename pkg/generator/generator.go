@@ -24,6 +24,7 @@ type Generator struct {
 	PostsDir fs.FS // The filesystem containing the input posts in markdown
 
 	config.RawOutput
+	config.DisableTags
 	config.SiteTitle
 	config.BlogRoot
 	config.Environment
@@ -36,10 +37,12 @@ type Generator struct {
 func (c Generator) String() string {
 	return fmt.Sprintf(`Generator Config
 - RawOutput           %t,
+- DisableTags         %t,
 - SiteTitle           %s,
 - BlogRoot            %s,
 - Environment         %s`,
 		c.RawOutput,
+		c.DisableTags.Disable,
 		c.SiteTitle,
 		c.BlogRoot,
 		c.Environment.Environment,
@@ -51,8 +54,9 @@ func (c Generator) String() string {
 // resources cannot be initialized.
 //
 // Optional config.GeneratorOption values control behavior: config.WithRawOutput,
-// config.WithSiteTitle, config.WithBlogRoot, config.WithEnvironment. The
-// template renderer is supplied as a positional argument, not an option.
+// config.WithDisableTags, config.WithSiteTitle, config.WithBlogRoot,
+// config.WithEnvironment. The template renderer is supplied as a positional
+// argument, not an option.
 func New(posts fs.FS, renderer *TemplateRenderer, opts ...config.GeneratorOption) *Generator {
 	logger := slog.Default()
 
@@ -67,6 +71,8 @@ func New(posts fs.FS, renderer *TemplateRenderer, opts ...config.GeneratorOption
 	for _, opt := range opts {
 		if opt.WithRawOutputFunc != nil {
 			opt.WithRawOutputFunc(&gen.RawOutput)
+		} else if opt.WithDisableTagsFunc != nil {
+			opt.WithDisableTagsFunc(&gen.DisableTags)
 		} else if opt.WithSiteTitleFunc != nil {
 			opt.WithSiteTitleFunc(&gen.SiteTitle)
 		} else if opt.WithBlogRootFunc != nil {
@@ -168,6 +174,15 @@ func (g *Generator) assembleBlogWithTemplates(ctx context.Context, posts models.
 
 	blog := NewEmptyGeneratedBlog()
 
+	tagsEnabled := !g.DisableTags.Disable
+
+	// When tags are disabled, clear Post.Tags so template tag pills do not render.
+	if !tagsEnabled {
+		for _, post := range posts {
+			post.Tags = nil
+		}
+	}
+
 	// Sort posts by date descending
 	posts.SortByDate()
 
@@ -181,6 +196,7 @@ func (g *Generator) assembleBlogWithTemplates(ctx context.Context, posts models.
 				Year:        time.Now().Year(),
 				BlogRoot:    string(g.BlogRoot),
 				Environment: g.Environment.Environment,
+				TagsEnabled: tagsEnabled,
 			},
 			Post: post,
 		}
@@ -209,6 +225,7 @@ func (g *Generator) assembleBlogWithTemplates(ctx context.Context, posts models.
 			Year:        time.Now().Year(),
 			BlogRoot:    string(g.BlogRoot),
 			Environment: g.Environment.Environment,
+			TagsEnabled: tagsEnabled,
 		},
 		Posts:      indexPosts,
 		TotalPosts: len(indexPosts),
@@ -220,71 +237,75 @@ func (g *Generator) assembleBlogWithTemplates(ctx context.Context, posts models.
 	}
 	blog.Index = index
 
-	// Render tag pages
-	allTags := posts.GetAllTags()
-	for _, tag := range allTags {
-		tagPosts := posts.FilterByTag(tag)
+	if tagsEnabled {
+		// Render tag pages
+		allTags := posts.GetAllTags()
+		for _, tag := range allTags {
+			tagPosts := posts.FilterByTag(tag)
 
-		// Enrich tag posts with BlogRoot
-		for _, post := range tagPosts {
-			post.BlogRoot = string(g.BlogRoot)
+			// Enrich tag posts with BlogRoot
+			for _, post := range tagPosts {
+				post.BlogRoot = string(g.BlogRoot)
+			}
+
+			tagData := models.TagPageData{
+				BaseData: models.BaseData{
+					SiteTitle:   g.SiteTitle.SiteTitle,
+					PageTitle:   "Tag: " + tag,
+					Description: fmt.Sprintf("Posts tagged with %s", tag),
+					Year:        time.Now().Year(),
+					BlogRoot:    string(g.BlogRoot),
+					Environment: g.Environment.Environment,
+					TagsEnabled: true,
+				},
+				Tag:       tag,
+				Posts:     tagPosts,
+				PostCount: len(tagPosts),
+			}
+
+			rendered, err := g.renderer.RenderTag(tagData)
+			if err != nil {
+				return nil, fmt.Errorf("failed to render tag page %s: %w", tag, err)
+			}
+
+			blog.Tags[tag] = rendered
 		}
 
-		tagData := models.TagPageData{
+		// Render tags index page
+		var tagInfos []models.TagInfo
+		for _, tag := range allTags {
+			tagPosts := posts.FilterByTag(tag)
+			tagInfos = append(tagInfos, models.TagInfo{
+				Name:      tag,
+				PostCount: len(tagPosts),
+			})
+		}
+
+		// Sort tags alphabetically (case-insensitive)
+		sort.Slice(tagInfos, func(i, j int) bool {
+			return strings.ToLower(tagInfos[i].Name) < strings.ToLower(tagInfos[j].Name)
+		})
+
+		tagsIndexData := models.TagsIndexPageData{
 			BaseData: models.BaseData{
 				SiteTitle:   g.SiteTitle.SiteTitle,
-				PageTitle:   "Tag: " + tag,
-				Description: fmt.Sprintf("Posts tagged with %s", tag),
+				PageTitle:   "All Tags",
+				Description: "Browse all topics covered in this blog",
 				Year:        time.Now().Year(),
 				BlogRoot:    string(g.BlogRoot),
 				Environment: g.Environment.Environment,
+				TagsEnabled: true,
 			},
-			Tag:       tag,
-			Posts:     tagPosts,
-			PostCount: len(tagPosts),
+			Tags:      tagInfos,
+			TotalTags: len(tagInfos),
 		}
 
-		rendered, err := g.renderer.RenderTag(tagData)
+		tagsIndex, err := g.renderer.RenderTagsIndex(tagsIndexData)
 		if err != nil {
-			return nil, fmt.Errorf("failed to render tag page %s: %w", tag, err)
+			return nil, fmt.Errorf("failed to render tags index: %w", err)
 		}
-
-		blog.Tags[tag] = rendered
+		blog.TagsIndex = tagsIndex
 	}
-
-	// Render tags index page
-	var tagInfos []models.TagInfo
-	for _, tag := range allTags {
-		tagPosts := posts.FilterByTag(tag)
-		tagInfos = append(tagInfos, models.TagInfo{
-			Name:      tag,
-			PostCount: len(tagPosts),
-		})
-	}
-
-	// Sort tags alphabetically (case-insensitive)
-	sort.Slice(tagInfos, func(i, j int) bool {
-		return strings.ToLower(tagInfos[i].Name) < strings.ToLower(tagInfos[j].Name)
-	})
-
-	tagsIndexData := models.TagsIndexPageData{
-		BaseData: models.BaseData{
-			SiteTitle:   g.SiteTitle.SiteTitle,
-			PageTitle:   "All Tags",
-			Description: "Browse all topics covered in this blog",
-			Year:        time.Now().Year(),
-			BlogRoot:    string(g.BlogRoot),
-			Environment: g.Environment.Environment,
-		},
-		Tags:      tagInfos,
-		TotalTags: len(tagInfos),
-	}
-
-	tagsIndex, err := g.renderer.RenderTagsIndex(tagsIndexData)
-	if err != nil {
-		return nil, fmt.Errorf("failed to render tags index: %w", err)
-	}
-	blog.TagsIndex = tagsIndex
 
 	return blog, nil
 }

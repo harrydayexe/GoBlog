@@ -40,7 +40,7 @@ type Server struct {
 	config.Port
 	config.Host
 
-	handler    atomic.Value           // stores http.Handler
+	handler    atomic.Value            // stores http.Handler
 	middleware []middleware.Middleware // middleware chain
 	generator  *generator.Generator
 }

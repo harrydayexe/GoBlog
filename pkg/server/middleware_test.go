@@ -301,6 +301,77 @@ func ExampleServer_withMiddleware() {
 	_ = srv
 }
 
+// TestServerDisableTags verifies that /tags and /tags/{tag} routes return 404
+// when DisableTags is set, while the index route still returns 200.
+func TestServerDisableTags(t *testing.T) {
+	t.Parallel()
+
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	postsFS := createTestFS(t)
+
+	cfg := config.ServerConfig{
+		Server: []config.BaseServerOption{
+			config.WithPort(8080),
+		},
+		Gen: []config.GeneratorOption{
+			config.WithDisableTags(),
+		},
+	}
+
+	srv, err := server.New(logger, postsFS, cfg)
+	if err != nil {
+		t.Fatalf("failed to create server: %v", err)
+	}
+
+	tests := []struct {
+		path           string
+		wantStatusCode int
+	}{
+		{"/", http.StatusOK},
+		{"/tags", http.StatusNotFound},
+		{"/tags/go", http.StatusNotFound},
+	}
+
+	for _, tt := range tests {
+		req := httptest.NewRequest(http.MethodGet, tt.path, nil)
+		w := httptest.NewRecorder()
+		srv.ServeHTTP(w, req)
+
+		if w.Code != tt.wantStatusCode {
+			t.Errorf("GET %s: got status %d, want %d", tt.path, w.Code, tt.wantStatusCode)
+		}
+	}
+}
+
+// TestServerTagsEnabledByDefault verifies that /tags and /tags/{tag} routes
+// return a non-404 status when DisableTags is not set.
+func TestServerTagsEnabledByDefault(t *testing.T) {
+	t.Parallel()
+
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	postsFS := createTestFS(t)
+
+	cfg := config.ServerConfig{
+		Server: []config.BaseServerOption{
+			config.WithPort(8080),
+		},
+	}
+
+	srv, err := server.New(logger, postsFS, cfg)
+	if err != nil {
+		t.Fatalf("failed to create server: %v", err)
+	}
+
+	// /tags should be registered and return non-404.
+	req := httptest.NewRequest(http.MethodGet, "/tags", nil)
+	w := httptest.NewRecorder()
+	srv.ServeHTTP(w, req)
+
+	if w.Code == http.StatusNotFound {
+		t.Errorf("GET /tags: got 404 but tags should be enabled by default")
+	}
+}
+
 // createTestFS creates a minimal test filesystem with a single post.
 func createTestFS(t *testing.T) fs.FS {
 	t.Helper()

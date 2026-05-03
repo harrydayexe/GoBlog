@@ -375,6 +375,71 @@ Testing the blog root feature.
 	}
 }
 
+// TestRunGenerate_DisableTags tests that --disable-tags suppresses tag output.
+func TestRunGenerate_DisableTags(t *testing.T) {
+	t.Parallel()
+
+	tempDir := t.TempDir()
+
+	testPost := `---
+title: Tagged Post
+date: 2024-01-15
+description: A tagged test post
+tags: [test, go]
+---
+
+# Tagged Post
+`
+	postsDir := tempDir + "/posts"
+	if err := os.MkdirAll(postsDir, 0755); err != nil {
+		t.Fatalf("Failed to create posts dir: %v", err)
+	}
+	if err := os.WriteFile(postsDir+"/tagged.md", []byte(testPost), 0644); err != nil {
+		t.Fatalf("Failed to write test post: %v", err)
+	}
+
+	outputDir := tempDir + "/output"
+	if err := os.MkdirAll(outputDir, 0755); err != nil {
+		t.Fatalf("Failed to create output dir: %v", err)
+	}
+
+	postsFsys := os.DirFS(postsDir)
+	renderer, err := generator.NewTemplateRenderer(os.DirFS("../../pkg/templates/default"))
+	if err != nil {
+		t.Fatalf("Failed to create renderer: %v", err)
+	}
+
+	opts := []config.GeneratorOption{config.WithDisableTags()}
+	handler := outputter.NewDirectoryWriter(outputDir, opts...)
+
+	if err := runGenerate(context.Background(), postsFsys, renderer, opts, handler); err != nil {
+		t.Fatalf("runGenerate() with disable-tags error = %v, want nil", err)
+	}
+
+	// tags directory must not be created.
+	tagsPath := outputDir + "/tags"
+	if _, err := os.Stat(tagsPath); !os.IsNotExist(err) {
+		t.Error("runGenerate() with disable-tags should not create tags directory")
+	}
+
+	// posts and index must exist.
+	if _, err := os.Stat(outputDir + "/index.html"); os.IsNotExist(err) {
+		t.Error("runGenerate() with disable-tags should still create index.html")
+	}
+	if _, err := os.Stat(outputDir + "/posts"); os.IsNotExist(err) {
+		t.Error("runGenerate() with disable-tags should still create posts directory")
+	}
+
+	// Rendered index must not contain a Tags nav link.
+	indexBytes, err := os.ReadFile(outputDir + "/index.html")
+	if err != nil {
+		t.Fatalf("Failed to read index.html: %v", err)
+	}
+	if containsString(string(indexBytes), `href="/tags"`) || containsString(string(indexBytes), ">Tags<") {
+		t.Error("index.html contains a Tags nav link but disable-tags is set")
+	}
+}
+
 // containsString checks if a string contains a substring (helper function).
 func containsString(s, substr string) bool {
 	return strings.Contains(s, substr)

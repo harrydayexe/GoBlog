@@ -959,6 +959,143 @@ func TestGenerate_EnvironmentInTemplateData(t *testing.T) {
 	}
 }
 
+// TestWithDisableTags tests that the WithDisableTags option is applied correctly.
+func TestWithDisableTags(t *testing.T) {
+	t.Parallel()
+
+	testFS := os.DirFS("testdata")
+
+	genDefault := New(testFS, nil)
+	if genDefault.DisableTags.Disable {
+		t.Error("Generator without WithDisableTags() should have Disable = false")
+	}
+
+	genDisabled := New(testFS, nil, config.WithDisableTags())
+	if !genDisabled.DisableTags.Disable {
+		t.Error("Generator with WithDisableTags() should have Disable = true")
+	}
+}
+
+// TestAssembleBlogWithTemplates_DisableTags verifies that when DisableTags is
+// enabled: tag pages are not generated, tags index is nil, post/index HTML
+// contains no tag nav link, and post tag pills are suppressed.
+func TestAssembleBlogWithTemplates_DisableTags(t *testing.T) {
+	t.Parallel()
+
+	tempDir := t.TempDir()
+
+	postContent := `---
+title: Tagged Post
+date: 2024-03-01
+description: A post with tags
+tags: [go, testing]
+---
+# Tagged Post
+Content here.
+`
+	if err := os.WriteFile(tempDir+"/tagged.md", []byte(postContent), 0644); err != nil {
+		t.Fatalf("Failed to write test file: %v", err)
+	}
+
+	testFS := os.DirFS(tempDir)
+	renderer, err := NewTemplateRenderer(os.DirFS("../templates/default"))
+	if err != nil {
+		t.Fatalf("NewTemplateRenderer() error = %v", err)
+	}
+
+	gen := New(testFS, renderer, config.WithDisableTags())
+	blog, err := gen.Generate(context.Background())
+	if err != nil {
+		t.Fatalf("Generate() error = %v", err)
+	}
+
+	// Tag pages should not be generated.
+	if len(blog.Tags) != 0 {
+		t.Errorf("blog.Tags should be empty with DisableTags; got %d entries", len(blog.Tags))
+	}
+
+	// Tags index should not be generated.
+	if len(blog.TagsIndex) != 0 {
+		t.Errorf("blog.TagsIndex should be empty with DisableTags; got %d bytes", len(blog.TagsIndex))
+	}
+
+	// Posts and index must still exist.
+	if len(blog.Posts) == 0 {
+		t.Error("blog.Posts should not be empty")
+	}
+	if len(blog.Index) == 0 {
+		t.Error("blog.Index should not be empty")
+	}
+
+	// Rendered pages should not contain the Tags nav link.
+	indexHTML := string(blog.Index)
+	if contains(indexHTML, `href="/tags"`) || contains(indexHTML, `>Tags<`) {
+		t.Error("index.html contains a Tags nav link but DisableTags is set")
+	}
+
+	for slug, content := range blog.Posts {
+		postHTML := string(content)
+		// No Tags nav link.
+		if contains(postHTML, `href="/tags"`) || contains(postHTML, `>Tags<`) {
+			t.Errorf("post %q contains a Tags nav link but DisableTags is set", slug)
+		}
+		// No tag pills linking to tag pages.
+		if contains(postHTML, `href="/tags/go`) || contains(postHTML, `href="/tags/testing`) {
+			t.Errorf("post %q contains tag pill links but DisableTags is set", slug)
+		}
+	}
+}
+
+// TestGenerate_TagsEnabledInTemplateData verifies that the TagsEnabled value
+// in BaseData is correctly forwarded to templates and defaults to true.
+func TestGenerate_TagsEnabledInTemplateData(t *testing.T) {
+	t.Parallel()
+
+	minimalFS := fstest.MapFS{
+		"pages/index.tmpl":      {Data: []byte(`{{if .TagsEnabled}}TAGS_ON{{else}}TAGS_OFF{{end}}`)},
+		"pages/post.tmpl":       {Data: []byte(`{{if .TagsEnabled}}TAGS_ON{{else}}TAGS_OFF{{end}}`)},
+		"pages/tag.tmpl":        {Data: []byte(`{{if .TagsEnabled}}TAGS_ON{{else}}TAGS_OFF{{end}}`)},
+		"pages/tags-index.tmpl": {Data: []byte(`{{if .TagsEnabled}}TAGS_ON{{else}}TAGS_OFF{{end}}`)},
+	}
+
+	renderer, err := NewTemplateRenderer(minimalFS)
+	if err != nil {
+		t.Fatalf("NewTemplateRenderer() error = %v", err)
+	}
+
+	testFS := os.DirFS("testdata")
+
+	// Without WithDisableTags — TagsEnabled should be true in all templates.
+	genEnabled := New(testFS, renderer)
+	blogEnabled, err := genEnabled.Generate(context.Background())
+	if err != nil {
+		t.Fatalf("Generate() error = %v", err)
+	}
+	if !contains(string(blogEnabled.Index), "TAGS_ON") {
+		t.Error("index without DisableTags should have TagsEnabled=true")
+	}
+	for slug, content := range blogEnabled.Posts {
+		if !contains(string(content), "TAGS_ON") {
+			t.Errorf("post %q without DisableTags should have TagsEnabled=true", slug)
+		}
+	}
+
+	// With WithDisableTags — TagsEnabled should be false.
+	genDisabled := New(testFS, renderer, config.WithDisableTags())
+	blogDisabled, err := genDisabled.Generate(context.Background())
+	if err != nil {
+		t.Fatalf("Generate() with DisableTags error = %v", err)
+	}
+	if !contains(string(blogDisabled.Index), "TAGS_OFF") {
+		t.Error("index with DisableTags should have TagsEnabled=false")
+	}
+	for slug, content := range blogDisabled.Posts {
+		if !contains(string(content), "TAGS_OFF") {
+			t.Errorf("post %q with DisableTags should have TagsEnabled=false", slug)
+		}
+	}
+}
+
 // Helper function to check if a string contains a substring (case-insensitive).
 func contains(s, substr string) bool {
 	return bytes.Contains([]byte(strings.ToLower(s)), []byte(strings.ToLower(substr)))
