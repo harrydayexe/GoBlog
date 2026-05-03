@@ -11,11 +11,9 @@ import (
 )
 
 // HandlerConfig holds configuration options for the blog HTTP handler.
-// It embeds config.BlogRoot to specify the root path where the blog is served,
-// and config.DisableTags to control whether tag routes are registered.
+// It embeds config.BlogRoot to specify the root path where the blog is served.
 type HandlerConfig struct {
 	config.BlogRoot
-	config.DisableTags
 
 	logger *slog.Logger
 }
@@ -23,17 +21,21 @@ type HandlerConfig struct {
 // Handler creates an HTTP handler that serves the generated blog content.
 // It accepts a GeneratedBlog, a logger for error reporting, and optional
 // configuration options to customize the handler behavior, such as setting
-// a custom blog root path or disabling tag routes.
+// a custom blog root path.
 //
 // The handler serves the following routes (assuming default root "/"):
 //   - GET / and GET /posts - serves the blog index page
 //   - GET /posts/{postName} - serves individual blog posts
-//   - GET /tags - serves the tags index page (unless DisableTags is set)
-//   - GET /tags/{tagName} - serves tag-specific pages (unless DisableTags is set)
+//   - GET /tags - serves the tags index page (only if blog.TagsIndex is non-empty)
+//   - GET /tags/{tagName} - serves tag-specific pages (only if blog.Tags is non-empty)
+//
+// Tag routes are registered only when the blog contains tag content. When the
+// generator is configured with config.WithDisableTags(), blog.Tags and
+// blog.TagsIndex will be empty and the tag routes will not be registered.
 //
 // The handler is safe for concurrent use by multiple goroutines.
 // It does not modify the GeneratedBlog instance.
-func Handler(blog *generator.GeneratedBlog, logger *slog.Logger, opts ...config.GeneratorOption) http.Handler {
+func Handler(blog *generator.GeneratedBlog, logger *slog.Logger, opts ...config.BaseOption) http.Handler {
 	cfg := HandlerConfig{
 		BlogRoot: config.BlogRoot("/"),
 		logger:   logger,
@@ -42,8 +44,6 @@ func Handler(blog *generator.GeneratedBlog, logger *slog.Logger, opts ...config.
 	for _, opt := range opts {
 		if opt.WithBlogRootFunc != nil {
 			opt.WithBlogRootFunc(&cfg.BlogRoot)
-		} else if opt.WithDisableTagsFunc != nil {
-			opt.WithDisableTagsFunc(&cfg.DisableTags)
 		}
 	}
 
@@ -69,7 +69,7 @@ func generateHandler(cfg HandlerConfig, blog *generator.GeneratedBlog) http.Hand
 	mux.Handle(root+"{$}", handleIndex(cfg, blog))
 	mux.Handle(root+"posts/{postName}", handlePost(cfg, blog))
 
-	if !cfg.DisableTags.Disable {
+	if len(blog.Tags) > 0 || len(blog.TagsIndex) > 0 {
 		mux.Handle(root+"tags", handleTagsIndex(cfg, blog))
 		mux.Handle(root+"tags/{tagName}", handleTag(cfg, blog))
 	}

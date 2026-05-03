@@ -217,7 +217,7 @@ func (s *Server) refreshHandler(ctx context.Context) error {
 
 	s.logger.DebugContext(ctx, "Creating New Handler for Server")
 
-	handler := Handler(blog, s.logger, config.WithBaseOption(s.BlogRoot.AsOption()), s.generator.DisableTags.AsOption())
+	handler := Handler(blog, s.logger, s.BlogRoot.AsOption())
 
 	// Apply middleware stack if configured
 	if len(s.middleware) > 0 {
