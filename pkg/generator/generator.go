@@ -57,9 +57,9 @@ func (c Generator) String() string {
 // resources cannot be initialized.
 //
 // Optional config.GeneratorOption values control behavior: config.WithRawOutput,
-// config.WithDisableTags, config.WithSiteTitle, config.WithBlogRoot,
-// config.WithEnvironment. The template renderer is supplied as a positional
-// argument, not an option.
+// config.WithDisableTags, config.WithDisableReadingTime, config.WithSiteTitle,
+// config.WithBlogRoot, config.WithEnvironment. The template renderer is supplied
+// as a positional argument, not an option.
 func New(posts fs.FS, renderer *TemplateRenderer, opts ...config.GeneratorOption) *Generator {
 	logger := slog.Default()
 

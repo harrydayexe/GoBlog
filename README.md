@@ -330,6 +330,39 @@ The `BaseData` struct passed to all templates includes a `TagsEnabled bool` fiel
 
 The built-in templates already respect this field. If you provide custom templates that unconditionally render tag links, those links will still appear even when `--disable-tags` is set — update them to gate on `{{.TagsEnabled}}`.
 
+### Reading Time
+
+By default, GoBlog computes an estimated reading time for each post and the default templates display it inline next to the post date (e.g. `March 15, 2026 · 5 min read`). Reading time is calculated by stripping HTML tags from the rendered content, counting whitespace-separated words, and dividing by **220 WPM** with ceiling rounding and a 1-minute floor.
+
+#### Using Disable Reading Time with the CLI
+
+```bash
+# Generate without reading time annotations
+goblog generate posts/ output/ --disable-reading-time
+
+# Also works with serve
+goblog serve posts/ --disable-reading-time
+```
+
+When reading time is disabled:
+- `Post.ReadingTimeMinutes` is left at zero for all posts
+- The default templates suppress the `· N min read` annotation (they guard it with `{{if .Post.ReadingTimeMinutes}}`)
+- No other output changes — posts, index, and tag pages are unaffected
+
+#### Using Disable Reading Time with the Go API
+
+```go
+gen := generator.New(fsys, renderer, config.WithDisableReadingTime())
+```
+
+#### Custom Templates and ReadingTimeMinutes
+
+The `Post` struct includes a `ReadingTimeMinutes int` field (zero when disabled). Custom templates can render it conditionally:
+
+```html
+{{if .Post.ReadingTimeMinutes}} · {{.Post.ReadingTimeMinutes}} min read{{end}}
+```
+
 ### Blog Root Configuration
 
 When deploying your blog at a subdirectory rather than the root of your domain (e.g., `example.com/blog/` instead of `example.com/`), you need to configure the blog root path. This ensures all generated links in templates use the correct base path.
@@ -453,7 +486,7 @@ page-specific fields:
 
 | Template | Data struct | Extra fields |
 |---|---|---|
-| `pages/post.tmpl` | [`PostPageData`](https://pkg.go.dev/github.com/harrydayexe/GoBlog/v2/pkg/models#PostPageData) | `.Post *Post` |
+| `pages/post.tmpl` | [`PostPageData`](https://pkg.go.dev/github.com/harrydayexe/GoBlog/v2/pkg/models#PostPageData) | `.Post *Post` (includes `.Post.ReadingTimeMinutes int`) |
 | `pages/index.tmpl` | [`IndexPageData`](https://pkg.go.dev/github.com/harrydayexe/GoBlog/v2/pkg/models#IndexPageData) | `.Posts PostList`, `.TotalPosts int` |
 | `pages/tag.tmpl` | [`TagPageData`](https://pkg.go.dev/github.com/harrydayexe/GoBlog/v2/pkg/models#TagPageData) | `.Tag string`, `.Posts []*Post`, `.PostCount int` — not rendered when `--disable-tags` is set |
 | `pages/tags-index.tmpl` | [`TagsIndexPageData`](https://pkg.go.dev/github.com/harrydayexe/GoBlog/v2/pkg/models#TagsIndexPageData) | `.Tags []TagInfo`, `.TotalTags int` — not rendered when `--disable-tags` is set |
