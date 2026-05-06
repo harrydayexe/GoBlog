@@ -1096,6 +1096,75 @@ func TestGenerate_TagsEnabledInTemplateData(t *testing.T) {
 	}
 }
 
+// TestWithDisableReadingTime tests that the WithDisableReadingTime option is applied correctly.
+func TestWithDisableReadingTime(t *testing.T) {
+	t.Parallel()
+
+	testFS := os.DirFS("testdata")
+
+	genDefault := New(testFS, nil)
+	if genDefault.DisableReadingTime.Disable {
+		t.Error("Generator without WithDisableReadingTime() should have Disable = false")
+	}
+
+	genDisabled := New(testFS, nil, config.WithDisableReadingTime())
+	if !genDisabled.DisableReadingTime.Disable {
+		t.Error("Generator with WithDisableReadingTime() should have Disable = true")
+	}
+}
+
+// TestGenerate_ReadingTimePopulated verifies that generated posts have ReadingTimeMinutes >= 1
+// by default and that it is zero when WithDisableReadingTime() is supplied.
+func TestGenerate_ReadingTimePopulated(t *testing.T) {
+	t.Parallel()
+
+	tempDir := t.TempDir()
+	postContent := `---
+title: Reading Time Post
+date: 2024-05-01
+description: Testing reading time
+tags: [test]
+---
+# Reading Time Post
+
+` + strings.Repeat("word ", 300) + `
+`
+	if err := os.WriteFile(tempDir+"/rt.md", []byte(postContent), 0644); err != nil {
+		t.Fatalf("Failed to write test file: %v", err)
+	}
+
+	renderer, err := NewTemplateRenderer(os.DirFS("../templates/default"))
+	if err != nil {
+		t.Fatalf("NewTemplateRenderer() error = %v", err)
+	}
+
+	testFS := os.DirFS(tempDir)
+
+	// Enabled (default): ReadingTimeMinutes should be >= 1.
+	gen := New(testFS, renderer, config.WithSiteTitle("Test"))
+	blog, err := gen.Generate(context.Background())
+	if err != nil {
+		t.Fatalf("Generate() error = %v", err)
+	}
+	for slug, content := range blog.Posts {
+		if !contains(string(content), "min read") {
+			t.Errorf("post %q: expected 'min read' in output when reading time is enabled", slug)
+		}
+	}
+
+	// Disabled: ReadingTimeMinutes should be zero, 'min read' absent.
+	genDisabled := New(testFS, renderer, config.WithSiteTitle("Test"), config.WithDisableReadingTime())
+	blogDisabled, err := genDisabled.Generate(context.Background())
+	if err != nil {
+		t.Fatalf("Generate() with DisableReadingTime error = %v", err)
+	}
+	for slug, content := range blogDisabled.Posts {
+		if contains(string(content), "min read") {
+			t.Errorf("post %q: unexpected 'min read' in output when reading time is disabled", slug)
+		}
+	}
+}
+
 // Helper function to check if a string contains a substring (case-insensitive).
 func contains(s, substr string) bool {
 	return bytes.Contains([]byte(strings.ToLower(s)), []byte(strings.ToLower(substr)))

@@ -129,6 +129,7 @@ goblog serve posts/ --port 8080
 |---|---|---|---|
 | `--raw` | `-r` | `false` | Output raw HTML without template wrapping |
 | `--disable-tags` | `-T` | `false` | Disable tag tracking and tag page generation |
+| `--disable-reading-time` | | `false` | Disable reading time estimation on posts |
 | `--root-path` | `-p` | `/` | Blog root path for subdirectory deployment |
 | `--template-dir` | `-t` | built-in | Path to a custom template directory |
 
@@ -139,6 +140,7 @@ goblog serve posts/ --port 8080
 | `--port` | `-P` | `8080` | TCP port to listen on |
 | `--host` | `-H` | all interfaces | Host address to bind to |
 | `--disable-tags` | `-T` | `false` | Disable tag tracking and tag page generation |
+| `--disable-reading-time` | | `false` | Disable reading time estimation on posts |
 | `--root-path` | `-p` | `/` | Blog root path for subdirectory deployment |
 | `--template-dir` | `-t` | built-in | Path to a custom template directory |
 
@@ -510,7 +512,7 @@ To use the built-in templates instead, replace `os.DirFS("./mytheme")` with
 | [`pkg/generator`](https://pkg.go.dev/github.com/harrydayexe/GoBlog/v2/pkg/generator) | Convert a directory of posts into a `GeneratedBlog` in memory |
 | [`pkg/outputter`](https://pkg.go.dev/github.com/harrydayexe/GoBlog/v2/pkg/outputter) | Write a `GeneratedBlog` to disk; implement `Outputter` for custom destinations |
 | [`pkg/server`](https://pkg.go.dev/github.com/harrydayexe/GoBlog/v2/pkg/server) | HTTP server with atomic live-reload via `Server.UpdatePosts` |
-| [`pkg/config`](https://pkg.go.dev/github.com/harrydayexe/GoBlog/v2/pkg/config) | Functional options: `WithRawOutput`, `WithDisableTags`, `WithSiteTitle`, `WithBlogRoot`, `WithEnvironment`, `WithPort`, `WithHost`, `WithMiddleware` |
+| [`pkg/config`](https://pkg.go.dev/github.com/harrydayexe/GoBlog/v2/pkg/config) | Functional options: `WithRawOutput`, `WithDisableTags`, `WithDisableReadingTime`, `WithSiteTitle`, `WithBlogRoot`, `WithEnvironment`, `WithPort`, `WithHost`, `WithMiddleware` |
 | [`pkg/templates`](https://pkg.go.dev/github.com/harrydayexe/GoBlog/v2/pkg/templates) | Embedded default templates (`templates.Default`) |
 
 ### Site title
