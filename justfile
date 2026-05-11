@@ -16,7 +16,7 @@ LDFLAGS := '-s -w -X main.version=' + VERSION + ' -X main.commit=' + COMMIT + ' 
 
 # Build binary for current OS/architecture
 [default]
-[group("dev")]
+[group("build")]
 build:
     @echo "Building {{BINARY_NAME}}..."
     @mkdir -p {{DIST_DIR}}
@@ -118,3 +118,10 @@ run-serve *ARGS:
     else
         go run {{MAIN_PATH}} serve {{ARGS}}
     fi
+
+# Build the dockerfile for the current architecture
+[group("build")]
+docker tag="goblog:latest":
+    @echo "Building Docker image..."
+    docker build -t {{tag}} .
+    @echo "✓ Docker image built successfully"
