@@ -598,7 +598,9 @@ In a template:
 
 Multiple `WithFuncs` calls accumulate; later registrations overwrite earlier ones for the same key.
 
-The built-in helpers (`formatDate`, `shortDate`, `year`) remain available unless intentionally replaced. Registering a function whose name matches a built-in **silently replaces it** — useful for a custom date format, but a footgun if done accidentally.
+The built-in helpers (`formatDate`, `shortDate`, `year`) remain available unless intentionally replaced. Registering a function whose name matches a built-in **replaces it and logs a warning** — useful for a custom date format, but a footgun if done accidentally.
+
+> **Security:** `html/template`'s contextual auto-escaping is bypassed for any function that returns `template.HTML`, `template.JS`, `template.JSStr`, `template.URL`, `template.CSS`, or `template.HTMLAttr`. Never use those return types with values derived from user-controlled input — doing so opts the value out of escaping and creates an XSS sink. Return plain `string` instead and let `html/template` escape at render time.
 
 When using the embedded HTTP server, supply renderer options via `ServerConfig.RendererOpts`:
 
@@ -635,6 +637,8 @@ The values are accessible in all templates as `{{.Custom.key}}`:
 `{{.Custom}}` is `nil` when no `WithCustomData` option is supplied — templates should guard access with `{{with .Custom}}` or `{{if .Custom}}`.
 
 Multiple `WithCustomData` calls merge their maps; later values overwrite earlier ones for duplicate keys.
+
+> **Security:** Store only plain, immutable values (strings, numbers, booleans) in the custom data map. Do not pre-wrap values in `template.HTML`, `template.JS`, or other sanitised wrapper types — those bypass `html/template`'s contextual auto-escaping and become XSS sinks if the value originates from user-controlled input. Do not construct custom data from untrusted input at request time; this map is for static, developer-controlled values only.
 
 ### Serving programmatically
 

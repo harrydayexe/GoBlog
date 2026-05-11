@@ -238,6 +238,19 @@ type CustomData struct{ Data map[string]any }
 // WithCustomData. Values stored in the map must be safe for concurrent reads
 // because the HTTP server may render multiple pages in parallel.
 //
+// # Security
+//
+// Store only plain, immutable values (strings, numbers, booleans) in the map.
+// Do not pre-wrap values in [html/template.HTML], [html/template.JS],
+// [html/template.JSStr], [html/template.URL], [html/template.CSS], or
+// [html/template.HTMLAttr]: those types signal to html/template that the value
+// is already safe and bypass contextual auto-escaping, creating an XSS sink if
+// the value originates from user-controlled input. Let html/template escape
+// values at render time instead.
+//
+// Do not construct custom data from untrusted input at request time. This map
+// is intended for static, developer-controlled values only.
+//
 // Example usage:
 //
 //	gen := generator.New(fsys, renderer,
@@ -265,6 +278,9 @@ func WithCustomData(data map[string]any) GeneratorOption {
 	}
 }
 
+// AsOption converts this CustomData value back into a GeneratorOption so it
+// can be passed to generator and server constructors that accept GeneratorOption
+// values (e.g. when round-tripping through a ServerConfig).
 func (o CustomData) AsOption() GeneratorOption {
 	return WithCustomData(o.Data)
 }

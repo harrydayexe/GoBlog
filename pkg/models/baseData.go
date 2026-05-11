@@ -51,5 +51,10 @@ type BaseData struct {
 	// The same map is shared across every page rendered in a single Generate
 	// call. Do not mutate the map from inside a template or after passing it
 	// to config.WithCustomData.
+	//
+	// Security: values in this map should be plain strings, numbers, or
+	// booleans. Do not store html/template.HTML, html/template.JS, or other
+	// pre-sanitised wrapper types — those bypass contextual auto-escaping and
+	// become XSS sinks if the underlying value is user-controlled.
 	Custom map[string]any
 }

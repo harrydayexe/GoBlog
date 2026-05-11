@@ -25,14 +25,24 @@ type RendererOption struct {
 //	year() int                       returns the current calendar year
 //
 // If a key in funcs matches one of those built-in names, the supplied function
-// silently replaces the built-in. This allows intentional overrides (for
-// example, substituting your own date format), but will also silently break
-// the default templates if done accidentally. Check against the list above
-// before registering a function to avoid unintentional collisions.
+// replaces the built-in and a warning is logged via slog. This allows
+// intentional overrides (for example, substituting your own date format), but
+// will also suppress default template behaviour if done accidentally. Check
+// against the list above before registering a function to avoid unintentional
+// collisions.
 //
 // Multiple calls to WithFuncs accumulate: functions are merged in the order
 // the options are applied, with later registrations overwriting earlier ones
 // for the same key.
+//
+// # Security
+//
+// html/template's contextual auto-escaping is bypassed for any function that
+// returns one of the following pre-sanitised types: [html/template.HTML],
+// [html/template.JS], [html/template.JSStr], [html/template.URL],
+// [html/template.CSS], or [html/template.HTMLAttr]. Never use those return
+// types with values derived from user-controlled input, as doing so opts the
+// value out of escaping and creates an XSS sink.
 //
 // Example usage:
 //

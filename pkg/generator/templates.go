@@ -86,11 +86,32 @@ func NewTemplateRenderer(templatesFS fs.FS, opts ...config.RendererOption) (*Tem
 		},
 	}
 
+	// Track current built-in values so we can detect when user code replaces them.
+	// Function values are not comparable, so we temporarily remove the built-ins
+	// before each user opt and check which ones reappear afterwards.
+	builtins := map[string]any{
+		"formatDate": funcMap["formatDate"],
+		"shortDate":  funcMap["shortDate"],
+		"year":       funcMap["year"],
+	}
+
 	// Merge user-supplied functions on top of the built-ins. A name collision
-	// with a built-in results in the user's function winning silently.
+	// with a built-in results in the user's function winning; log at Warn so
+	// operators notice accidental overrides during startup.
 	for _, opt := range opts {
 		if opt.WithFuncsFunc != nil {
+			for k := range builtins {
+				delete(funcMap, k)
+			}
 			opt.WithFuncsFunc(&funcMap)
+			for k, saved := range builtins {
+				if _, overridden := funcMap[k]; overridden {
+					slog.Warn("WithFuncs: built-in template function overridden", slog.String("name", k))
+					builtins[k] = funcMap[k]
+				} else {
+					funcMap[k] = saved
+				}
+			}
 		}
 	}
 
