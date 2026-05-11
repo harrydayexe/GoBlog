@@ -50,6 +50,10 @@ func NewGeneratorCommand(ctx context.Context, c *cli.Command) error {
 		opts = append(opts, config.WithDisableTags())
 	}
 
+	if c.Bool(DisableReadingTimeFlagName) {
+		opts = append(opts, config.WithDisableReadingTime())
+	}
+
 	templateDirPath := c.String(TemplateDirFlagName)
 	var templateDir fs.FS
 	if templateDirPath == "" {

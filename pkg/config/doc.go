@@ -32,6 +32,11 @@
 // does not register /tags routes. Unlike WithRawOutput(), posts and the index
 // page are still rendered with full templates.
 //
+// WithDisableReadingTime() disables estimated reading time on posts. When
+// enabled, Post.ReadingTimeMinutes is left at zero and the default templates
+// suppress the "· N min read" annotation next to each post date. Reading time
+// is enabled by default (220 WPM, rounded up, 1-minute minimum).
+//
 // WithSiteTitle(title string) sets the site title used in generated HTML
 // pages and templates.
 //

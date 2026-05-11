@@ -18,13 +18,14 @@ type Post struct {
 	Tags        []string  `yaml:"tags"`
 
 	// Generated fields
-	Slug        string        // URL-friendly identifier
-	Content     []byte        // Rendered HTML content
-	HTMLContent template.HTML // HTML content for templates (not escaped)
-	RawContent  string        // Original markdown content
-	SourcePath  string        // Path to source markdown file
-	PublishDate time.Time     // Formatted publish date
-	BlogRoot    string        // Blog root path for URLs (e.g., "/" or "/blog/")
+	Slug               string        // URL-friendly identifier
+	Content            []byte        // Rendered HTML content
+	HTMLContent        template.HTML // HTML content for templates (not escaped)
+	RawContent         string        // Original markdown content
+	SourcePath         string        // Path to source markdown file
+	PublishDate        time.Time     // Formatted publish date
+	BlogRoot           string        // Blog root path for URLs (e.g., "/" or "/blog/")
+	ReadingTimeMinutes int           // Estimated reading time in minutes (0 = disabled)
 }
 
 // Validate checks if the post has all required fields.

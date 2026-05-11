@@ -9,14 +9,15 @@ package config
 //
 // This type should not be constructed directly by users. Instead, use the
 // provided option functions like WithRawOutput(), WithDisableTags(),
-// WithSiteTitle(), WithEnvironment(), and WithBaseOption().
+// WithDisableReadingTime(), WithSiteTitle(), WithEnvironment(), and WithBaseOption().
 type GeneratorOption struct {
 	BaseOption
 
-	WithRawOutputFunc   func(v *RawOutput)
-	WithDisableTagsFunc func(v *DisableTags)
-	WithSiteTitleFunc   func(v *SiteTitle)
-	WithEnvironmentFunc func(v *Environment)
+	WithRawOutputFunc          func(v *RawOutput)
+	WithDisableTagsFunc        func(v *DisableTags)
+	WithDisableReadingTimeFunc func(v *DisableReadingTime)
+	WithSiteTitleFunc          func(v *SiteTitle)
+	WithEnvironmentFunc        func(v *Environment)
 }
 
 // WithBaseOption wraps a BaseOption as a GeneratorOption so it can be passed
@@ -115,6 +116,47 @@ func (o DisableTags) AsOption() GeneratorOption {
 	}
 	return GeneratorOption{
 		WithDisableTagsFunc: func(v *DisableTags) {
+			v.Disable = false
+		},
+	}
+}
+
+// DisableReadingTime is a configuration type that controls whether estimated
+// reading times are computed and surfaced on post pages.
+//
+// When Disable is true:
+//   - Post.ReadingTimeMinutes is left at zero for all posts
+//   - The default templates omit the "· N min read" annotation next to the date
+//
+// This type is typically embedded in generator configuration structs and should
+// be set using the WithDisableReadingTime() option function.
+type DisableReadingTime struct{ Disable bool }
+
+// WithDisableReadingTime returns a GeneratorOption that disables reading time
+// estimation on posts.
+//
+// When applied to a generator, Post.ReadingTimeMinutes will remain zero for all
+// posts. The default templates guard the "· N min read" annotation with
+// {{if .Post.ReadingTimeMinutes}}, so setting this option suppresses the display
+// without requiring template changes.
+//
+// Example usage:
+//
+//	gen := generator.New(fsys, renderer, config.WithDisableReadingTime())
+func WithDisableReadingTime() GeneratorOption {
+	return GeneratorOption{
+		WithDisableReadingTimeFunc: func(v *DisableReadingTime) {
+			v.Disable = true
+		},
+	}
+}
+
+func (o DisableReadingTime) AsOption() GeneratorOption {
+	if o.Disable {
+		return WithDisableReadingTime()
+	}
+	return GeneratorOption{
+		WithDisableReadingTimeFunc: func(v *DisableReadingTime) {
 			v.Disable = false
 		},
 	}

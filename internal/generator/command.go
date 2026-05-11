@@ -46,5 +46,10 @@ var GeneratorCommand cli.Command = cli.Command{
 			Usage:   "disable tag tracking and tag page generation",
 			Value:   false,
 		},
+		&cli.BoolFlag{
+			Name:  DisableReadingTimeFlagName,
+			Usage: "disable reading time estimation on posts",
+			Value: false,
+		},
 	},
 }

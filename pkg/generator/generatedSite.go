@@ -34,6 +34,14 @@ package generator
 //
 // This mode is useful when the blog content is not taxonomy-driven or when a
 // custom navigation structure is used in place of GoBlog's built-in tag pages.
+//
+// # Disable Reading Time Mode
+//
+// When the generator is configured with config.WithDisableReadingTime(), the
+// Post.ReadingTimeMinutes field is left at zero for all posts. The default
+// templates guard the "· N min read" annotation with
+// {{if .Post.ReadingTimeMinutes}}, so the annotation is simply omitted without
+// any other changes to the output structure.
 type GeneratedBlog struct {
 	Posts     map[string][]byte // Posts maps a slug to raw HTML bytes for each post
 	Index     []byte            // Index contains the raw HTML for the blog index page

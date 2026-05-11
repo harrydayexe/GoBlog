@@ -10,7 +10,7 @@
             <header class="mb-8">
                 <!-- Date -->
                 <time datetime="{{.Post.Date.Format "2006-01-02"}}" class="text-sm text-gray-500">
-                    {{.Post.FormattedDate}}
+                    {{.Post.FormattedDate}}{{if .Post.ReadingTimeMinutes}} · {{.Post.ReadingTimeMinutes}} min read{{end}}
                 </time>
 
                 <!-- Title -->

@@ -25,6 +25,7 @@ type Generator struct {
 
 	config.RawOutput
 	config.DisableTags
+	config.DisableReadingTime
 	config.SiteTitle
 	config.BlogRoot
 	config.Environment
@@ -38,11 +39,13 @@ func (c Generator) String() string {
 	return fmt.Sprintf(`Generator Config
 - RawOutput           %t,
 - DisableTags         %t,
+- DisableReadingTime  %t,
 - SiteTitle           %s,
 - BlogRoot            %s,
 - Environment         %s`,
 		c.RawOutput,
 		c.DisableTags.Disable,
+		c.DisableReadingTime.Disable,
 		c.SiteTitle,
 		c.BlogRoot,
 		c.Environment.Environment,
@@ -54,9 +57,9 @@ func (c Generator) String() string {
 // resources cannot be initialized.
 //
 // Optional config.GeneratorOption values control behavior: config.WithRawOutput,
-// config.WithDisableTags, config.WithSiteTitle, config.WithBlogRoot,
-// config.WithEnvironment. The template renderer is supplied as a positional
-// argument, not an option.
+// config.WithDisableTags, config.WithDisableReadingTime, config.WithSiteTitle,
+// config.WithBlogRoot, config.WithEnvironment. The template renderer is supplied
+// as a positional argument, not an option.
 func New(posts fs.FS, renderer *TemplateRenderer, opts ...config.GeneratorOption) *Generator {
 	logger := slog.Default()
 
@@ -73,6 +76,8 @@ func New(posts fs.FS, renderer *TemplateRenderer, opts ...config.GeneratorOption
 			opt.WithRawOutputFunc(&gen.RawOutput)
 		} else if opt.WithDisableTagsFunc != nil {
 			opt.WithDisableTagsFunc(&gen.DisableTags)
+		} else if opt.WithDisableReadingTimeFunc != nil {
+			opt.WithDisableReadingTimeFunc(&gen.DisableReadingTime)
 		} else if opt.WithSiteTitleFunc != nil {
 			opt.WithSiteTitleFunc(&gen.SiteTitle)
 		} else if opt.WithBlogRootFunc != nil {
@@ -180,6 +185,13 @@ func (g *Generator) assembleBlogWithTemplates(ctx context.Context, posts models.
 	if !tagsEnabled {
 		for _, post := range posts {
 			post.Tags = nil
+		}
+	}
+
+	// Compute reading time for each post unless disabled.
+	if !g.DisableReadingTime.Disable {
+		for _, post := range posts {
+			post.ReadingTimeMinutes = minutesFromWords(wordCount(post.Content))
 		}
 	}
 

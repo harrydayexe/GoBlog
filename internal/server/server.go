@@ -37,6 +37,10 @@ func NewServeCommand(ctx context.Context, c *cli.Command) error {
 	if c.Bool(DisableTagsFlagName) {
 		cfg.Gen = append(cfg.Gen, config.WithDisableTags())
 	}
+
+	if c.Bool(DisableReadingTimeFlagName) {
+		cfg.Gen = append(cfg.Gen, config.WithDisableReadingTime())
+	}
 	cfg.Server = append(cfg.Server, config.WithPort(c.Int(PortFlagName)))
 
 	if host := c.String(HostFlagName); host != "" {

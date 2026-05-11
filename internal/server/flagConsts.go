@@ -17,3 +17,6 @@ const BlogRootFlagName = "root-path"
 
 // DisableTagsFlagName is the CLI flag name for disabling tag page generation.
 const DisableTagsFlagName = "disable-tags"
+
+// DisableReadingTimeFlagName is the CLI flag name for disabling reading time estimation.
+const DisableReadingTimeFlagName = "disable-reading-time"
