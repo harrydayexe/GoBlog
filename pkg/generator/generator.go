@@ -29,6 +29,7 @@ type Generator struct {
 	config.SiteTitle
 	config.BlogRoot
 	config.Environment
+	config.CustomData
 	ParserConfig parser.Config // The config to use when parsing
 
 	logger   *slog.Logger
@@ -42,13 +43,15 @@ func (c Generator) String() string {
 - DisableReadingTime  %t,
 - SiteTitle           %s,
 - BlogRoot            %s,
-- Environment         %s`,
+- Environment         %s,
+- CustomData keys     %d`,
 		c.RawOutput,
 		c.DisableTags.Disable,
 		c.DisableReadingTime.Disable,
 		c.SiteTitle,
 		c.BlogRoot,
 		c.Environment.Environment,
+		len(c.CustomData.Data),
 	)
 }
 
@@ -58,8 +61,8 @@ func (c Generator) String() string {
 //
 // Optional config.GeneratorOption values control behavior: config.WithRawOutput,
 // config.WithDisableTags, config.WithDisableReadingTime, config.WithSiteTitle,
-// config.WithBlogRoot, config.WithEnvironment. The template renderer is supplied
-// as a positional argument, not an option.
+// config.WithBlogRoot, config.WithEnvironment, config.WithCustomData.
+// The template renderer is supplied as a positional argument, not an option.
 func New(posts fs.FS, renderer *TemplateRenderer, opts ...config.GeneratorOption) *Generator {
 	logger := slog.Default()
 
@@ -84,6 +87,8 @@ func New(posts fs.FS, renderer *TemplateRenderer, opts ...config.GeneratorOption
 			opt.WithBlogRootFunc(&gen.BlogRoot)
 		} else if opt.WithEnvironmentFunc != nil {
 			opt.WithEnvironmentFunc(&gen.Environment)
+		} else if opt.WithCustomDataFunc != nil {
+			opt.WithCustomDataFunc(&gen.CustomData)
 		}
 	}
 
@@ -209,6 +214,7 @@ func (g *Generator) assembleBlogWithTemplates(ctx context.Context, posts models.
 				BlogRoot:    string(g.BlogRoot),
 				Environment: g.Environment.Environment,
 				TagsEnabled: tagsEnabled,
+				Custom:      g.CustomData.Data,
 			},
 			Post: post,
 		}
@@ -238,6 +244,7 @@ func (g *Generator) assembleBlogWithTemplates(ctx context.Context, posts models.
 			BlogRoot:    string(g.BlogRoot),
 			Environment: g.Environment.Environment,
 			TagsEnabled: tagsEnabled,
+			Custom:      g.CustomData.Data,
 		},
 		Posts:      indexPosts,
 		TotalPosts: len(indexPosts),
@@ -269,6 +276,7 @@ func (g *Generator) assembleBlogWithTemplates(ctx context.Context, posts models.
 					BlogRoot:    string(g.BlogRoot),
 					Environment: g.Environment.Environment,
 					TagsEnabled: true,
+					Custom:      g.CustomData.Data,
 				},
 				Tag:       tag,
 				Posts:     tagPosts,
@@ -307,6 +315,7 @@ func (g *Generator) assembleBlogWithTemplates(ctx context.Context, posts models.
 				BlogRoot:    string(g.BlogRoot),
 				Environment: g.Environment.Environment,
 				TagsEnabled: true,
+				Custom:      g.CustomData.Data,
 			},
 			Tags:      tagInfos,
 			TotalTags: len(tagInfos),

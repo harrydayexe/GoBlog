@@ -66,7 +66,7 @@ func New(logger *slog.Logger, posts fs.FS, opts config.ServerConfig) (*Server, e
 		templatesDir = templates.Default
 	}
 
-	renderer, err := generator.NewTemplateRenderer(templatesDir)
+	renderer, err := generator.NewTemplateRenderer(templatesDir, opts.RendererOpts...)
 	if err != nil {
 		return nil, err
 	}
