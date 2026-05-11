@@ -481,8 +481,8 @@ ranging over a list of posts.
 
 Every page template receives a struct that embeds
 [`models.BaseData`](https://pkg.go.dev/github.com/harrydayexe/GoBlog/v2/pkg/models#BaseData)
-(`SiteTitle`, `PageTitle`, `Description`, `Year`, `BlogRoot`, `Environment`), plus
-page-specific fields:
+(`SiteTitle`, `PageTitle`, `Description`, `Year`, `BlogRoot`, `Environment`,
+`TagsEnabled`, `Custom`), plus page-specific fields:
 
 | Template | Data struct | Extra fields |
 |---|---|---|
@@ -545,7 +545,7 @@ To use the built-in templates instead, replace `os.DirFS("./mytheme")` with
 | [`pkg/generator`](https://pkg.go.dev/github.com/harrydayexe/GoBlog/v2/pkg/generator) | Convert a directory of posts into a `GeneratedBlog` in memory |
 | [`pkg/outputter`](https://pkg.go.dev/github.com/harrydayexe/GoBlog/v2/pkg/outputter) | Write a `GeneratedBlog` to disk; implement `Outputter` for custom destinations |
 | [`pkg/server`](https://pkg.go.dev/github.com/harrydayexe/GoBlog/v2/pkg/server) | HTTP server with atomic live-reload via `Server.UpdatePosts` |
-| [`pkg/config`](https://pkg.go.dev/github.com/harrydayexe/GoBlog/v2/pkg/config) | Functional options: `WithRawOutput`, `WithDisableTags`, `WithDisableReadingTime`, `WithSiteTitle`, `WithBlogRoot`, `WithEnvironment`, `WithPort`, `WithHost`, `WithMiddleware` |
+| [`pkg/config`](https://pkg.go.dev/github.com/harrydayexe/GoBlog/v2/pkg/config) | Functional options: `WithRawOutput`, `WithDisableTags`, `WithDisableReadingTime`, `WithSiteTitle`, `WithBlogRoot`, `WithEnvironment`, `WithPort`, `WithHost`, `WithMiddleware`, `WithFuncs`, `WithCustomData` |
 | [`pkg/templates`](https://pkg.go.dev/github.com/harrydayexe/GoBlog/v2/pkg/templates) | Embedded default templates (`templates.Default`) |
 
 ### Site title
@@ -567,6 +567,78 @@ Use it in templates to gate environment-specific markup:
 ```html
 {{if eq .Environment "production"}}<script src="/analytics.js"></script>{{end}}
 ```
+
+### Custom template functions
+
+Register your own Go functions to call from any template. Pass one or more `config.WithFuncs` options to `generator.NewTemplateRenderer`:
+
+```go
+import (
+    "html/template"
+    "strings"
+
+    "github.com/harrydayexe/GoBlog/v2/pkg/config"
+    "github.com/harrydayexe/GoBlog/v2/pkg/generator"
+    "github.com/harrydayexe/GoBlog/v2/pkg/templates"
+)
+
+renderer, err := generator.NewTemplateRenderer(
+    templates.Default,
+    config.WithFuncs(template.FuncMap{
+        "upper": strings.ToUpper,
+    }),
+)
+```
+
+In a template:
+
+```html
+<h1>{{upper .Post.Title}}</h1>
+```
+
+Multiple `WithFuncs` calls accumulate; later registrations overwrite earlier ones for the same key.
+
+The built-in helpers (`formatDate`, `shortDate`, `year`) remain available unless intentionally replaced. Registering a function whose name matches a built-in **replaces it and logs a warning** — useful for a custom date format, but a footgun if done accidentally.
+
+> **Security:** `html/template`'s contextual auto-escaping is bypassed for any function that returns `template.HTML`, `template.JS`, `template.JSStr`, `template.URL`, `template.CSS`, or `template.HTMLAttr`. Never use those return types with values derived from user-controlled input — doing so opts the value out of escaping and creates an XSS sink. Return plain `string` instead and let `html/template` escape at render time.
+
+When using the embedded HTTP server, supply renderer options via `ServerConfig.RendererOpts`:
+
+```go
+cfg := config.ServerConfig{
+    RendererOpts: []config.RendererOption{
+        config.WithFuncs(template.FuncMap{"upper": strings.ToUpper}),
+    },
+}
+```
+
+### Custom template data
+
+Inject arbitrary key-value data from your application into every rendered page. Supply a `map[string]any` via `config.WithCustomData` when constructing the generator:
+
+```go
+gen := generator.New(fsys, renderer,
+    config.WithCustomData(map[string]any{
+        "author":      "Jane Smith",
+        "analyticsID": "UA-12345",
+    }),
+)
+```
+
+The values are accessible in all templates as `{{.Custom.key}}`:
+
+```html
+{{with .Custom}}
+<meta name="author" content="{{.author}}">
+<script>var _id = "{{.analyticsID}}";</script>
+{{end}}
+```
+
+`{{.Custom}}` is `nil` when no `WithCustomData` option is supplied — templates should guard access with `{{with .Custom}}` or `{{if .Custom}}`.
+
+Multiple `WithCustomData` calls merge their maps; later values overwrite earlier ones for duplicate keys.
+
+> **Security:** Store only plain, immutable values (strings, numbers, booleans) in the custom data map. Do not pre-wrap values in `template.HTML`, `template.JS`, or other sanitised wrapper types — those bypass `html/template`'s contextual auto-escaping and become XSS sinks if the value originates from user-controlled input. Do not construct custom data from untrusted input at request time; this map is for static, developer-controlled values only.
 
 ### Serving programmatically
 

@@ -49,6 +49,27 @@
 // deploying at example.com/blog/. This ensures all generated links in templates
 // use the correct base path. Default is "/" for root deployment.
 //
+// WithFuncs(funcs template.FuncMap) is a RendererOption that registers
+// additional template functions for use in all templates. Functions are merged
+// into the built-in FuncMap (formatDate, shortDate, year). A function whose
+// name matches a built-in silently replaces it. Pass RendererOption values to
+// generator.NewTemplateRenderer, or to ServerConfig.RendererOpts for the HTTP
+// server path.
+//
+// WithCustomData(data map[string]any) is a GeneratorOption that merges
+// arbitrary key-value data into models.BaseData.Custom, making it accessible
+// in all templates as {{.Custom.key}}. Multiple calls merge their maps, with
+// later values overwriting earlier ones for duplicate keys. The field is nil
+// when no WithCustomData option is supplied.
+//
+// # Option types
+//
+// GeneratorOption carries options for generator.New and outputter.NewDirectoryWriter.
+// BaseServerOption carries options for the HTTP server (port, host, middleware).
+// RendererOption carries options for generator.NewTemplateRenderer (custom funcs).
+// ServerConfig groups all three option types plus a TemplateDir filesystem for
+// the server constructor (server.New).
+//
 // # Usage Examples
 //
 // Basic usage with a single option:
@@ -62,6 +83,21 @@
 //	gen := generator.New(fsys, renderer,
 //	    config.WithRawOutput(),
 //	    config.WithSiteTitle("My Blog"),
+//	)
+//
+// Registering a custom template function:
+//
+//	renderer, _ := generator.NewTemplateRenderer(
+//	    templates.Default,
+//	    config.WithFuncs(template.FuncMap{"upper": strings.ToUpper}),
+//	)
+//
+// Injecting custom data into templates:
+//
+//	gen := generator.New(fsys, renderer,
+//	    config.WithCustomData(map[string]any{
+//	        "author": "Jane Smith",
+//	    }),
 //	)
 //
 // Configuring blog root for subdirectory deployment:

@@ -1165,6 +1165,225 @@ tags: [test]
 	}
 }
 
+// TestNewTemplateRenderer_CustomFuncs verifies that a function registered via
+// config.WithFuncs is available inside templates.
+func TestNewTemplateRenderer_CustomFuncs(t *testing.T) {
+	t.Parallel()
+
+	minimalFS := fstest.MapFS{
+		"pages/post.tmpl":       {Data: []byte(`{{upper .Post.Title}}`)},
+		"pages/index.tmpl":      {Data: []byte(`index`)},
+		"pages/tag.tmpl":        {Data: []byte(`tag`)},
+		"pages/tags-index.tmpl": {Data: []byte(`tags`)},
+	}
+
+	renderer, err := NewTemplateRenderer(minimalFS, config.WithFuncs(template.FuncMap{
+		"upper": strings.ToUpper,
+	}))
+	if err != nil {
+		t.Fatalf("NewTemplateRenderer() error = %v", err)
+	}
+
+	data := models.PostPageData{
+		BaseData: models.BaseData{SiteTitle: "Test", PageTitle: "Test Post", Year: 2024},
+		Post: &models.Post{
+			Title:   "hello world",
+			Date:    time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+			Slug:    "hello-world",
+			Content: []byte("<p>hi</p>"),
+		},
+	}
+
+	rendered, err := renderer.RenderPost(data)
+	if err != nil {
+		t.Fatalf("RenderPost() error = %v", err)
+	}
+
+	if !contains(string(rendered), "HELLO WORLD") {
+		t.Errorf("RenderPost() output should contain uppercased title; got: %s", rendered)
+	}
+}
+
+// TestNewTemplateRenderer_OverridesBuiltin verifies that a user-supplied function
+// with the same name as a built-in silently replaces the built-in.
+func TestNewTemplateRenderer_OverridesBuiltin(t *testing.T) {
+	t.Parallel()
+
+	const sentinel = "custom-date-format"
+
+	minimalFS := fstest.MapFS{
+		"pages/post.tmpl":       {Data: []byte(`{{formatDate .Post.Date}}`)},
+		"pages/index.tmpl":      {Data: []byte(`index`)},
+		"pages/tag.tmpl":        {Data: []byte(`tag`)},
+		"pages/tags-index.tmpl": {Data: []byte(`tags`)},
+	}
+
+	renderer, err := NewTemplateRenderer(minimalFS, config.WithFuncs(template.FuncMap{
+		"formatDate": func(t time.Time) string { return sentinel },
+	}))
+	if err != nil {
+		t.Fatalf("NewTemplateRenderer() error = %v", err)
+	}
+
+	data := models.PostPageData{
+		BaseData: models.BaseData{SiteTitle: "Test", PageTitle: "Test Post", Year: 2024},
+		Post: &models.Post{
+			Title: "Test",
+			Date:  time.Date(2024, 6, 15, 0, 0, 0, 0, time.UTC),
+			Slug:  "test",
+		},
+	}
+
+	rendered, err := renderer.RenderPost(data)
+	if err != nil {
+		t.Fatalf("RenderPost() error = %v", err)
+	}
+
+	if !contains(string(rendered), sentinel) {
+		t.Errorf("RenderPost() should use overridden formatDate returning %q; got: %s", sentinel, rendered)
+	}
+	// The default built-in output should not appear.
+	if contains(string(rendered), "June 15, 2024") {
+		t.Errorf("RenderPost() output contains built-in formatDate output; override did not take effect")
+	}
+}
+
+// TestNewTemplateRenderer_MultipleWithFuncs verifies that multiple WithFuncs
+// calls accumulate and later registrations win on duplicate keys.
+func TestNewTemplateRenderer_MultipleWithFuncs(t *testing.T) {
+	t.Parallel()
+
+	minimalFS := fstest.MapFS{
+		"pages/post.tmpl":       {Data: []byte(`{{greet .Post.Title}}`)},
+		"pages/index.tmpl":      {Data: []byte(`index`)},
+		"pages/tag.tmpl":        {Data: []byte(`tag`)},
+		"pages/tags-index.tmpl": {Data: []byte(`tags`)},
+	}
+
+	renderer, err := NewTemplateRenderer(minimalFS,
+		config.WithFuncs(template.FuncMap{
+			"greet": func(s string) string { return "Hello, " + s },
+		}),
+		config.WithFuncs(template.FuncMap{
+			"greet": func(s string) string { return "Hi, " + s }, // overrides first registration
+		}),
+	)
+	if err != nil {
+		t.Fatalf("NewTemplateRenderer() error = %v", err)
+	}
+
+	data := models.PostPageData{
+		BaseData: models.BaseData{SiteTitle: "Test", Year: 2024},
+		Post:     &models.Post{Title: "World", Slug: "world"},
+	}
+
+	rendered, err := renderer.RenderPost(data)
+	if err != nil {
+		t.Fatalf("RenderPost() error = %v", err)
+	}
+
+	if !contains(string(rendered), "Hi, World") {
+		t.Errorf("Expected later WithFuncs to win; got: %s", rendered)
+	}
+	if contains(string(rendered), "Hello, World") {
+		t.Errorf("Expected first WithFuncs to be overridden; got: %s", rendered)
+	}
+}
+
+// TestNewTemplateRenderer_NoOpts verifies that omitting WithFuncs leaves existing
+// behaviour unchanged.
+func TestNewTemplateRenderer_NoOpts(t *testing.T) {
+	t.Parallel()
+
+	renderer, err := NewTemplateRenderer(os.DirFS("../templates/default"))
+	if err != nil {
+		t.Fatalf("NewTemplateRenderer() without opts error = %v", err)
+	}
+	if renderer == nil {
+		t.Fatal("NewTemplateRenderer() returned nil")
+	}
+}
+
+// TestGenerator_CustomData verifies that values supplied via config.WithCustomData
+// are accessible as .Custom inside every rendered page type.
+func TestGenerator_CustomData(t *testing.T) {
+	t.Parallel()
+
+	minimalFS := fstest.MapFS{
+		"pages/post.tmpl":       {Data: []byte(`{{.Custom.greeting}}`)},
+		"pages/index.tmpl":      {Data: []byte(`{{.Custom.greeting}}`)},
+		"pages/tag.tmpl":        {Data: []byte(`{{.Custom.greeting}}`)},
+		"pages/tags-index.tmpl": {Data: []byte(`{{.Custom.greeting}}`)},
+	}
+
+	renderer, err := NewTemplateRenderer(minimalFS)
+	if err != nil {
+		t.Fatalf("NewTemplateRenderer() error = %v", err)
+	}
+
+	testFS := os.DirFS("testdata")
+	gen := New(testFS, renderer, config.WithCustomData(map[string]any{
+		"greeting": "hello-custom",
+	}))
+
+	blog, err := gen.Generate(context.Background())
+	if err != nil {
+		t.Fatalf("Generate() error = %v", err)
+	}
+
+	for slug, content := range blog.Posts {
+		if !contains(string(content), "hello-custom") {
+			t.Errorf("Post %q: .Custom.greeting not found in output", slug)
+		}
+	}
+	if !contains(string(blog.Index), "hello-custom") {
+		t.Error("Index: .Custom.greeting not found in output")
+	}
+	for tag, content := range blog.Tags {
+		if !contains(string(content), "hello-custom") {
+			t.Errorf("Tag page %q: .Custom.greeting not found in output", tag)
+		}
+	}
+	if !contains(string(blog.TagsIndex), "hello-custom") {
+		t.Error("TagsIndex: .Custom.greeting not found in output")
+	}
+}
+
+// TestGenerator_CustomData_Nil verifies that BaseData.Custom is nil when no
+// WithCustomData option is supplied.
+func TestGenerator_CustomData_Nil(t *testing.T) {
+	t.Parallel()
+
+	testFS := os.DirFS("testdata")
+	gen := New(testFS, nil, config.WithRawOutput())
+	if gen.CustomData.Data != nil {
+		t.Errorf("Expected CustomData.Data to be nil without WithCustomData option; got %v", gen.CustomData.Data)
+	}
+}
+
+// TestGenerator_CustomData_Merge verifies that multiple WithCustomData calls
+// merge maps, with later values overriding earlier ones for the same key.
+func TestGenerator_CustomData_Merge(t *testing.T) {
+	t.Parallel()
+
+	testFS := os.DirFS("testdata")
+	gen := New(testFS, nil, config.WithRawOutput(),
+		config.WithCustomData(map[string]any{"a": "first", "b": "beta"}),
+		config.WithCustomData(map[string]any{"a": "second", "c": "gamma"}),
+	)
+
+	data := gen.CustomData.Data
+	if data["a"] != "second" {
+		t.Errorf("Expected 'a' = %q (later call wins); got %v", "second", data["a"])
+	}
+	if data["b"] != "beta" {
+		t.Errorf("Expected 'b' = %q; got %v", "beta", data["b"])
+	}
+	if data["c"] != "gamma" {
+		t.Errorf("Expected 'c' = %q; got %v", "gamma", data["c"])
+	}
+}
+
 // Helper function to check if a string contains a substring (case-insensitive).
 func contains(s, substr string) bool {
 	return bytes.Contains([]byte(strings.ToLower(s)), []byte(strings.ToLower(substr)))

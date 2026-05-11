@@ -9,7 +9,8 @@ package config
 //
 // This type should not be constructed directly by users. Instead, use the
 // provided option functions like WithRawOutput(), WithDisableTags(),
-// WithDisableReadingTime(), WithSiteTitle(), WithEnvironment(), and WithBaseOption().
+// WithDisableReadingTime(), WithSiteTitle(), WithEnvironment(), WithCustomData(),
+// and WithBaseOption().
 type GeneratorOption struct {
 	BaseOption
 
@@ -18,6 +19,7 @@ type GeneratorOption struct {
 	WithDisableReadingTimeFunc func(v *DisableReadingTime)
 	WithSiteTitleFunc          func(v *SiteTitle)
 	WithEnvironmentFunc        func(v *Environment)
+	WithCustomDataFunc         func(v *CustomData)
 }
 
 // WithBaseOption wraps a BaseOption as a GeneratorOption so it can be passed
@@ -210,4 +212,75 @@ func WithEnvironment(env string) GeneratorOption {
 
 func (o Environment) AsOption() GeneratorOption {
 	return WithEnvironment(o.Environment)
+}
+
+// CustomData is a configuration type that holds arbitrary key-value data
+// surfaced to all page templates via [github.com/harrydayexe/GoBlog/v2/pkg/models.BaseData].Custom.
+//
+// This type is typically embedded in generator configuration structs and
+// should be set using the [WithCustomData] option function.
+type CustomData struct{ Data map[string]any }
+
+// WithCustomData returns a GeneratorOption that merges the supplied map into
+// the custom data available to all page templates as {{ .Custom.key }}.
+//
+// The map is exposed on [github.com/harrydayexe/GoBlog/v2/pkg/models.BaseData].Custom
+// and is available in every rendered page: post, index, tag, and tags-index.
+//
+// Multiple calls to WithCustomData accumulate: keys are merged in the order
+// the options are applied, with later values overwriting earlier ones for the
+// same key. Templates should guard access with {{ with .Custom }} or
+// {{ if .Custom }} when the field may be nil (i.e. when no WithCustomData
+// option was supplied).
+//
+// The same map instance is shared across all pages rendered in a single
+// Generate call. Callers must not mutate the map after passing it to
+// WithCustomData. Values stored in the map must be safe for concurrent reads
+// because the HTTP server may render multiple pages in parallel.
+//
+// # Security
+//
+// Store only plain, immutable values (strings, numbers, booleans) in the map.
+// Do not pre-wrap values in [html/template.HTML], [html/template.JS],
+// [html/template.JSStr], [html/template.URL], [html/template.CSS], or
+// [html/template.HTMLAttr]: those types signal to html/template that the value
+// is already safe and bypass contextual auto-escaping, creating an XSS sink if
+// the value originates from user-controlled input. Let html/template escape
+// values at render time instead.
+//
+// Do not construct custom data from untrusted input at request time. This map
+// is intended for static, developer-controlled values only.
+//
+// Example usage:
+//
+//	gen := generator.New(fsys, renderer,
+//	    config.WithCustomData(map[string]any{
+//	        "author":      "Jane Smith",
+//	        "analyticsID": "UA-12345",
+//	    }),
+//	)
+//
+// In a template:
+//
+//	{{ with .Custom }}
+//	    <meta name="author" content="{{ .author }}">
+//	{{ end }}
+func WithCustomData(data map[string]any) GeneratorOption {
+	return GeneratorOption{
+		WithCustomDataFunc: func(v *CustomData) {
+			if v.Data == nil {
+				v.Data = map[string]any{}
+			}
+			for k, val := range data {
+				v.Data[k] = val
+			}
+		},
+	}
+}
+
+// AsOption converts this CustomData value back into a GeneratorOption so it
+// can be passed to generator and server constructors that accept GeneratorOption
+// values (e.g. when round-tripping through a ServerConfig).
+func (o CustomData) AsOption() GeneratorOption {
+	return WithCustomData(o.Data)
 }

@@ -3,10 +3,13 @@ package generator_test
 import (
 	"context"
 	"fmt"
+	"html/template"
 	"os"
+	"strings"
 
 	"github.com/harrydayexe/GoBlog/v2/pkg/config"
 	"github.com/harrydayexe/GoBlog/v2/pkg/generator"
+	"github.com/harrydayexe/GoBlog/v2/pkg/templates"
 )
 
 // Example demonstrates basic usage of the generator package.
@@ -148,4 +151,44 @@ func ExampleGeneratedBlog() {
 	// Output: Total posts: 3
 	// Has Posts map: true
 	// Has Tags map: true
+}
+
+// ExampleWithFuncs demonstrates registering a custom template function.
+// The function is called directly from templates as {{upper .SomeField}}.
+func ExampleWithFuncs() {
+	renderer, err := generator.NewTemplateRenderer(
+		templates.Default,
+		config.WithFuncs(template.FuncMap{
+			"upper": strings.ToUpper,
+		}),
+	)
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
+
+	fmt.Printf("Renderer created: %t\n", renderer != nil)
+	// Output: Renderer created: true
+}
+
+// ExampleWithCustomData demonstrates injecting custom data into templates.
+// All rendered pages receive the values via {{.Custom.key}}.
+func ExampleWithCustomData() {
+	fsys := os.DirFS("testdata")
+	gen := generator.New(fsys, nil, config.WithRawOutput(),
+		config.WithCustomData(map[string]any{
+			"author":      "Jane Smith",
+			"analyticsID": "UA-12345",
+		}),
+	)
+
+	ctx := context.Background()
+	blog, err := gen.Generate(ctx)
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
+
+	fmt.Printf("Generated %d post(s)\n", len(blog.Posts))
+	// Output: Generated 3 post(s)
 }

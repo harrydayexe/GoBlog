@@ -1,6 +1,6 @@
 module github.com/harrydayexe/GoBlog/v2
 
-go 1.25.6
+go 1.26.3
 
 require (
 	github.com/alecthomas/chroma/v2 v2.22.0

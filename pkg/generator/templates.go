@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/harrydayexe/GoBlog/v2/pkg/config"
 	"github.com/harrydayexe/GoBlog/v2/pkg/models"
 )
 
@@ -39,17 +40,40 @@ type TemplateRenderer struct {
 // partials by their defined name ({{template "head" .}}), and Render*
 // methods invoke pages by their path.
 //
+// # Built-in helpers
+//
 // The following helpers are available in every template's FuncMap:
 //
 //	formatDate(t time.Time) string   formats t as "January 2, 2006"
 //	shortDate(t time.Time) string    formats t as "Jan 2, 2006"
 //	year() int                       returns the current calendar year
 //
+// # Custom functions
+//
+// Additional template functions can be registered via [config.WithFuncs].
+// User-supplied functions are merged into the FuncMap after the built-ins, so
+// registering a function whose name matches a built-in (formatDate, shortDate,
+// year) will silently replace that built-in. This enables intentional overrides
+// (e.g. a custom date format) but will also silently suppress default template
+// behaviour if done accidentally.
+//
+// Multiple [config.WithFuncs] calls accumulate; later registrations overwrite
+// earlier ones for the same key.
+//
+// Example:
+//
+//	renderer, err := generator.NewTemplateRenderer(
+//	    templates.Default,
+//	    config.WithFuncs(template.FuncMap{
+//	        "upper": strings.ToUpper,
+//	    }),
+//	)
+//
 // Pass [github.com/harrydayexe/GoBlog/v2/pkg/templates.Default] to use the
 // built-in templates, or any fs.FS (e.g. os.DirFS("./mytemplates")) for a
 // custom theme. Returns an error if any template fails to parse.
-func NewTemplateRenderer(templatesFS fs.FS) (*TemplateRenderer, error) {
-	// helpers available to all templates
+func NewTemplateRenderer(templatesFS fs.FS, opts ...config.RendererOption) (*TemplateRenderer, error) {
+	// Start with the built-in helpers.
 	funcMap := template.FuncMap{
 		"formatDate": func(t time.Time) string {
 			return t.Format("January 2, 2006")
@@ -60,6 +84,35 @@ func NewTemplateRenderer(templatesFS fs.FS) (*TemplateRenderer, error) {
 		"year": func() int {
 			return time.Now().Year()
 		},
+	}
+
+	// Track current built-in values so we can detect when user code replaces them.
+	// Function values are not comparable, so we temporarily remove the built-ins
+	// before each user opt and check which ones reappear afterwards.
+	builtins := map[string]any{
+		"formatDate": funcMap["formatDate"],
+		"shortDate":  funcMap["shortDate"],
+		"year":       funcMap["year"],
+	}
+
+	// Merge user-supplied functions on top of the built-ins. A name collision
+	// with a built-in results in the user's function winning; log at Warn so
+	// operators notice accidental overrides during startup.
+	for _, opt := range opts {
+		if opt.WithFuncsFunc != nil {
+			for k := range builtins {
+				delete(funcMap, k)
+			}
+			opt.WithFuncsFunc(&funcMap)
+			for k, saved := range builtins {
+				if _, overridden := funcMap[k]; overridden {
+					slog.Warn("WithFuncs: built-in template function overridden", slog.String("name", k))
+					builtins[k] = funcMap[k]
+				} else {
+					funcMap[k] = saved
+				}
+			}
+		}
 	}
 
 	// Parse all template files

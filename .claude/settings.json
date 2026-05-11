@@ -3,7 +3,10 @@
         "PostToolUse": [
             {
                 "matcher": "Edit|Write",
-                "hooks": [{ "type": "command", "command": ".claude/hooks/format-go.sh" }]
+                "hooks": [
+                    { "type": "command", "command": ".claude/hooks/format-go.sh", "if": "Edit(*.go)" },
+                    { "type": "command", "command": ".claude/hooks/format-go.sh", "if": "Write(*.go)" }
+                ]
             }
         ]
     }

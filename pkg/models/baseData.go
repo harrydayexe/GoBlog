@@ -41,4 +41,20 @@ type BaseData struct {
 	// Custom templates should gate tag UI on this field:
 	//   {{if .TagsEnabled}}<a href="{{.BlogRoot}}tags">Tags</a>{{end}}
 	TagsEnabled bool
+
+	// Custom holds arbitrary key-value data injected by the calling application
+	// via config.WithCustomData. It is nil when no custom data was configured.
+	//
+	// Templates should guard access to avoid nil-map panics:
+	//   {{with .Custom}}<meta name="author" content="{{.author}}">{{end}}
+	//
+	// The same map is shared across every page rendered in a single Generate
+	// call. Do not mutate the map from inside a template or after passing it
+	// to config.WithCustomData.
+	//
+	// Security: values in this map should be plain strings, numbers, or
+	// booleans. Do not store html/template.HTML, html/template.JS, or other
+	// pre-sanitised wrapper types — those bypass contextual auto-escaping and
+	// become XSS sinks if the underlying value is user-controlled.
+	Custom map[string]any
 }
