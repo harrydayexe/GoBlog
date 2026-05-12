@@ -39,6 +39,7 @@ func NewGeneratorCommand(ctx context.Context, c *cli.Command) error {
 
 	opts := []config.GeneratorOption{
 		config.WithEnvironment(string(envCfg.Environment)),
+		config.WithHTMLPaths(),
 	}
 
 	rawOutputFlag := c.Bool(RawOutputFlagName)

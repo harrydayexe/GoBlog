@@ -20,6 +20,7 @@ type GeneratorOption struct {
 	WithSiteTitleFunc          func(v *SiteTitle)
 	WithEnvironmentFunc        func(v *Environment)
 	WithCustomDataFunc         func(v *CustomData)
+	WithHTMLPathsFunc          func(v *HTMLPaths)
 }
 
 // WithBaseOption wraps a BaseOption as a GeneratorOption so it can be passed
@@ -212,6 +213,57 @@ func WithEnvironment(env string) GeneratorOption {
 
 func (o Environment) AsOption() GeneratorOption {
 	return WithEnvironment(o.Environment)
+}
+
+// HTMLPaths is a configuration type that controls whether BaseData.Path values
+// are emitted with a .html file extension.
+//
+// When Enable is true:
+//   - Index page path becomes /index.html (BlogRoot "/") or /<root>.html (other roots)
+//   - Post, tag, and tags-index paths have .html appended
+//
+// This type is typically embedded in generator configuration structs and should
+// be set using the WithHTMLPaths() option function.
+type HTMLPaths struct{ Enable bool }
+
+// WithHTMLPaths returns a GeneratorOption that switches BaseData.Path to use
+// .html-suffixed file paths instead of clean URLs.
+//
+// This is automatically applied by the goblog generate CLI so that canonical
+// URLs in static output match the actual .html files written to disk. Library
+// users serving content via pkg/server should leave this option off; the server
+// accepts both clean URLs and .html URLs via its built-in StripHTMLExtension
+// middleware.
+//
+// Path values with this option enabled:
+//
+//	BlogRoot = "/"            BlogRoot = "/blog/"
+//	Index:   /index.html      /blog.html
+//	Post:    /posts/slug.html  /blog/posts/slug.html
+//	Tag:     /tags/go.html    /blog/tags/go.html
+//	TagsIdx: /tags.html       /blog/tags.html
+//
+// Example usage:
+//
+//	gen := generator.New(fsys, renderer, config.WithHTMLPaths())
+func WithHTMLPaths() GeneratorOption {
+	return GeneratorOption{
+		WithHTMLPathsFunc: func(v *HTMLPaths) {
+			v.Enable = true
+		},
+	}
+}
+
+// AsOption converts this HTMLPaths value back into a GeneratorOption.
+func (o HTMLPaths) AsOption() GeneratorOption {
+	if o.Enable {
+		return WithHTMLPaths()
+	}
+	return GeneratorOption{
+		WithHTMLPathsFunc: func(v *HTMLPaths) {
+			v.Enable = false
+		},
+	}
 }
 
 // CustomData is a configuration type that holds arbitrary key-value data

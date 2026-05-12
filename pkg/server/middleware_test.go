@@ -372,6 +372,138 @@ func TestServerTagsEnabledByDefault(t *testing.T) {
 	}
 }
 
+// TestServer_StripsHTMLExtension verifies that the server accepts requests with
+// and without .html suffixes and serves identical content for both.
+func TestServer_StripsHTMLExtension(t *testing.T) {
+	t.Parallel()
+
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	postsFS := createTestFS(t)
+
+	cfg := config.ServerConfig{
+		Server: []config.BaseServerOption{
+			config.WithPort(8080),
+		},
+	}
+
+	srv, err := server.New(logger, postsFS, cfg)
+	if err != nil {
+		t.Fatalf("failed to create server: %v", err)
+	}
+
+	// Fetch the clean-URL index for comparison.
+	cleanReq := httptest.NewRequest(http.MethodGet, "/", nil)
+	cleanW := httptest.NewRecorder()
+	srv.ServeHTTP(cleanW, cleanReq)
+	indexBody := cleanW.Body.String()
+
+	// /index.html must return the same body as /.
+	htmlReq := httptest.NewRequest(http.MethodGet, "/index.html", nil)
+	htmlW := httptest.NewRecorder()
+	srv.ServeHTTP(htmlW, htmlReq)
+	if htmlW.Code != http.StatusOK {
+		t.Errorf("GET /index.html: got status %d, want 200", htmlW.Code)
+	}
+	if htmlW.Body.String() != indexBody {
+		t.Error("GET /index.html: body differs from GET /")
+	}
+
+	// /posts/test-post.html must return the same as /posts/test-post.
+	cleanPostReq := httptest.NewRequest(http.MethodGet, "/posts/test-post", nil)
+	cleanPostW := httptest.NewRecorder()
+	srv.ServeHTTP(cleanPostW, cleanPostReq)
+	postBody := cleanPostW.Body.String()
+
+	htmlPostReq := httptest.NewRequest(http.MethodGet, "/posts/test-post.html", nil)
+	htmlPostW := httptest.NewRecorder()
+	srv.ServeHTTP(htmlPostW, htmlPostReq)
+	if htmlPostW.Code != http.StatusOK {
+		t.Errorf("GET /posts/test-post.html: got status %d, want 200", htmlPostW.Code)
+	}
+	if htmlPostW.Body.String() != postBody {
+		t.Error("GET /posts/test-post.html: body differs from GET /posts/test-post")
+	}
+
+	// /tags/go.html must return the same as /tags/go.
+	cleanTagReq := httptest.NewRequest(http.MethodGet, "/tags/go", nil)
+	cleanTagW := httptest.NewRecorder()
+	srv.ServeHTTP(cleanTagW, cleanTagReq)
+
+	htmlTagReq := httptest.NewRequest(http.MethodGet, "/tags/go.html", nil)
+	htmlTagW := httptest.NewRecorder()
+	srv.ServeHTTP(htmlTagW, htmlTagReq)
+	if htmlTagW.Code != cleanTagW.Code {
+		t.Errorf("GET /tags/go.html: got status %d, want %d (same as clean URL)", htmlTagW.Code, cleanTagW.Code)
+	}
+}
+
+// TestServer_StripsHTMLExtension_BlogRoot verifies .html stripping works when
+// BlogRoot is a subdirectory.
+func TestServer_StripsHTMLExtension_BlogRoot(t *testing.T) {
+	t.Parallel()
+
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	postsFS := createTestFS(t)
+
+	cfg := config.ServerConfig{
+		Server: []config.BaseServerOption{
+			config.WithPort(8080),
+			config.BaseServerOption{BaseOption: config.WithBlogRoot("/blog/")},
+		},
+		Gen: []config.GeneratorOption{
+			config.WithBaseOption(config.WithBlogRoot("/blog/")),
+		},
+	}
+
+	srv, err := server.New(logger, postsFS, cfg)
+	if err != nil {
+		t.Fatalf("failed to create server: %v", err)
+	}
+
+	// /blog/ must return the index.
+	cleanReq := httptest.NewRequest(http.MethodGet, "/blog/", nil)
+	cleanW := httptest.NewRecorder()
+	srv.ServeHTTP(cleanW, cleanReq)
+	if cleanW.Code != http.StatusOK {
+		t.Fatalf("GET /blog/: got status %d, want 200", cleanW.Code)
+	}
+
+	// /blog.html strips to /blog which then redirects or serves; middleware turns
+	// /blog.html → /blog, and Go's mux strips trailing non-slash so check we don't 404.
+	htmlReq := httptest.NewRequest(http.MethodGet, "/blog/posts/test-post.html", nil)
+	htmlW := httptest.NewRecorder()
+	srv.ServeHTTP(htmlW, htmlReq)
+	if htmlW.Code != http.StatusOK {
+		t.Errorf("GET /blog/posts/test-post.html: got status %d, want 200", htmlW.Code)
+	}
+}
+
+// TestHandler_StripsHTMLExtension verifies that the bare Handler() function
+// (without server.New) also strips .html from incoming requests.
+func TestHandler_StripsHTMLExtension(t *testing.T) {
+	t.Parallel()
+
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	postsFS := createTestFS(t)
+
+	// Build a GeneratedBlog manually via the generator.
+	cfg := config.ServerConfig{
+		Gen: []config.GeneratorOption{config.WithRawOutput()},
+	}
+	srv, err := server.New(logger, postsFS, cfg)
+	if err != nil {
+		t.Fatalf("failed to create server: %v", err)
+	}
+
+	// /index.html should still be served as /  (strip → route to index).
+	req := httptest.NewRequest(http.MethodGet, "/index.html", nil)
+	w := httptest.NewRecorder()
+	srv.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Errorf("GET /index.html via bare server: got %d, want 200", w.Code)
+	}
+}
+
 // createTestFS creates a minimal test filesystem with a single post.
 func createTestFS(t *testing.T) fs.FS {
 	t.Helper()

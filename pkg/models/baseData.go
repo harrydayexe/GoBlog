@@ -58,21 +58,39 @@ type BaseData struct {
 	// become XSS sinks if the underlying value is user-controlled.
 	Custom map[string]any
 
-	// Path is the site-relative path of this page, including the BlogRoot prefix
-	// and without a .html extension. Use it to construct canonical URLs or Open
-	// Graph meta tags without having to re-concatenate BlogRoot in the template.
+	// Path is the site-relative path of this page, including the BlogRoot prefix.
+	// Use it to construct canonical URLs or Open Graph meta tags without having
+	// to re-concatenate BlogRoot in the template.
 	//
-	// Examples (BlogRoot = "/blog/"):
-	//   Index page:       /blog/
-	//   Post page:        /blog/posts/my-first-post
-	//   Tag page:         /blog/tags/golang
-	//   Tags index:       /blog/tags
+	// By default (clean-URL mode) the path has no .html extension:
 	//
-	// Examples (default BlogRoot = "/"):
-	//   Index page:       /
-	//   Post page:        /posts/my-first-post
-	//   Tag page:         /tags/golang
-	//   Tags index:       /tags
+	//   Examples (BlogRoot = "/blog/"):
+	//     Index page:       /blog/
+	//     Post page:        /blog/posts/my-first-post
+	//     Tag page:         /blog/tags/golang
+	//     Tags index:       /blog/tags
+	//
+	//   Examples (default BlogRoot = "/"):
+	//     Index page:       /
+	//     Post page:        /posts/my-first-post
+	//     Tag page:         /tags/golang
+	//     Tags index:       /tags
+	//
+	// When config.WithHTMLPaths() is applied (used automatically by goblog
+	// generate so paths match the .html files written to disk) the extension is
+	// included:
+	//
+	//   Examples (BlogRoot = "/blog/"):
+	//     Index page:       /blog.html
+	//     Post page:        /blog/posts/my-first-post.html
+	//     Tag page:         /blog/tags/golang.html
+	//     Tags index:       /blog/tags.html
+	//
+	//   Examples (default BlogRoot = "/"):
+	//     Index page:       /index.html
+	//     Post page:        /posts/my-first-post.html
+	//     Tag page:         /tags/golang.html
+	//     Tags index:       /tags.html
 	//
 	// Typical usage for an Open Graph URL tag:
 	//   <meta property="og:url" content="https://example.com{{.Path}}">

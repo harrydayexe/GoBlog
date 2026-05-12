@@ -8,6 +8,7 @@ import (
 
 	"github.com/harrydayexe/GoBlog/v2/pkg/config"
 	"github.com/harrydayexe/GoBlog/v2/pkg/generator"
+	"github.com/harrydayexe/GoWebUtilities/middleware"
 )
 
 // HandlerConfig holds configuration options for the blog HTTP handler.
@@ -33,6 +34,10 @@ type HandlerConfig struct {
 // generator is configured with config.WithDisableTags(), blog.Tags and
 // blog.TagsIndex will be empty and the tag routes will not be registered.
 //
+// The returned handler automatically strips .html suffixes from incoming request
+// paths via middleware.NewStripHTMLExtension, so both /posts/foo and
+// /posts/foo.html are routed to the same handler.
+//
 // The handler is safe for concurrent use by multiple goroutines.
 // It does not modify the GeneratedBlog instance.
 func Handler(blog *generator.GeneratedBlog, logger *slog.Logger, opts ...config.BaseOption) http.Handler {
@@ -57,7 +62,7 @@ func Handler(blog *generator.GeneratedBlog, logger *slog.Logger, opts ...config.
 	logger.Debug("handlerConfig set", slog.String("BlogRoot", string(cfg.BlogRoot)))
 	logger.Debug("blog index page", slog.Int("bytes", len(blog.Index)))
 
-	return generateHandler(cfg, blog)
+	return middleware.NewStripHTMLExtension()(generateHandler(cfg, blog))
 }
 
 func generateHandler(cfg HandlerConfig, blog *generator.GeneratedBlog) http.Handler {

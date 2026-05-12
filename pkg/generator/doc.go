@@ -89,20 +89,28 @@
 // # Page Path
 //
 // Every rendered page receives a Path field on its template data containing the
-// URL path for that page relative to BlogRoot. It is accessible in templates as
-// {{.Path}}:
+// URL path for that page. It is accessible in templates as {{.Path}}:
 //
 //	<link rel="canonical" href="https://example.com{{.Path}}">
 //	<meta property="og:url" content="https://example.com{{.Path}}">
 //
-// The value is determined by page type:
-//   - Post page:       /<slug>
-//   - Index page:      /
+// By default (clean-URL mode) the value includes BlogRoot and no .html suffix:
+//   - Index page:      /  (or /blog/ when BlogRoot = "/blog/")
+//   - Post page:       /posts/<slug>
 //   - Tag page:        /tags/<tag>
 //   - Tags index page: /tags
 //
-// Path always begins with a leading slash and never carries a trailing slash
-// (except for the index page, which is exactly "/").
+// When [config.WithHTMLPaths] is applied (automatically set by the goblog
+// generate CLI), paths include the .html extension to match the files written
+// to disk:
+//   - Index page:      /index.html  (or /blog.html when BlogRoot = "/blog/")
+//   - Post page:       /posts/<slug>.html
+//   - Tag page:        /tags/<tag>.html
+//   - Tags index page: /tags.html
+//
+// The pkg/server package accepts both clean URLs and .html URLs via its
+// built-in StripHTMLExtension middleware, so the server always uses clean-URL
+// paths regardless of the generating option.
 //
 // # Output
 //

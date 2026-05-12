@@ -56,6 +56,14 @@
 // generator.NewTemplateRenderer, or to ServerConfig.RendererOpts for the HTTP
 // server path.
 //
+// WithHTMLPaths() is a GeneratorOption that switches BaseData.Path values to
+// use .html file extensions instead of clean URLs. When enabled, the index
+// path becomes /index.html (or /<root>.html for a non-root BlogRoot), and all
+// other pages get .html appended. This is automatically applied by the goblog
+// generate CLI so canonical URLs in static output match the actual files on
+// disk. Library users serving via pkg/server should leave this off; the server
+// accepts both clean URLs and .html URLs automatically.
+//
 // WithCustomData(data map[string]any) is a GeneratorOption that merges
 // arbitrary key-value data into models.BaseData.Custom, making it accessible
 // in all templates as {{.Custom.key}}. Multiple calls merge their maps, with
@@ -64,7 +72,9 @@
 //
 // # Option types
 //
-// GeneratorOption carries options for generator.New and outputter.NewDirectoryWriter.
+// GeneratorOption carries options for generator.New and outputter.NewDirectoryWriter,
+// including WithRawOutput, WithDisableTags, WithDisableReadingTime, WithSiteTitle,
+// WithEnvironment, WithCustomData, and WithHTMLPaths.
 // BaseServerOption carries options for the HTTP server (port, host, middleware).
 // RendererOption carries options for generator.NewTemplateRenderer (custom funcs).
 // ServerConfig groups all three option types plus a TemplateDir filesystem for
