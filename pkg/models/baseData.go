@@ -57,4 +57,24 @@ type BaseData struct {
 	// pre-sanitised wrapper types — those bypass contextual auto-escaping and
 	// become XSS sinks if the underlying value is user-controlled.
 	Custom map[string]any
+
+	// Path is the site-relative path of this page, including the BlogRoot prefix
+	// and without a .html extension. Use it to construct canonical URLs or Open
+	// Graph meta tags without having to re-concatenate BlogRoot in the template.
+	//
+	// Examples (BlogRoot = "/blog/"):
+	//   Index page:       /blog/
+	//   Post page:        /blog/posts/my-first-post
+	//   Tag page:         /blog/tags/golang
+	//   Tags index:       /blog/tags
+	//
+	// Examples (default BlogRoot = "/"):
+	//   Index page:       /
+	//   Post page:        /posts/my-first-post
+	//   Tag page:         /tags/golang
+	//   Tags index:       /tags
+	//
+	// Typical usage for an Open Graph URL tag:
+	//   <meta property="og:url" content="https://example.com{{.Path}}">
+	Path string
 }
