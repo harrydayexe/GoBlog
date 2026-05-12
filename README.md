@@ -482,7 +482,13 @@ ranging over a list of posts.
 Every page template receives a struct that embeds
 [`models.BaseData`](https://pkg.go.dev/github.com/harrydayexe/GoBlog/v2/pkg/models#BaseData)
 (`SiteTitle`, `PageTitle`, `Description`, `Year`, `BlogRoot`, `Environment`,
-`TagsEnabled`, `Custom`), plus page-specific fields:
+`TagsEnabled`, `Custom`, `Path`), plus page-specific fields:
+
+`Path` is the full site-relative path of the page including `BlogRoot` and without a `.html` extension (e.g. `/blog/posts/my-first-post`, `/blog/tags/golang`, `/blog/`). Use it to build canonical URLs or Open Graph tags:
+
+```html
+<meta property="og:url" content="https://example.com{{.Path}}">
+```
 
 | Template | Data struct | Extra fields |
 |---|---|---|

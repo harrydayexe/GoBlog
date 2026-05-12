@@ -1096,6 +1096,71 @@ func TestGenerate_TagsEnabledInTemplateData(t *testing.T) {
 	}
 }
 
+// TestGenerate_PathInTemplateData verifies that Path on BaseData is correctly set
+// for every page type and includes the BlogRoot prefix.
+func TestGenerate_PathInTemplateData(t *testing.T) {
+	t.Parallel()
+
+	minimalFS := fstest.MapFS{
+		"pages/index.tmpl":      {Data: []byte(`{{.Path}}`)},
+		"pages/post.tmpl":       {Data: []byte(`{{.Path}}`)},
+		"pages/tag.tmpl":        {Data: []byte(`{{.Path}}`)},
+		"pages/tags-index.tmpl": {Data: []byte(`{{.Path}}`)},
+	}
+
+	renderer, err := NewTemplateRenderer(minimalFS)
+	if err != nil {
+		t.Fatalf("NewTemplateRenderer() error = %v", err)
+	}
+
+	testFS := os.DirFS("testdata")
+
+	tests := []struct {
+		name     string
+		blogRoot string
+	}{
+		{name: "custom BlogRoot", blogRoot: "/blog/"},
+		{name: "default BlogRoot", blogRoot: "/"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gen := New(testFS, renderer, config.WithBaseOption(config.WithBlogRoot(tt.blogRoot)))
+			blog, err := gen.Generate(context.Background())
+			if err != nil {
+				t.Fatalf("Generate() error = %v", err)
+			}
+
+			// Index page path should equal BlogRoot.
+			if string(blog.Index) != tt.blogRoot {
+				t.Errorf("Index Path = %q, want %q", string(blog.Index), tt.blogRoot)
+			}
+
+			// Each post path should be BlogRoot + "posts/" + slug.
+			for slug, content := range blog.Posts {
+				want := tt.blogRoot + "posts/" + slug
+				if string(content) != want {
+					t.Errorf("Post %q Path = %q, want %q", slug, string(content), want)
+				}
+			}
+
+			// Each tag page path should be BlogRoot + "tags/" + tag.
+			for tag, content := range blog.Tags {
+				want := tt.blogRoot + "tags/" + tag
+				if string(content) != want {
+					t.Errorf("Tag %q Path = %q, want %q", tag, string(content), want)
+				}
+			}
+
+			// Tags index path should be BlogRoot + "tags".
+			wantTagsIndex := tt.blogRoot + "tags"
+			if string(blog.TagsIndex) != wantTagsIndex {
+				t.Errorf("TagsIndex Path = %q, want %q", string(blog.TagsIndex), wantTagsIndex)
+			}
+		})
+	}
+}
+
 // TestWithDisableReadingTime tests that the WithDisableReadingTime option is applied correctly.
 func TestWithDisableReadingTime(t *testing.T) {
 	t.Parallel()

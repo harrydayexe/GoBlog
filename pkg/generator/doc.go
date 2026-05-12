@@ -86,6 +86,24 @@
 // Multiple WithCustomData calls merge their maps; later values overwrite earlier
 // ones for duplicate keys.
 //
+// # Page Path
+//
+// Every rendered page receives a Path field on its template data containing the
+// URL path for that page relative to BlogRoot. It is accessible in templates as
+// {{.Path}}:
+//
+//	<link rel="canonical" href="https://example.com{{.Path}}">
+//	<meta property="og:url" content="https://example.com{{.Path}}">
+//
+// The value is determined by page type:
+//   - Post page:       /<slug>
+//   - Index page:      /
+//   - Tag page:        /tags/<tag>
+//   - Tags index page: /tags
+//
+// Path always begins with a leading slash and never carries a trailing slash
+// (except for the index page, which is exactly "/").
+//
 // # Output
 //
 // The Generator returns all generated content in memory via GeneratedBlog.
