@@ -16,6 +16,9 @@ type Post struct {
 	Date        time.Time `yaml:"date"`
 	Description string    `yaml:"description"`
 	Tags        []string  `yaml:"tags"`
+	// Author is the name of the post's author. It is optional; when not declared
+	// in the front matter it defaults to an empty string.
+	Author string `yaml:"author"`
 
 	// Generated fields
 	Slug               string        // URL-friendly identifier

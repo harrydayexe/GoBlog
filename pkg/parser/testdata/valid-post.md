@@ -3,6 +3,7 @@ title: "A Valid Blog Post"
 date: 2026-01-10T10:00:00Z
 description: "This is a test post with all required fields"
 tags: [go, testing, blog]
+author: "Jane Doe"
 ---
 
 # Welcome to My Blog

@@ -59,6 +59,16 @@ func TestPost_Validate(t *testing.T) {
 			expectErr: true,
 			errText:   "description",
 		},
+		{
+			name: "empty author is valid",
+			post: Post{
+				Title:       "Test Post",
+				Date:        now,
+				Description: "A test post",
+				Author:      "",
+			},
+			expectErr: false,
+		},
 	}
 
 	for _, tt := range tests {

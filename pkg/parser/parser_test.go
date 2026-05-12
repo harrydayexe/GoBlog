@@ -35,6 +35,10 @@ func TestParseFile_ValidPost(t *testing.T) {
 		t.Error("expected valid date, got zero time")
 	}
 
+	if post.Author != "Jane Doe" {
+		t.Errorf("expected author 'Jane Doe', got: %s", post.Author)
+	}
+
 	// Check generated fields
 	if post.SourcePath != "valid-post.md" {
 		t.Errorf("expected source path 'valid-post.md', got: %s", post.SourcePath)
@@ -64,6 +68,21 @@ func TestParseFile_ValidPost(t *testing.T) {
 	// Verify markdown was converted (should contain <strong> for **)
 	if !strings.Contains(string(post.Content), "<strong>valid</strong>") {
 		t.Error("expected rendered HTML to contain bold text")
+	}
+}
+
+func TestParseFile_NoAuthor(t *testing.T) {
+	t.Parallel()
+	p := New()
+	fsys := os.DirFS("testdata")
+
+	post, err := p.ParseFile(context.Background(), fsys, "no-author.md")
+	if err != nil {
+		t.Fatalf("expected no error for post without author, got: %v", err)
+	}
+
+	if post.Author != "" {
+		t.Errorf("expected empty author, got: %s", post.Author)
 	}
 }
 
