@@ -30,6 +30,7 @@ type Generator struct {
 	config.BlogRoot
 	config.Environment
 	config.CustomData
+	config.HTMLPaths
 	ParserConfig parser.Config // The config to use when parsing
 
 	logger   *slog.Logger
@@ -44,7 +45,8 @@ func (c Generator) String() string {
 - SiteTitle           %s,
 - BlogRoot            %s,
 - Environment         %s,
-- CustomData keys     %d`,
+- CustomData keys     %d,
+- HTMLPaths           %t`,
 		c.RawOutput,
 		c.DisableTags.Disable,
 		c.DisableReadingTime.Disable,
@@ -52,6 +54,7 @@ func (c Generator) String() string {
 		c.BlogRoot,
 		c.Environment.Environment,
 		len(c.CustomData.Data),
+		c.HTMLPaths.Enable,
 	)
 }
 
@@ -89,6 +92,8 @@ func New(posts fs.FS, renderer *TemplateRenderer, opts ...config.GeneratorOption
 			opt.WithEnvironmentFunc(&gen.Environment)
 		} else if opt.WithCustomDataFunc != nil {
 			opt.WithCustomDataFunc(&gen.CustomData)
+		} else if opt.WithHTMLPathsFunc != nil {
+			opt.WithHTMLPathsFunc(&gen.HTMLPaths)
 		}
 	}
 
@@ -164,6 +169,40 @@ func (g *Generator) DebugConfig(ctx context.Context) {
 	g.logger.DebugContext(ctx, g.String())
 }
 
+// pagePath returns the BaseData.Path value for a given page.
+// kind must be one of "index", "post", "tag", or "tagsIndex"; name is the
+// slug or tag string (empty for "index" and "tagsIndex").
+func (g *Generator) pagePath(kind, name string) string {
+	root := string(g.BlogRoot)
+
+	var base string
+	switch kind {
+	case "index":
+		if root == "/" {
+			base = "/index"
+		} else {
+			// "/blog/" → "/blog"
+			base = strings.TrimSuffix(root, "/")
+		}
+	case "post":
+		base = root + "posts/" + name
+	case "tag":
+		base = root + "tags/" + name
+	case "tagsIndex":
+		base = root + "tags"
+	}
+
+	if g.HTMLPaths.Enable {
+		return base + ".html"
+	}
+
+	// Clean-URL default: return the base as-is except for the index.
+	if kind == "index" {
+		return root // "/" or "/blog/"
+	}
+	return base
+}
+
 func (g *Generator) assembleRawBlog(posts models.PostList) *GeneratedBlog {
 	blog := NewEmptyGeneratedBlog()
 
@@ -215,7 +254,7 @@ func (g *Generator) assembleBlogWithTemplates(ctx context.Context, posts models.
 				Environment: g.Environment.Environment,
 				TagsEnabled: tagsEnabled,
 				Custom:      g.CustomData.Data,
-				Path:        string(g.BlogRoot) + "posts/" + post.Slug,
+				Path:        g.pagePath("post", post.Slug),
 			},
 			Post: post,
 		}
@@ -246,7 +285,7 @@ func (g *Generator) assembleBlogWithTemplates(ctx context.Context, posts models.
 			Environment: g.Environment.Environment,
 			TagsEnabled: tagsEnabled,
 			Custom:      g.CustomData.Data,
-			Path:        string(g.BlogRoot),
+			Path:        g.pagePath("index", ""),
 		},
 		Posts:      indexPosts,
 		TotalPosts: len(indexPosts),
@@ -279,7 +318,7 @@ func (g *Generator) assembleBlogWithTemplates(ctx context.Context, posts models.
 					Environment: g.Environment.Environment,
 					TagsEnabled: true,
 					Custom:      g.CustomData.Data,
-					Path:        string(g.BlogRoot) + "tags/" + tag,
+					Path:        g.pagePath("tag", tag),
 				},
 				Tag:       tag,
 				Posts:     tagPosts,
@@ -319,7 +358,7 @@ func (g *Generator) assembleBlogWithTemplates(ctx context.Context, posts models.
 				Environment: g.Environment.Environment,
 				TagsEnabled: true,
 				Custom:      g.CustomData.Data,
-				Path:        string(g.BlogRoot) + "tags",
+				Path:        g.pagePath("tagsIndex", ""),
 			},
 			Tags:      tagInfos,
 			TotalTags: len(tagInfos),

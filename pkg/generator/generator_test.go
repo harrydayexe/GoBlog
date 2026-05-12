@@ -1116,46 +1116,86 @@ func TestGenerate_PathInTemplateData(t *testing.T) {
 	testFS := os.DirFS("testdata")
 
 	tests := []struct {
-		name     string
-		blogRoot string
+		name          string
+		blogRoot      string
+		htmlPaths     bool
+		wantIndex     string
+		wantTagsIndex string
+		// post and tag paths are derived from blogRoot + prefix + name [+ ".html"]
 	}{
-		{name: "custom BlogRoot", blogRoot: "/blog/"},
-		{name: "default BlogRoot", blogRoot: "/"},
+		{
+			name:          "default BlogRoot clean URLs",
+			blogRoot:      "/",
+			htmlPaths:     false,
+			wantIndex:     "/",
+			wantTagsIndex: "/tags",
+		},
+		{
+			name:          "custom BlogRoot clean URLs",
+			blogRoot:      "/blog/",
+			htmlPaths:     false,
+			wantIndex:     "/blog/",
+			wantTagsIndex: "/blog/tags",
+		},
+		{
+			name:          "default BlogRoot html paths",
+			blogRoot:      "/",
+			htmlPaths:     true,
+			wantIndex:     "/index.html",
+			wantTagsIndex: "/tags.html",
+		},
+		{
+			name:          "custom BlogRoot html paths",
+			blogRoot:      "/blog/",
+			htmlPaths:     true,
+			wantIndex:     "/blog.html",
+			wantTagsIndex: "/blog/tags.html",
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gen := New(testFS, renderer, config.WithBaseOption(config.WithBlogRoot(tt.blogRoot)))
+			t.Parallel()
+			opts := []config.GeneratorOption{config.WithBaseOption(config.WithBlogRoot(tt.blogRoot))}
+			if tt.htmlPaths {
+				opts = append(opts, config.WithHTMLPaths())
+			}
+			gen := New(testFS, renderer, opts...)
 			blog, err := gen.Generate(context.Background())
 			if err != nil {
 				t.Fatalf("Generate() error = %v", err)
 			}
 
-			// Index page path should equal BlogRoot.
-			if string(blog.Index) != tt.blogRoot {
-				t.Errorf("Index Path = %q, want %q", string(blog.Index), tt.blogRoot)
+			if string(blog.Index) != tt.wantIndex {
+				t.Errorf("Index Path = %q, want %q", string(blog.Index), tt.wantIndex)
 			}
 
-			// Each post path should be BlogRoot + "posts/" + slug.
 			for slug, content := range blog.Posts {
-				want := tt.blogRoot + "posts/" + slug
+				var want string
+				if tt.htmlPaths {
+					want = tt.blogRoot + "posts/" + slug + ".html"
+				} else {
+					want = tt.blogRoot + "posts/" + slug
+				}
 				if string(content) != want {
 					t.Errorf("Post %q Path = %q, want %q", slug, string(content), want)
 				}
 			}
 
-			// Each tag page path should be BlogRoot + "tags/" + tag.
 			for tag, content := range blog.Tags {
-				want := tt.blogRoot + "tags/" + tag
+				var want string
+				if tt.htmlPaths {
+					want = tt.blogRoot + "tags/" + tag + ".html"
+				} else {
+					want = tt.blogRoot + "tags/" + tag
+				}
 				if string(content) != want {
 					t.Errorf("Tag %q Path = %q, want %q", tag, string(content), want)
 				}
 			}
 
-			// Tags index path should be BlogRoot + "tags".
-			wantTagsIndex := tt.blogRoot + "tags"
-			if string(blog.TagsIndex) != wantTagsIndex {
-				t.Errorf("TagsIndex Path = %q, want %q", string(blog.TagsIndex), wantTagsIndex)
+			if string(blog.TagsIndex) != tt.wantTagsIndex {
+				t.Errorf("TagsIndex Path = %q, want %q", string(blog.TagsIndex), tt.wantTagsIndex)
 			}
 		})
 	}

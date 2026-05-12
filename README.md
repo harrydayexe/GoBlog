@@ -441,6 +441,47 @@ goblog generate posts/ output/ --root-path /docs/blog/
 # Links: /docs/blog/posts/slug.html, /docs/blog/tags/tag.html, /docs/blog/
 ```
 
+### Static Deployment and `.html` URLs
+
+When GoBlog generates static files to disk (`goblog generate` or `outputter.DirectoryWriter`),
+each page is written as a `.html` file — `posts/my-post.html`, `tags/golang.html`,
+`index.html`, and so on. The `{{.Path}}` field in template data should therefore contain
+the `.html`-suffixed URL so that Open Graph tags and canonical links point at the actual
+file.
+
+**The `goblog generate` CLI enables this automatically.** No flag is needed; every
+generated site has `.html`-suffixed paths in its template data:
+
+```
+# BlogRoot = "/"                  # BlogRoot = "/blog/"
+Index:     /index.html            /blog.html
+Post:      /posts/slug.html       /blog/posts/slug.html
+Tag:       /tags/golang.html      /blog/tags/golang.html
+Tags idx:  /tags.html             /blog/tags.html
+```
+
+#### Using `WithHTMLPaths()` in the Go API
+
+If you write static output programmatically (without the CLI), pass
+`config.WithHTMLPaths()` to the generator:
+
+```go
+gen := generator.New(fsys, renderer,
+    config.WithHTMLPaths(),
+    config.WithBlogRoot("/blog/"),
+)
+```
+
+Without this option (the default), paths are clean URLs with no extension — suitable
+for use with `pkg/server` or any host that maps clean URLs to `.html` files.
+
+#### Serving `.html` URLs
+
+`pkg/server` automatically accepts both `/posts/my-post` and `/posts/my-post.html`.
+The built-in `middleware.NewStripHTMLExtension` middleware rewrites `.html` request
+paths to their clean forms before routing, so clients or search engines that follow
+static `.html` links will be served correctly without any extra configuration.
+
 ### Custom Templates
 
 GoBlog ships with built-in templates (`templates.Default`) but you can supply
@@ -551,7 +592,7 @@ To use the built-in templates instead, replace `os.DirFS("./mytheme")` with
 | [`pkg/generator`](https://pkg.go.dev/github.com/harrydayexe/GoBlog/v2/pkg/generator) | Convert a directory of posts into a `GeneratedBlog` in memory |
 | [`pkg/outputter`](https://pkg.go.dev/github.com/harrydayexe/GoBlog/v2/pkg/outputter) | Write a `GeneratedBlog` to disk; implement `Outputter` for custom destinations |
 | [`pkg/server`](https://pkg.go.dev/github.com/harrydayexe/GoBlog/v2/pkg/server) | HTTP server with atomic live-reload via `Server.UpdatePosts` |
-| [`pkg/config`](https://pkg.go.dev/github.com/harrydayexe/GoBlog/v2/pkg/config) | Functional options: `WithRawOutput`, `WithDisableTags`, `WithDisableReadingTime`, `WithSiteTitle`, `WithBlogRoot`, `WithEnvironment`, `WithPort`, `WithHost`, `WithMiddleware`, `WithFuncs`, `WithCustomData` |
+| [`pkg/config`](https://pkg.go.dev/github.com/harrydayexe/GoBlog/v2/pkg/config) | Functional options: `WithRawOutput`, `WithDisableTags`, `WithDisableReadingTime`, `WithSiteTitle`, `WithBlogRoot`, `WithEnvironment`, `WithPort`, `WithHost`, `WithMiddleware`, `WithFuncs`, `WithCustomData`, `WithHTMLPaths` |
 | [`pkg/templates`](https://pkg.go.dev/github.com/harrydayexe/GoBlog/v2/pkg/templates) | Embedded default templates (`templates.Default`) |
 
 ### Site title

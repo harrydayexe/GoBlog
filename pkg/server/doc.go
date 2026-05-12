@@ -37,6 +37,16 @@
 //	    log.Fatal(err)
 //	}
 //
+// # HTML Extension Handling
+//
+// The server automatically accepts requests with or without .html suffixes.
+// Requests for /posts/my-post.html are rewritten to /posts/my-post before
+// routing, so both forms return the same content. This is handled by
+// middleware.NewStripHTMLExtension from github.com/harrydayexe/GoWebUtilities,
+// which is applied unconditionally inside Handler(). User-supplied middleware
+// added via config.WithMiddleware sees the original .html URL before it is
+// stripped.
+//
 // # Middleware
 //
 // The server supports pluggable HTTP middleware for cross-cutting concerns
