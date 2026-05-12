@@ -100,6 +100,7 @@ title: "My Blog Post Title"
 date: 2024-01-15
 description: "A brief description of the post"
 tags: ["go", "blogging", "markdown"]
+author: "Jane Doe"
 ---
 
 # Post Content
@@ -112,6 +113,8 @@ func main() {
 }
 \`\`\`
 ```
+
+The `author` field is optional. When omitted, `Post.Author` is an empty string and no error is returned. Access it in a custom post template via `{{.Post.Author}}`.
 
 ## CLI Usage
 
