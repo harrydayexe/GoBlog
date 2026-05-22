@@ -809,20 +809,6 @@ docker run \
   harrydayexe/goblog /posts --template-dir /mytheme
 ```
 
-### Static Site Generation
-
-Override the entrypoint to run `goblog generate` instead of `goblog serve`. Mount an output directory to retrieve the generated files:
-
-```bash
-docker run \
-  --entrypoint /app/goblog \
-  -v ./posts:/posts \
-  -v ./output:/output \
-  harrydayexe/goblog generate /posts /output
-```
-
-The generated site is written to `./output` on your host. All [`generate` flags](#generate-flags) are supported in the same way.
-
 ### Environment Variables
 
 | Variable | Default | Description |
