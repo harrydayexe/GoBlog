@@ -17,12 +17,8 @@ import (
 	"github.com/urfave/cli/v3"
 )
 
-// These are replaced at build time by GoReleaser
-var (
-	version = "dev"
-	commit  = "none"
-	date    = "unknown"
-)
+// version is replaced at build time by GoReleaser
+var version = "dev"
 
 func main() {
 	var verbosity int
@@ -35,11 +31,10 @@ func main() {
 	}
 
 	cli.VersionPrinter = func(cmd *cli.Command) {
-		v, c, d := buildVersion()
-		fmt.Printf("GoBlog version %s\nCommit %s\nDate %s\n", v, c, d)
+		fmt.Printf("GoBlog version %s\n", buildVersion())
 	}
 
-	v, _, _ := buildVersion()
+	v := buildVersion()
 	cmd := &cli.Command{
 		Name:                   "GoBlog",
 		Usage:                  "Create a blog feed from posts written in Markdown!",
