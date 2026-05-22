@@ -10,6 +10,44 @@ GoBlog is a flexible blog generation and serving system for creating static blog
 
 The project is designed for developers who want a simple, Go-based solution for blog generation with support for modern Markdown features like syntax highlighting, footnotes, and custom templates.
 
+## Table of Contents
+
+- [Installation](#installation)
+  - [CLI tool](#cli-tool)
+  - [Library](#library)
+- [Quick Start](#quick-start)
+  - [Using the Parser Package](#using-the-parser-package)
+  - [Parsing Multiple Posts](#parsing-multiple-posts)
+- [Documentation](#documentation)
+- [Markdown Post Format](#markdown-post-format)
+- [CLI Usage](#cli-usage)
+  - [`generate` flags](#generate-flags)
+  - [`serve` flags](#serve-flags)
+- [Advanced Features](#advanced-features)
+  - [Syntax Highlighting CSS](#syntax-highlighting-css)
+  - [Raw Output Mode](#raw-output-mode)
+  - [Disable Tags Mode](#disable-tags-mode)
+  - [Reading Time](#reading-time)
+  - [Blog Root Configuration](#blog-root-configuration)
+  - [Static Deployment and `.html` URLs](#static-deployment-and-html-urls)
+  - [Custom Templates](#custom-templates)
+- [Go Package Reference](#go-package-reference)
+  - [Site title](#site-title)
+  - [Runtime environment](#runtime-environment)
+  - [Custom template functions](#custom-template-functions)
+  - [Custom template data](#custom-template-data)
+  - [Serving programmatically](#serving-programmatically)
+  - [Custom output destination](#custom-output-destination)
+- [Docker Usage](#docker-usage)
+  - [Quick Start](#quick-start-1)
+  - [Configuration](#configuration)
+  - [Custom Templates](#custom-templates-1)
+  - [Static Site Generation](#static-site-generation)
+  - [Environment Variables](#environment-variables)
+  - [Docker Compose](#docker-compose)
+- [Contributing](#contributing)
+- [License](#license)
+
 ## Installation
 
 ### CLI tool
@@ -729,9 +767,87 @@ type Outputter interface {
 
 ## Docker Usage
 
+The official GoBlog image is published to Docker Hub as [`harrydayexe/goblog`](https://hub.docker.com/repository/docker/harrydayexe/goblog/general). It runs `goblog serve /posts` by default and exposes port `8080`.
+
+### Quick Start
+
+Mount your Markdown posts directory to `/posts` inside the container and map port `8080`:
+
 ```bash
-# Run blog server in container
-docker run -v ./posts:/posts -p 8080:8080 goblog/goblog serve /posts
+docker run -v ./posts:/posts -p 8080:8080 harrydayexe/goblog
+```
+
+Your blog will be available at http://localhost:8080.
+
+### Configuration
+
+All [`serve` flags](#serve-flags) work by appending them after the image name. Because they replace the default `CMD` (`/posts`), re-supply the posts path as the first argument:
+
+```bash
+# Change the listening port
+docker run -v ./posts:/posts -p 9000:9000 harrydayexe/goblog /posts --port 9000
+
+# Deploy at a subdirectory path
+docker run -v ./posts:/posts -p 8080:8080 harrydayexe/goblog /posts --root-path /blog/
+
+# Disable tag pages
+docker run -v ./posts:/posts -p 8080:8080 harrydayexe/goblog /posts --disable-tags
+
+# Bind to a specific host interface
+docker run -v ./posts:/posts -p 8080:8080 harrydayexe/goblog /posts --host 127.0.0.1
+```
+
+### Custom Templates
+
+Mount your template directory into the container and point `--template-dir` at it:
+
+```bash
+docker run \
+  -v ./posts:/posts \
+  -v ./mytheme:/mytheme \
+  -p 8080:8080 \
+  harrydayexe/goblog /posts --template-dir /mytheme
+```
+
+### Static Site Generation
+
+Override the entrypoint to run `goblog generate` instead of `goblog serve`. Mount an output directory to retrieve the generated files:
+
+```bash
+docker run \
+  --entrypoint /app/goblog \
+  -v ./posts:/posts \
+  -v ./output:/output \
+  harrydayexe/goblog generate /posts /output
+```
+
+The generated site is written to `./output` on your host. All [`generate` flags](#generate-flags) are supported in the same way.
+
+### Environment Variables
+
+| Variable | Default | Description |
+|---|---|---|
+| `ENVIRONMENT` | `local` | Runtime environment surfaced to templates as `{{.Environment}}`. Valid values: `local`, `test`, `production`. |
+
+```bash
+docker run -v ./posts:/posts -p 8080:8080 -e ENVIRONMENT=production harrydayexe/goblog
+```
+
+### Docker Compose
+
+A typical `docker-compose.yml` for hosting a blog from a mounted posts directory:
+
+```yaml
+services:
+  blog:
+    image: harrydayexe/goblog
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./posts:/posts
+    environment:
+      ENVIRONMENT: production
+    restart: unless-stopped
 ```
 
 ## Contributing

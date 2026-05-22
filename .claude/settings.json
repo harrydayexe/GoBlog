@@ -5,7 +5,9 @@
                 "matcher": "Edit|Write",
                 "hooks": [
                     { "type": "command", "command": ".claude/hooks/format-go.sh", "if": "Edit(*.go)" },
-                    { "type": "command", "command": ".claude/hooks/format-go.sh", "if": "Write(*.go)" }
+                    { "type": "command", "command": ".claude/hooks/format-go.sh", "if": "Write(*.go)" },
+                    { "type": "prompt", "prompt": "The README.md was just edited. Check whether the Table of Contents is still accurate and complete — all headings should be listed with correct anchor links. If it is out of date, update it now.", "if": "Edit(README.md)", "statusMessage": "Checking README table of contents..." },
+                    { "type": "prompt", "prompt": "The README.md was just written. Check whether the Table of Contents is still accurate and complete — all headings should be listed with correct anchor links. If it is out of date, update it now.", "if": "Write(README.md)", "statusMessage": "Checking README table of contents..." }
                 ]
             }
         ]
