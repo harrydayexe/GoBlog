@@ -112,7 +112,7 @@ check-license:
 # Add license headers
 [group("lint")]
 add-license:
-    addlicense -l mpl ./
+    addlicense -l mpl -c "GoBlog Authors" ./
 
 # Run generator command with arguments
 [group('run')]

@@ -838,7 +838,8 @@ services:
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit issues or pull requests.
+Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for how to
+set up the project, run tests, and submit pull requests.
 
 ## License
 
