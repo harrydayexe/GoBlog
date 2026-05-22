@@ -6,124 +6,22 @@
 [![License: MIT](https://img.shields.io/badge/License-GPL3-yellow.svg)](LICENSE)
 [![DockerHub](https://img.shields.io/docker/v/harrydayexe/goblog?sort=semver)](https://hub.docker.com/repository/docker/harrydayexe/goblog/general)
 
-GoBlog is a flexible blog generation and serving system for creating static blog feeds from Markdown files. It provides a powerful parser for Markdown content with YAML frontmatter, as well as multiple deployment options including a CLI tool, Docker image, and embeddable Go package.
+GoBlog is a blog generation and serving system for creating static blog feeds from Markdown files. It is available as a CLI tool, a Docker image, and an embeddable Go library.
 
-The project is designed for developers who want a simple, Go-based solution for blog generation with support for modern Markdown features like syntax highlighting, footnotes, and custom templates.
+## CLI
 
-## Installation
-
-### CLI tool
-
-Install the `goblog` binary to `$GOPATH/bin` (ensure that directory is on your `$PATH`):
+Install the `goblog` binary:
 
 ```bash
 go install github.com/harrydayexe/GoBlog/v2/cmd/goblog@latest
 ```
 
-To install from a local checkout instead, run from the repo root:
-
 ```bash
-go install ./cmd/goblog
-```
-
-### Library
-
-Add GoBlog as a dependency in your Go module:
-
-```bash
-go get github.com/harrydayexe/GoBlog/v2
-```
-
-## Quick Start
-
-### Using the Parser Package
-
-The parser package reads Markdown files with YAML frontmatter and converts them to structured Post objects:
-
-```go
-package main
-
-import (
-    "context"
-    "fmt"
-    "log"
-    "os"
-
-    "github.com/harrydayexe/GoBlog/v2/pkg/parser"
-)
-
-func main() {
-    // Create a new parser (syntax highlighting enabled by default)
-    p := parser.New()
-
-    // Parse a single markdown file
-    postsFS := os.DirFS("posts/")
-    post, err := p.ParseFile(context.Background(), postsFS, "my-post.md")
-    if err != nil {
-        log.Fatal(err)
-    }
-
-    fmt.Printf("Title: %s\n", post.Title)
-    fmt.Printf("Date: %s\n", post.FormattedDate())
-    fmt.Printf("Tags: %v\n", post.Tags)
-}
-```
-
-### Parsing Multiple Posts
-
-```go
-// Parse all markdown files in a directory
-posts, err := p.ParseDirectory(context.Background(), postsFS)
-if err != nil {
-    log.Fatal(err)
-}
-
-// Sort by date and filter by tag
-posts.SortByDate()
-goPosts := posts.FilterByTag("go")
-
-fmt.Printf("Found %d posts about Go\n", len(goPosts))
-```
-
-## Documentation
-
-Full API documentation is available at:
-- **pkg.go.dev**: https://pkg.go.dev/github.com/harrydayexe/GoBlog/v2
-
-## Markdown Post Format
-
-Posts are written in Markdown with YAML frontmatter:
-
-```markdown
----
-title: "My Blog Post Title"
-date: 2024-01-15
-description: "A brief description of the post"
-tags: ["go", "blogging", "markdown"]
-author: "Jane Doe"
----
-
-# Post Content
-
-Your blog post content goes here with **full Markdown support**.
-
-\`\`\`go
-func main() {
-    fmt.Println("Code highlighting included!")
-}
-\`\`\`
-```
-
-The `author` field is optional. When omitted, `Post.Author` is an empty string and no error is returned. Access it in a custom post template via `{{.Post.Author}}`.
-
-## CLI Usage
-
-```bash
-# Generate static blog (alias: goblog g)
+# Generate static files
 goblog generate posts/ output/
 
-# Serve blog locally
-goblog serve posts/ --port 8080
+# Serve locally
+goblog serve posts/
 ```
 
 ### `generate` flags
@@ -147,597 +45,91 @@ goblog serve posts/ --port 8080
 | `--root-path` | `-p` | `/` | Blog root path for subdirectory deployment |
 | `--template-dir` | `-t` | built-in | Path to a custom template directory |
 
-## Advanced Features
+## Docker
 
-### Syntax Highlighting CSS
+The official image is [`harrydayexe/goblog`](https://hub.docker.com/repository/docker/harrydayexe/goblog/general). It runs `goblog serve /posts` by default and exposes port `8080`.
 
-The parser renders code blocks using **CSS classes** (via chroma's `html.WithClasses` option) rather than inline styles. This keeps the generated HTML clean but means you must include a matching stylesheet in your templates.
-
-Generate the stylesheet for any [chroma style](https://github.com/alecthomas/chroma/tree/master/styles) at startup and embed it in a `<style>` tag:
-
-```go
-import (
-    chromahtml "github.com/alecthomas/chroma/v2/formatters/html"
-    "github.com/alecthomas/chroma/v2/styles"
-    "strings"
-)
-
-formatter := chromahtml.New(chromahtml.WithClasses(true))
-style := styles.Get("monokai") // choose any chroma style name
-var sb strings.Builder
-formatter.WriteCSS(&sb, style)
-chromaCSS := sb.String() // embed in a <style> tag in your template
-```
-
-There is currently no API to change the highlighter style from within GoBlog — pick whichever style you like when generating the stylesheet above and the CSS class names will match.
-
-The CSS class names follow the Pygments short-name convention (`.k` for keyword, `.s` for string, `.nf` for function name, etc.). A full reference is in [chroma's types.go](https://github.com/alecthomas/chroma/blob/master/types.go).
-
-Footnotes are disabled by default. Enable them with `parser.WithFootnote()`:
-
-```go
-p := parser.New(parser.WithFootnote())
-```
-
-### Raw Output Mode
-
-GoBlog supports raw HTML output mode for advanced use cases where you need direct access to the generated HTML without template wrappers. This is useful when:
-
-- Integrating GoBlog output into an existing site or CMS
-- Building custom templates in your own application
-- Embedding blog content in other HTML frameworks
-- Processing HTML content programmatically before display
-
-#### Using Raw Output with the CLI
+Mount your Markdown posts directory to `/posts`:
 
 ```bash
-# Generate raw HTML files without templates
-goblog generate posts/ output/ --raw
-
-# Or use the short flag
-goblog generate posts/ output/ -r
+docker run -v ./posts:/posts -p 8080:8080 harrydayexe/goblog
 ```
 
-When raw output mode is enabled:
-- Individual post files (under `posts/`) contain only the parsed Markdown converted to HTML
-- No template wrapping is applied to the content
-- The `tags/` directory is not created (tag pages are skipped)
-- `index.html` is still written by `DirectoryWriter` but its body is empty
-
-#### Using Raw Output with the Go API
-
-```go
-package main
-
-import (
-    "context"
-    "os"
-
-    "github.com/harrydayexe/GoBlog/v2/pkg/config"
-    "github.com/harrydayexe/GoBlog/v2/pkg/generator"
-    "github.com/harrydayexe/GoBlog/v2/pkg/outputter"
-)
-
-func main() {
-    // Create generator with raw output enabled (no renderer needed in raw mode)
-    fsys := os.DirFS("posts/")
-    gen := generator.New(fsys, nil, config.WithRawOutput())
-
-    // Generate the blog
-    blog, err := gen.Generate(context.Background())
-    if err != nil {
-        panic(err)
-    }
-
-    // Access raw HTML bytes directly
-    for slug, htmlContent := range blog.Posts {
-        // Process or wrap htmlContent as needed
-        // htmlContent contains only the parsed Markdown as HTML
-    }
-
-    // Write to disk with raw output mode
-    writer := outputter.NewDirectoryWriter("output/", config.WithRawOutput())
-    writer.HandleGeneratedBlog(context.Background(), blog)
-}
-```
-
-#### What to Expect from Raw Output
-
-When `RawOutput` is enabled, the `GeneratedBlog` structure contains:
-
-- **`Posts` map**: Keys are post slugs (derived from post titles or filenames), values are raw HTML byte slices containing only the Markdown content converted to HTML
-- **`Index` field**: Empty in raw mode — no index page is generated
-- **`Tags` map**: Empty — tag pages are not generated in raw output mode
-- **`TagsIndex` field**: Empty — tags index is not generated in raw output mode
-
-The HTML content is clean, semantic HTML generated from your Markdown without any surrounding structure like `<html>`, `<head>`, or `<body>` tags. This gives you complete control over how to integrate the content into your site.
-
-### Disable Tags Mode
-
-GoBlog can be configured to skip all tag-related output while still applying full templates to posts and the index page. This is useful when:
-
-- Your content is not taxonomy-driven and you don't need tag pages
-- You want a simpler site structure without a `/tags/` section
-- You are using a custom navigation scheme in place of GoBlog's built-in tag pages
-
-#### Using Disable Tags with the CLI
+Pass any `serve` flags after the image name — re-supply the posts path as the first argument:
 
 ```bash
-# Generate without tag pages
-goblog generate posts/ output/ --disable-tags
-
-# Or use the short flag
-goblog generate posts/ output/ -T
-
-# Also works with serve
-goblog serve posts/ --disable-tags
+docker run -v ./posts:/posts -p 9000:9000 harrydayexe/goblog /posts --port 9000
+docker run -v ./posts:/posts -p 8080:8080 harrydayexe/goblog /posts --root-path /blog/
 ```
 
-When disable tags mode is enabled:
-- Individual post files are rendered with full templates; with the default templates, per-post tag pills are hidden
-- The `tags/` directory is not created — no individual tag pages or tags index
-- `index.html` is rendered as normal; with the default templates, the "Tags" nav link in the header is hidden
-- The `/tags` and `/tags/{tag}` routes return 404 in serve mode
-
-#### Using Disable Tags with the Go API
-
-```go
-package main
-
-import (
-    "context"
-    "os"
-
-    "github.com/harrydayexe/GoBlog/v2/pkg/config"
-    "github.com/harrydayexe/GoBlog/v2/pkg/generator"
-    "github.com/harrydayexe/GoBlog/v2/pkg/outputter"
-    "github.com/harrydayexe/GoBlog/v2/pkg/templates"
-)
-
-func main() {
-    fsys := os.DirFS("posts/")
-    renderer, _ := generator.NewTemplateRenderer(templates.Default)
-    gen := generator.New(fsys, renderer, config.WithDisableTags())
-
-    blog, err := gen.Generate(context.Background())
-    if err != nil {
-        panic(err)
-    }
-
-    // blog.Tags is an empty map; blog.TagsIndex is nil
-    // blog.Posts and blog.Index contain fully-rendered HTML without tag UI
-
-    writer := outputter.NewDirectoryWriter("output/", config.WithDisableTags())
-    writer.HandleGeneratedBlog(context.Background(), blog)
-}
-```
-
-#### What to Expect from Disable Tags Output
-
-When `DisableTags` is enabled, the `GeneratedBlog` structure contains:
-
-- **`Posts` map**: Keys are post slugs, values are fully-templated HTML pages; with the default templates, tag pills are not rendered
-- **`Index` field**: Fully-templated index page; with the default templates, the "Tags" nav link is not rendered
-- **`Tags` map**: Empty — individual tag pages are not generated
-- **`TagsIndex` field**: Empty — the tags index page is not generated
-
-#### Custom Templates and TagsEnabled
-
-The `BaseData` struct passed to all templates includes a `TagsEnabled bool` field. Custom templates should use this field to conditionally render tag-related UI:
-
-```html
-{{if .TagsEnabled}}
-<a href="{{.BlogRoot}}tags">Tags</a>
-{{end}}
-```
-
-The built-in templates already respect this field. If you provide custom templates that unconditionally render tag links, those links will still appear even when `--disable-tags` is set — update them to gate on `{{.TagsEnabled}}`.
-
-### Reading Time
-
-By default, GoBlog computes an estimated reading time for each post and the default templates display it inline next to the post date (e.g. `March 15, 2026 · 5 min read`). Reading time is calculated by stripping HTML tags from the rendered content, counting whitespace-separated words, and dividing by **220 WPM** with ceiling rounding and a 1-minute floor.
-
-#### Using Disable Reading Time with the CLI
+For custom templates, mount your template directory and use `--template-dir`:
 
 ```bash
-# Generate without reading time annotations
-goblog generate posts/ output/ --disable-reading-time
-
-# Also works with serve
-goblog serve posts/ --disable-reading-time
+docker run \
+  -v ./posts:/posts \
+  -v ./mytheme:/mytheme \
+  -p 8080:8080 \
+  harrydayexe/goblog /posts --template-dir /mytheme
 ```
 
-When reading time is disabled:
-- `Post.ReadingTimeMinutes` is left at zero for all posts
-- The default templates suppress the `· N min read` annotation (they guard it with `{{if .Post.ReadingTimeMinutes}}`)
-- No other output changes — posts, index, and tag pages are unaffected
+## Library
 
-#### Using Disable Reading Time with the Go API
-
-```go
-gen := generator.New(fsys, renderer, config.WithDisableReadingTime())
-```
-
-#### Custom Templates and ReadingTimeMinutes
-
-The `Post` struct includes a `ReadingTimeMinutes int` field (zero when disabled). Custom templates can render it conditionally:
-
-```html
-{{if .Post.ReadingTimeMinutes}} · {{.Post.ReadingTimeMinutes}} min read{{end}}
-```
-
-### Blog Root Configuration
-
-When deploying your blog at a subdirectory rather than the root of your domain (e.g., `example.com/blog/` instead of `example.com/`), you need to configure the blog root path. This ensures all generated links in templates use the correct base path.
-
-#### Using Blog Root with the CLI
+Add GoBlog as a dependency:
 
 ```bash
-# Generate blog for deployment at /blog/ subdirectory
-goblog generate posts/ output/ --root-path /blog/
-
-# Or use the short flag
-goblog generate posts/ output/ -p /blog/
-
-# Serve blog locally with custom root path
-goblog serve posts/ --root-path /blog/ --port 8080
+go get github.com/harrydayexe/GoBlog/v2
 ```
 
-When blog root is configured:
-- All internal links (navigation, post links, tag links) will use the specified root path
-- Links are generated as `/blog/posts/my-post.html` instead of `/posts/my-post.html`
-- Home links point to `/blog/` instead of `/`
-- Tag links use `/blog/tags/tag-name.html` instead of `/tags/tag-name.html`
-
-#### Using Blog Root with the Go API
-
-```go
-package main
-
-import (
-    "context"
-    "os"
-
-    "github.com/harrydayexe/GoBlog/v2/pkg/config"
-    "github.com/harrydayexe/GoBlog/v2/pkg/generator"
-    "github.com/harrydayexe/GoBlog/v2/pkg/outputter"
-)
-
-func main() {
-    // Create generator with blog root for subdirectory deployment
-    fsys := os.DirFS("posts/")
-    renderer, _ := generator.NewTemplateRenderer(templates.Default)
-    gen := generator.New(fsys, renderer, config.WithBlogRoot("/blog/"))
-
-    // Generate the blog
-    blog, err := gen.Generate(context.Background())
-    if err != nil {
-        panic(err)
-    }
-
-    // Write to disk - all links will use /blog/ prefix
-    writer := outputter.NewDirectoryWriter("output/")
-    writer.HandleGeneratedBlog(context.Background(), blog)
-}
-```
-
-#### Common Use Cases
-
-**Root Deployment (Default)**:
-```bash
-# Blog at example.com/
-goblog generate posts/ output/
-# Links: /posts/slug.html, /tags/tag.html, /
-```
-
-**Subdirectory Deployment**:
-```bash
-# Blog at example.com/blog/
-goblog generate posts/ output/ --root-path /blog/
-# Links: /blog/posts/slug.html, /blog/tags/tag.html, /blog/
-```
-
-**Nested Subdirectory**:
-```bash
-# Blog at example.com/docs/blog/
-goblog generate posts/ output/ --root-path /docs/blog/
-# Links: /docs/blog/posts/slug.html, /docs/blog/tags/tag.html, /docs/blog/
-```
-
-### Static Deployment and `.html` URLs
-
-When GoBlog generates static files to disk (`goblog generate` or `outputter.DirectoryWriter`),
-each page is written as a `.html` file — `posts/my-post.html`, `tags/golang.html`,
-`index.html`, and so on. The `{{.Path}}` field in template data should therefore contain
-the `.html`-suffixed URL so that Open Graph tags and canonical links point at the actual
-file.
-
-**The `goblog generate` CLI enables this automatically.** No flag is needed; every
-generated site has `.html`-suffixed paths in its template data:
-
-```
-# BlogRoot = "/"                  # BlogRoot = "/blog/"
-Index:     /index.html            /blog.html
-Post:      /posts/slug.html       /blog/posts/slug.html
-Tag:       /tags/golang.html      /blog/tags/golang.html
-Tags idx:  /tags.html             /blog/tags.html
-```
-
-#### Using `WithHTMLPaths()` in the Go API
-
-If you write static output programmatically (without the CLI), pass
-`config.WithHTMLPaths()` to the generator:
-
-```go
-gen := generator.New(fsys, renderer,
-    config.WithHTMLPaths(),
-    config.WithBlogRoot("/blog/"),
-)
-```
-
-Without this option (the default), paths are clean URLs with no extension — suitable
-for use with `pkg/server` or any host that maps clean URLs to `.html` files.
-
-#### Serving `.html` URLs
-
-`pkg/server` automatically accepts both `/posts/my-post` and `/posts/my-post.html`.
-The built-in `middleware.NewStripHTMLExtension` middleware rewrites `.html` request
-paths to their clean forms before routing, so clients or search engines that follow
-static `.html` links will be served correctly without any extra configuration.
-
-### Custom Templates
-
-GoBlog ships with built-in templates (`templates.Default`) but you can supply
-any `fs.FS` — e.g. `os.DirFS("./mytheme")` — to `generator.NewTemplateRenderer`
-for a fully custom theme.
-
-#### Required directory layout
-
-Your template root must contain:
-
-```
-mytheme/
-  pages/
-    post.tmpl          receives models.PostPageData
-    index.tmpl         receives models.IndexPageData
-    tag.tmpl           receives models.TagPageData
-    tags-index.tmpl    receives models.TagsIndexPageData
-  partials/
-    head.tmpl          must {{define "head"}}
-    header.tmpl        must {{define "header"}}
-    footer.tmpl        must {{define "footer"}}
-    post-card.tmpl     must {{define "post-card"}}
-  layouts/             optional — loaded but not executed by default
-```
-
-Each page template is a complete HTML document. It pulls in partials with:
-
-```html
-{{template "head" .}}
-{{template "header" .}}
-{{template "footer" .}}
-```
-
-The `post-card` partial is referenced inside `index.tmpl` and `tag.tmpl` when
-ranging over a list of posts.
-
-#### Template data
-
-Every page template receives a struct that embeds
-[`models.BaseData`](https://pkg.go.dev/github.com/harrydayexe/GoBlog/v2/pkg/models#BaseData)
-(`SiteTitle`, `PageTitle`, `Description`, `Year`, `BlogRoot`, `Environment`,
-`TagsEnabled`, `Custom`, `Path`), plus page-specific fields:
-
-`Path` is the full site-relative path of the page including `BlogRoot` and without a `.html` extension (e.g. `/blog/posts/my-first-post`, `/blog/tags/golang`, `/blog/`). Use it to build canonical URLs or Open Graph tags:
-
-```html
-<meta property="og:url" content="https://example.com{{.Path}}">
-```
-
-| Template | Data struct | Extra fields |
-|---|---|---|
-| `pages/post.tmpl` | [`PostPageData`](https://pkg.go.dev/github.com/harrydayexe/GoBlog/v2/pkg/models#PostPageData) | `.Post *Post` (includes `.Post.ReadingTimeMinutes int`) |
-| `pages/index.tmpl` | [`IndexPageData`](https://pkg.go.dev/github.com/harrydayexe/GoBlog/v2/pkg/models#IndexPageData) | `.Posts PostList`, `.TotalPosts int` |
-| `pages/tag.tmpl` | [`TagPageData`](https://pkg.go.dev/github.com/harrydayexe/GoBlog/v2/pkg/models#TagPageData) | `.Tag string`, `.Posts []*Post`, `.PostCount int` — not rendered when `--disable-tags` is set |
-| `pages/tags-index.tmpl` | [`TagsIndexPageData`](https://pkg.go.dev/github.com/harrydayexe/GoBlog/v2/pkg/models#TagsIndexPageData) | `.Tags []TagInfo`, `.TotalTags int` — not rendered when `--disable-tags` is set |
-
-#### Template helpers (FuncMap)
-
-| Name | Signature | Example output |
-|---|---|---|
-| `formatDate` | `func(t time.Time) string` | `"January 2, 2006"` |
-| `shortDate` | `func(t time.Time) string` | `"Jan 2, 2006"` |
-| `year` | `func() int` | `2025` |
-
-#### Go API example
-
-```go
-package main
-
-import (
-    "context"
-    "os"
-
-    "github.com/harrydayexe/GoBlog/v2/pkg/config"
-    "github.com/harrydayexe/GoBlog/v2/pkg/generator"
-    "github.com/harrydayexe/GoBlog/v2/pkg/outputter"
-)
-
-func main() {
-    // Use a custom template directory
-    renderer, err := generator.NewTemplateRenderer(os.DirFS("./mytheme"))
-    if err != nil {
-        panic(err)
-    }
-
-    fsys := os.DirFS("posts/")
-    gen := generator.New(fsys, renderer, config.WithBlogRoot("/blog/"))
-
-    blog, err := gen.Generate(context.Background())
-    if err != nil {
-        panic(err)
-    }
-
-    writer := outputter.NewDirectoryWriter("output/")
-    writer.HandleGeneratedBlog(context.Background(), blog)
-}
-```
-
-To use the built-in templates instead, replace `os.DirFS("./mytheme")` with
-`templates.Default` (from `github.com/harrydayexe/GoBlog/v2/pkg/templates`).
-
-## Go Package Reference
+The main packages are:
 
 | Package | Summary |
 |---|---|
 | [`pkg/parser`](https://pkg.go.dev/github.com/harrydayexe/GoBlog/v2/pkg/parser) | Parse Markdown + YAML frontmatter into `Post` objects |
-| [`pkg/models`](https://pkg.go.dev/github.com/harrydayexe/GoBlog/v2/pkg/models) | Core data types: `Post`, `PostList`, page data structs |
-| [`pkg/generator`](https://pkg.go.dev/github.com/harrydayexe/GoBlog/v2/pkg/generator) | Convert a directory of posts into a `GeneratedBlog` in memory |
-| [`pkg/outputter`](https://pkg.go.dev/github.com/harrydayexe/GoBlog/v2/pkg/outputter) | Write a `GeneratedBlog` to disk; implement `Outputter` for custom destinations |
-| [`pkg/server`](https://pkg.go.dev/github.com/harrydayexe/GoBlog/v2/pkg/server) | HTTP server with atomic live-reload via `Server.UpdatePosts` |
-| [`pkg/config`](https://pkg.go.dev/github.com/harrydayexe/GoBlog/v2/pkg/config) | Functional options: `WithRawOutput`, `WithDisableTags`, `WithDisableReadingTime`, `WithSiteTitle`, `WithBlogRoot`, `WithEnvironment`, `WithPort`, `WithHost`, `WithMiddleware`, `WithFuncs`, `WithCustomData`, `WithHTMLPaths` |
+| [`pkg/generator`](https://pkg.go.dev/github.com/harrydayexe/GoBlog/v2/pkg/generator) | Convert a posts directory into a `GeneratedBlog` in memory |
+| [`pkg/outputter`](https://pkg.go.dev/github.com/harrydayexe/GoBlog/v2/pkg/outputter) | Write a `GeneratedBlog` to disk or a custom destination |
+| [`pkg/server`](https://pkg.go.dev/github.com/harrydayexe/GoBlog/v2/pkg/server) | Embeddable HTTP server with atomic live-reload |
+| [`pkg/config`](https://pkg.go.dev/github.com/harrydayexe/GoBlog/v2/pkg/config) | Functional options for generator, outputter, and server |
+| [`pkg/models`](https://pkg.go.dev/github.com/harrydayexe/GoBlog/v2/pkg/models) | Core data types: `Post`, `PostList`, template data structs |
 | [`pkg/templates`](https://pkg.go.dev/github.com/harrydayexe/GoBlog/v2/pkg/templates) | Embedded default templates (`templates.Default`) |
 
-### Site title
+A minimal generate-and-write example:
 
 ```go
-gen := generator.New(fsys, renderer, config.WithSiteTitle("My Blog"))
-```
+package main
 
-### Runtime environment
-
-GoBlog surfaces the environment to all templates as `{{.Environment}}`. Set it via the `ENVIRONMENT` env var (default `"local"`, valid values: `"local"`, `"test"`, `"production"`), or pass it directly:
-
-```go
-gen := generator.New(fsys, renderer, config.WithEnvironment("production"))
-```
-
-Use it in templates to gate environment-specific markup:
-
-```html
-{{if eq .Environment "production"}}<script src="/analytics.js"></script>{{end}}
-```
-
-### Custom template functions
-
-Register your own Go functions to call from any template. Pass one or more `config.WithFuncs` options to `generator.NewTemplateRenderer`:
-
-```go
 import (
-    "html/template"
-    "strings"
+    "context"
+    "os"
 
-    "github.com/harrydayexe/GoBlog/v2/pkg/config"
     "github.com/harrydayexe/GoBlog/v2/pkg/generator"
+    "github.com/harrydayexe/GoBlog/v2/pkg/outputter"
     "github.com/harrydayexe/GoBlog/v2/pkg/templates"
 )
 
-renderer, err := generator.NewTemplateRenderer(
-    templates.Default,
-    config.WithFuncs(template.FuncMap{
-        "upper": strings.ToUpper,
-    }),
-)
-```
+func main() {
+    fsys := os.DirFS("posts/")
+    renderer, err := generator.NewTemplateRenderer(templates.Default)
+    if err != nil {
+        panic(err)
+    }
 
-In a template:
+    gen := generator.New(fsys, renderer)
+    blog, err := gen.Generate(context.Background())
+    if err != nil {
+        panic(err)
+    }
 
-```html
-<h1>{{upper .Post.Title}}</h1>
-```
-
-Multiple `WithFuncs` calls accumulate; later registrations overwrite earlier ones for the same key.
-
-The built-in helpers (`formatDate`, `shortDate`, `year`) remain available unless intentionally replaced. Registering a function whose name matches a built-in **replaces it and logs a warning** — useful for a custom date format, but a footgun if done accidentally.
-
-> **Security:** `html/template`'s contextual auto-escaping is bypassed for any function that returns `template.HTML`, `template.JS`, `template.JSStr`, `template.URL`, `template.CSS`, or `template.HTMLAttr`. Never use those return types with values derived from user-controlled input — doing so opts the value out of escaping and creates an XSS sink. Return plain `string` instead and let `html/template` escape at render time.
-
-When using the embedded HTTP server, supply renderer options via `ServerConfig.RendererOpts`:
-
-```go
-cfg := config.ServerConfig{
-    RendererOpts: []config.RendererOption{
-        config.WithFuncs(template.FuncMap{"upper": strings.ToUpper}),
-    },
+    writer := outputter.NewDirectoryWriter("output/")
+    writer.HandleGeneratedBlog(context.Background(), blog)
 }
 ```
 
-### Custom template data
-
-Inject arbitrary key-value data from your application into every rendered page. Supply a `map[string]any` via `config.WithCustomData` when constructing the generator:
-
-```go
-gen := generator.New(fsys, renderer,
-    config.WithCustomData(map[string]any{
-        "author":      "Jane Smith",
-        "analyticsID": "UA-12345",
-    }),
-)
-```
-
-The values are accessible in all templates as `{{.Custom.key}}`:
-
-```html
-{{with .Custom}}
-<meta name="author" content="{{.author}}">
-<script>var _id = "{{.analyticsID}}";</script>
-{{end}}
-```
-
-`{{.Custom}}` is `nil` when no `WithCustomData` option is supplied — templates should guard access with `{{with .Custom}}` or `{{if .Custom}}`.
-
-Multiple `WithCustomData` calls merge their maps; later values overwrite earlier ones for duplicate keys.
-
-> **Security:** Store only plain, immutable values (strings, numbers, booleans) in the custom data map. Do not pre-wrap values in `template.HTML`, `template.JS`, or other sanitised wrapper types — those bypass `html/template`'s contextual auto-escaping and become XSS sinks if the value originates from user-controlled input. Do not construct custom data from untrusted input at request time; this map is for static, developer-controlled values only.
-
-### Serving programmatically
-
-`pkg/server` provides `Server`, which supports atomic handler hot-swapping — new posts can be loaded without restarting the process:
-
-```go
-cfg := config.ServerConfig{
-    Server: []config.BaseServerOption{
-        config.WithPort(8080),
-        config.WithMiddleware(logging.New(logger)),
-    },
-    Gen: []config.GeneratorOption{
-        config.WithSiteTitle("My Blog"),
-    },
-}
-
-srv, err := server.New(logger, os.DirFS("posts/"), cfg)
-if err != nil {
-    log.Fatal(err)
-}
-
-// Swap in new posts atomically while running:
-srv.UpdatePosts(os.DirFS("posts/"), context.Background())
-
-// Block until SIGINT/SIGTERM:
-srv.Run(context.Background())
-```
-
-### Custom output destination
-
-Implement the `outputter.Outputter` interface to write generated content anywhere (database, S3, etc.):
-
-```go
-type Outputter interface {
-    HandleGeneratedBlog(context.Context, *generator.GeneratedBlog) error
-}
-```
-
-## Docker Usage
-
-```bash
-# Run blog server in container
-docker run -v ./posts:/posts -p 8080:8080 goblog/goblog serve /posts
-```
+Full API documentation, including all config options and template data types, is at [pkg.go.dev/github.com/harrydayexe/GoBlog/v2](https://pkg.go.dev/github.com/harrydayexe/GoBlog/v2).
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit issues or pull requests.
+Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for how to set up the project, run tests, and submit pull requests.
 
 ## License
 
-GNU General Public License v3.0 - see [LICENSE](LICENSE) file for details.
+GNU General Public License v3.0 — see [LICENSE](LICENSE) for details.

@@ -39,22 +39,22 @@ clean:
     @echo "✓ Clean complete"
 
 # Run all tests
-[group("dev")]
+[group("test")]
 test:
     go test ./...
 
 # Run tests with verbose output
-[group("dev")]
+[group("test")]
 test-verbose:
     go test -v ./...
 
 # Run tests with race detector
-[group("dev")]
+[group("test")]
 test-race:
     go test -race ./...
 
 # Run tests with coverage profile
-[group("dev")]
+[group("test")]
 test-coverage:
     @echo "Running tests with coverage..."
     @mkdir -p {{COVERAGE_DIR}}
@@ -63,7 +63,7 @@ test-coverage:
     @go tool cover -func={{COVERAGE_DIR}}/coverage.out | tail -1
 
 # Generate HTML coverage report
-[group("dev")]
+[group("test")]
 coverage-html: test-coverage
     @echo "Generating HTML coverage report..."
     go tool cover -html={{COVERAGE_DIR}}/coverage.out -o {{COVERAGE_DIR}}/coverage.html
@@ -72,7 +72,7 @@ coverage-html: test-coverage
     @open {{COVERAGE_DIR}}/coverage.html 2>/dev/null || xdg-open {{COVERAGE_DIR}}/coverage.html 2>/dev/null || echo "Please open {{COVERAGE_DIR}}/coverage.html manually"
 
 # Run complete test suite (CI/CD simulation)
-[group("dev")]
+[group("test")]
 test-all:
     @echo "Running complete test suite (CI/CD workflow)..."
     @echo "\n=== Stage 1: go vet ==="
@@ -103,6 +103,16 @@ fmt-check:
 # Run all linting checks
 [group("lint")]
 lint: vet fmt-check
+
+# Check license headers exist
+[group("lint")]
+check-license:
+    addlicense -check ./
+
+# Add license headers
+[group("lint")]
+add-license:
+    addlicense -l mpl -c "GoBlog Authors" ./
 
 # Run generator command with arguments
 [group('run')]
