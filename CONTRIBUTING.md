@@ -28,19 +28,7 @@ an acknowledgement within a few days.
 ```
 cmd/goblog/          CLI entry point (main package)
 pkg/                 Public, importable packages
-  config/            Configuration parsing
-  generator/         Static site generation
-  models/            Core data types (Post, etc.)
-  outputter/         Output destination abstraction
-  parser/            Markdown + YAML frontmatter parser
-  server/            HTTP server
-  templates/         Default HTML templates
 internal/            Private implementation details
-  errors/            Sentinel errors
-  generator/         Generator internals
-  logger/            Logging helpers
-  server/            Server internals
-  utilities/         Shared helpers
 docs/example-posts/  Sample Markdown posts for local runs
 .github/workflows/   CI: tests, license-header check, release
 ```
