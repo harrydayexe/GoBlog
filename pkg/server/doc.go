@@ -118,6 +118,19 @@
 // The handler swap is atomic - in-flight requests complete with the old handler
 // while new requests immediately see the updated content.
 //
+// For automatic filesystem-triggered reloads, use pkg/watcher alongside
+// UpdatePosts. The watcher watches a directory tree for changes and invokes
+// a callback (debounced) on each change:
+//
+//	postsPath := "posts/"
+//	w, err := watcher.New(postsPath, watcher.WithLogger(logger))
+//	if err != nil {
+//	    log.Fatal(err)
+//	}
+//	go w.Run(ctx, func(ctx context.Context) {
+//	    srv.UpdatePosts(os.DirFS(postsPath), ctx)
+//	})
+//
 // # Concurrency
 //
 // All Server methods are safe for concurrent use by multiple goroutines.

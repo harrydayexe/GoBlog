@@ -44,15 +44,22 @@ goblog serve posts/
 | `--disable-reading-time` | | `false` | Disable reading time estimation on posts |
 | `--root-path` | `-p` | `/` | Blog root path for subdirectory deployment |
 | `--template-dir` | `-t` | built-in | Path to a custom template directory |
+| `--watch` | `-w` | `false` | Watch the posts directory and regenerate on changes |
 
 ## Docker
 
-The official image is [`harrydayexe/goblog`](https://hub.docker.com/repository/docker/harrydayexe/goblog/general). It runs `goblog serve /posts` by default and exposes port `8080`.
+The official image is [`harrydayexe/goblog`](https://hub.docker.com/repository/docker/harrydayexe/goblog/general). It runs `goblog serve /posts` by default and exposes port `8080`. File watching is off by default; pass `--watch` to enable it.
 
 Mount your Markdown posts directory to `/posts`:
 
 ```bash
 docker run -v ./posts:/posts -p 8080:8080 harrydayexe/goblog
+```
+
+To watch for post changes and reload automatically:
+
+```bash
+docker run -v ./posts:/posts -p 8080:8080 harrydayexe/goblog /posts --watch
 ```
 
 Pass any `serve` flags after the image name — re-supply the posts path as the first argument:
