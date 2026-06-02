@@ -55,5 +55,11 @@ var ServeCommand cli.Command = cli.Command{
 			Usage: "disable reading time estimation on posts",
 			Value: false,
 		},
+		&cli.BoolFlag{
+			Name:    WatchFlagName,
+			Aliases: []string{"w"},
+			Usage:   "watch the posts directory and regenerate the blog on changes",
+			Value:   false,
+		},
 	},
 }

@@ -24,3 +24,6 @@ const DisableTagsFlagName = "disable-tags"
 
 // DisableReadingTimeFlagName is the CLI flag name for disabling reading time estimation.
 const DisableReadingTimeFlagName = "disable-reading-time"
+
+// WatchFlagName is the CLI flag name for enabling filesystem watching.
+const WatchFlagName = "watch"

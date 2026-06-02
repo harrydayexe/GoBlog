@@ -10,12 +10,16 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"testing/fstest"
+	"time"
 
 	"github.com/harrydayexe/GoBlog/v2/pkg/config"
 	pkgserver "github.com/harrydayexe/GoBlog/v2/pkg/server"
+	"github.com/harrydayexe/GoBlog/v2/pkg/watcher"
 )
 
 var testPost = strings.TrimSpace(`
@@ -52,7 +56,7 @@ func TestRunServe_CanceledContext(t *testing.T) {
 		Server: []config.BaseServerOption{config.WithPort(0)},
 	}
 
-	err := runServe(ctx, discardLogger(), testFS(), cfg)
+	err := runServe(ctx, discardLogger(), t.TempDir(), testFS(), cfg, false)
 	if err != nil {
 		t.Errorf("runServe() with canceled context error = %v, want nil", err)
 	}
@@ -134,4 +138,86 @@ func TestRunServe_BlogRoot(t *testing.T) {
 	if rec2.Code != http.StatusNotFound {
 		t.Errorf("GET / with blog root status = %d, want %d", rec2.Code, http.StatusNotFound)
 	}
+}
+
+// TestRunServe_WatchBadPath verifies that runServe fails fast when --watch is
+// enabled but the posts path does not exist.
+func TestRunServe_WatchBadPath(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	cfg := config.ServerConfig{
+		Server: []config.BaseServerOption{config.WithPort(0)},
+	}
+
+	err := runServe(ctx, discardLogger(), "/nonexistent/goblog/watch/test", testFS(), cfg, true)
+	if err == nil {
+		t.Error("runServe() with watch=true and bad path returned nil, want error")
+	}
+}
+
+// TestRunServe_WatchReloadsPost verifies that writing a new post file to a
+// watched directory causes it to be served by the server. It wires
+// pkg/watcher and pkg/server together directly, mirroring the integration
+// that runServe performs.
+func TestRunServe_WatchReloadsPost(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+
+	if err := os.WriteFile(filepath.Join(dir, "test-post.md"), []byte(testPost), 0o644); err != nil {
+		t.Fatalf("WriteFile error = %v", err)
+	}
+
+	cfg := config.ServerConfig{
+		Server: []config.BaseServerOption{config.WithPort(0)},
+	}
+
+	srv, err := pkgserver.New(discardLogger(), os.DirFS(dir), cfg)
+	if err != nil {
+		t.Fatalf("server.New() error = %v", err)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+
+	w, err := watcher.New(dir, config.WithDebounce(50*time.Millisecond))
+	if err != nil {
+		t.Fatalf("watcher.New() error = %v", err)
+	}
+	go w.Run(ctx, func(ctx context.Context) { //nolint:errcheck
+		if err := srv.UpdatePosts(os.DirFS(dir), ctx); err != nil {
+			t.Logf("UpdatePosts error: %v", err)
+		}
+	})
+
+	// Give the watcher time to start.
+	time.Sleep(100 * time.Millisecond)
+
+	newPost := strings.TrimSpace(`
+---
+title: New Post
+description: A new post
+date: 2024-06-01
+tags: [new]
+---
+
+# New Post
+
+This is a new post.
+`)
+	if err := os.WriteFile(filepath.Join(dir, "new-post.md"), []byte(newPost), 0o644); err != nil {
+		t.Fatalf("WriteFile new-post error = %v", err)
+	}
+
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		rec := httptest.NewRecorder()
+		srv.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/posts/new-post", nil))
+		if rec.Code == http.StatusOK {
+			return
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+	t.Error("new post not available after 5s of watching")
 }

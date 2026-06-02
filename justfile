@@ -91,6 +91,11 @@ vet:
 fmt:
     go fmt ./...
 
+# Run vulncheck on codebase
+[group("lint")]
+vulncheck:
+    govulncheck ./...
+
 # Check if code is formatted
 [group("lint")]
 fmt-check:
