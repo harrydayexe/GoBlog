@@ -69,9 +69,9 @@
 // Only changes to files with a .md extension trigger the onChange callback.
 // All other file types (images, CSS, YAML, etc.) are silently ignored, as
 // are common editor temporary files (dotfiles, *.swp, *~, etc.).
-// Deletion of already-watched directories is not currently handled:
-// the watcher stops receiving events for deleted directory trees but does not
-// error. See the project issue tracker for a planned improvement.
+// Deletion of watched subdirectories releases the corresponding watch
+// descriptor automatically. A subdirectory that is removed and then recreated
+// is re-watched when the parent fires the subsequent Create event.
 //
 // # Concurrency
 //
