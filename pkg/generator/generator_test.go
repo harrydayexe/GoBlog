@@ -690,7 +690,7 @@ func TestGenerate_WithCustomBlogRoot(t *testing.T) {
 	}
 
 	// Create generator with custom blog root
-	gen := New(testFS, renderer, config.WithBaseOption(config.WithBlogRoot("/blog/")))
+	gen := New(testFS, renderer, config.WithBlogRoot("/blog/").AsGeneratorOption())
 
 	ctx := context.Background()
 	blog, err := gen.Generate(ctx)
@@ -814,7 +814,7 @@ func TestWithBlogRoot(t *testing.T) {
 	}
 
 	// With option - should use provided blog root
-	genCustom := New(testFS, nil, config.WithBaseOption(config.WithBlogRoot("/blog/")))
+	genCustom := New(testFS, nil, config.WithBlogRoot("/blog/").AsGeneratorOption())
 	if genCustom.BlogRoot != "/blog/" {
 		t.Errorf("Generator with WithBlogRoot() has BlogRoot = %q, want %q",
 			genCustom.BlogRoot, "/blog/")
@@ -1161,7 +1161,7 @@ func TestGenerate_PathInTemplateData(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			opts := []config.GeneratorOption{config.WithBaseOption(config.WithBlogRoot(tt.blogRoot))}
+			opts := []config.GeneratorOption{config.WithBlogRoot(tt.blogRoot).AsGeneratorOption()}
 			if tt.htmlPaths {
 				opts = append(opts, config.WithHTMLPaths())
 			}
@@ -1502,7 +1502,7 @@ func TestNew_WithLogger(t *testing.T) {
 	var buf bytes.Buffer
 	injected := slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelDebug}))
 
-	gen := New(os.DirFS("testdata"), nil, config.WithBaseOption(config.WithLogger(injected)))
+	gen := New(os.DirFS("testdata"), nil, config.WithLogger(injected).AsGeneratorOption())
 
 	if gen.Logger.Logger != injected {
 		t.Error("WithLogger option was not applied: generator logger does not match injected logger")

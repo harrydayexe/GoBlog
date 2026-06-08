@@ -40,11 +40,11 @@
 //
 // # Logger injection
 //
-// Supply a structured logger via config.WithLogger (a BaseOption, so it must be
-// wrapped with config.WithBaseOption when passed to generator.New):
+// Supply a structured logger via config.WithLogger (a BaseOption, so call
+// AsGeneratorOption to pass it to generator.New):
 //
 //	gen := generator.New(fsys, renderer,
-//	    config.WithBaseOption(config.WithLogger(myLogger)),
+//	    config.WithLogger(myLogger).AsGeneratorOption(),
 //	)
 //
 // # Custom Template Functions

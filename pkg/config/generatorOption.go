@@ -14,7 +14,7 @@ package config
 // This type should not be constructed directly by users. Instead, use the
 // provided option functions like WithRawOutput(), WithDisableTags(),
 // WithDisableReadingTime(), WithSiteTitle(), WithEnvironment(), WithCustomData(),
-// and WithBaseOption().
+// or call [BaseOption.AsGeneratorOption] on a [BaseOption] value.
 type GeneratorOption struct {
 	BaseOption
 
@@ -29,11 +29,21 @@ type GeneratorOption struct {
 
 // WithBaseOption wraps a BaseOption as a GeneratorOption so it can be passed
 // to generator constructors that accept GeneratorOption values.
-// Use this when you have a BaseOption (e.g. from WithBlogRoot) and need to
-// supply it alongside other GeneratorOptions.
+//
+// Deprecated: call [BaseOption.AsGeneratorOption] directly instead.
 func WithBaseOption(baseOption BaseOption) GeneratorOption {
 	return GeneratorOption{
 		BaseOption: baseOption,
+	}
+}
+
+// AsGeneratorOption returns a GeneratorOption that applies this BaseOption to a
+// generator or outputter instance, enabling a BaseOption (e.g. from [WithLogger]
+// or [WithBlogRoot]) to be passed to generator constructors alongside other
+// GeneratorOptions.
+func (o BaseOption) AsGeneratorOption() GeneratorOption {
+	return GeneratorOption{
+		BaseOption: o,
 	}
 }
 

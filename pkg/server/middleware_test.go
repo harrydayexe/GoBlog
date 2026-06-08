@@ -454,10 +454,10 @@ func TestServer_StripsHTMLExtension_BlogRoot(t *testing.T) {
 	cfg := config.ServerConfig{
 		Server: []config.BaseServerOption{
 			config.WithPort(8080),
-			config.BaseServerOption{BaseOption: config.WithBlogRoot("/blog/")},
+			config.WithBlogRoot("/blog/").AsServerOption(),
 		},
 		Gen: []config.GeneratorOption{
-			config.WithBaseOption(config.WithBlogRoot("/blog/")),
+			config.WithBlogRoot("/blog/").AsGeneratorOption(),
 		},
 	}
 

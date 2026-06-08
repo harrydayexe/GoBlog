@@ -17,14 +17,14 @@ import (
 )
 
 // TestNewDirectoryWriter_WithLogger verifies that a logger injected via
-// config.WithLogger (wrapped in WithBaseOption) is stored on the DirectoryWriter.
+// config.WithLogger is stored on the DirectoryWriter.
 func TestNewDirectoryWriter_WithLogger(t *testing.T) {
 	t.Parallel()
 
 	var buf bytes.Buffer
 	injected := slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelDebug}))
 
-	dw := NewDirectoryWriter(t.TempDir(), config.WithBaseOption(config.WithLogger(injected)))
+	dw := NewDirectoryWriter(t.TempDir(), config.WithLogger(injected).AsGeneratorOption())
 
 	if dw.Logger.Logger != injected {
 		t.Error("WithLogger option was not applied: DirectoryWriter logger does not match injected logger")

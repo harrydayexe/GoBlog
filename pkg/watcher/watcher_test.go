@@ -18,8 +18,8 @@ import (
 	"github.com/harrydayexe/GoBlog/v2/pkg/watcher"
 )
 
-// TestNew_WithLogger verifies that a logger injected via config.WithBaseWatcherOption
-// + config.WithLogger is stored on the Watcher.
+// TestNew_WithLogger verifies that a logger injected via config.WithLogger
+// is stored on the Watcher.
 func TestNew_WithLogger(t *testing.T) {
 	t.Parallel()
 
@@ -27,7 +27,7 @@ func TestNew_WithLogger(t *testing.T) {
 	var buf bytes.Buffer
 	injected := slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelDebug}))
 
-	w, err := watcher.New(dir, config.WithBaseWatcherOption(config.WithLogger(injected)))
+	w, err := watcher.New(dir, config.WithLogger(injected).AsWatcherOption())
 	if err != nil {
 		t.Fatalf("New() failed: %v", err)
 	}

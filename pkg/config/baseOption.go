@@ -42,7 +42,7 @@ type Logger struct{ Logger *slog.Logger }
 //
 //	gen := generator.New(fsys, renderer, config.WithLogger(logger))
 //	w, err := watcher.New("posts/", config.WithLogger(logger))
-//	writer := outputter.NewDirectoryWriter("output/", config.WithBaseOption(config.WithLogger(logger)))
+//	writer := outputter.NewDirectoryWriter("output/", config.WithLogger(logger).AsGeneratorOption())
 func WithLogger(l *slog.Logger) BaseOption {
 	return BaseOption{
 		WithLoggerFunc: func(v *Logger) { v.Logger = l },

@@ -64,7 +64,7 @@ type Server struct {
 //
 // Supply a logger via [config.WithLogger] in cfg.Server:
 //
-//	cfg.Server = append(cfg.Server, config.BaseServerOption{BaseOption: config.WithLogger(myLogger)})
+//	cfg.Server = append(cfg.Server, config.WithLogger(myLogger).AsServerOption())
 //
 // Deprecated: the positional logger parameter will be removed in v3.0.0.
 // Pass nil and supply the logger via config.WithLogger in cfg.Server instead.
@@ -113,7 +113,7 @@ func New(logger *slog.Logger, posts fs.FS, opts config.ServerConfig) (*Server, e
 	}
 
 	// Propagate the server's resolved logger into the generator.
-	genOpts := append(opts.Gen, config.WithBaseOption(srv.Logger.AsOption()))
+	genOpts := append(opts.Gen, srv.Logger.AsOption().AsGeneratorOption())
 	gen := generator.New(posts, renderer, genOpts...)
 	srv.generator = gen
 

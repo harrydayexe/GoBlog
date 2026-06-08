@@ -29,7 +29,7 @@
 //	postsPath := "posts/"
 //	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 //
-//	w, err := watcher.New(postsPath, config.WithBaseWatcherOption(config.WithLogger(logger)))
+//	w, err := watcher.New(postsPath, config.WithLogger(logger).AsWatcherOption())
 //	if err != nil {
 //	    log.Fatal(err)
 //	}

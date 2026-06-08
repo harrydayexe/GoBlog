@@ -28,7 +28,7 @@
 //	cfg := config.ServerConfig{
 //	    Server: []config.BaseServerOption{
 //	        config.WithPort(8080),
-//	        config.BaseServerOption{BaseOption: config.WithLogger(logger)},
+//	        config.WithLogger(logger).AsServerOption(),
 //	    },
 //	}
 //
@@ -72,7 +72,7 @@
 //	    Server: []config.BaseServerOption{
 //	        config.WithPort(8080),
 //	        config.WithMiddleware(logging.New(logger)),
-//	        config.BaseServerOption{BaseOption: config.WithLogger(logger)},
+//	        config.WithLogger(logger).AsServerOption(),
 //	    },
 //	}
 //
@@ -125,7 +125,7 @@
 // a callback (debounced) on each change:
 //
 //	postsPath := "posts/"
-//	w, err := watcher.New(postsPath, config.WithBaseWatcherOption(config.WithLogger(logger)))
+//	w, err := watcher.New(postsPath, config.WithLogger(logger).AsWatcherOption())
 //	if err != nil {
 //	    log.Fatal(err)
 //	}

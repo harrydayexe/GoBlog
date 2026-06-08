@@ -75,11 +75,11 @@ func NewServeCommand(ctx context.Context, c *cli.Command) error {
 		if !strings.HasSuffix(blogRoot, "/") {
 			blogRoot += "/"
 		}
-		cfg.Server = append(cfg.Server, config.BaseServerOption{BaseOption: config.WithBlogRoot(blogRoot)})
-		cfg.Gen = append(cfg.Gen, config.WithBaseOption(config.WithBlogRoot(blogRoot)))
+		cfg.Server = append(cfg.Server, config.WithBlogRoot(blogRoot).AsServerOption())
+		cfg.Gen = append(cfg.Gen, config.WithBlogRoot(blogRoot).AsGeneratorOption())
 	}
 
-	cfg.Server = append(cfg.Server, config.BaseServerOption{BaseOption: config.WithLogger(slog.Default())})
+	cfg.Server = append(cfg.Server, config.WithLogger(slog.Default()).AsServerOption())
 	return runServe(ctx, inputPostsDir, postsFsys, cfg, c.Bool(WatchFlagName))
 }
 
@@ -90,7 +90,7 @@ func runServe(ctx context.Context, postsPath string, posts fs.FS, cfg config.Ser
 	}
 
 	if watch {
-		w, err := watcher.New(postsPath, config.WithBaseWatcherOption(srv.Logger.AsOption()))
+		w, err := watcher.New(postsPath, srv.Logger.AsOption().AsWatcherOption())
 		if err != nil {
 			return err
 		}
