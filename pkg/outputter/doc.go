@@ -59,6 +59,12 @@
 //
 // When RawOutput is enabled, the tags directory is not created.
 //
+// Inject a structured logger via config.WithLogger:
+//
+//	writer := outputter.NewDirectoryWriter("output/",
+//	    config.WithLogger(myLogger).AsGeneratorOption(),
+//	)
+//
 // # Concurrency
 //
 // Outputter implementations should be safe for concurrent use. DirectoryWriter

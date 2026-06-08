@@ -53,6 +53,14 @@
 // deploying at example.com/blog/. This ensures all generated links in templates
 // use the correct base path. Default is "/" for root deployment.
 //
+// WithLogger(l *slog.Logger) is a BaseOption that sets the structured logger
+// used by the receiving component. It flows into every constructor that
+// accepts BaseOption values (generator.New via GeneratorOption, server.New via
+// BaseServerOption, outputter.NewDirectoryWriter via GeneratorOption) and into
+// watcher.New via WatcherOption (which embeds BaseOption). When not supplied,
+// each constructor falls back to slog.Default() at construction time. Passing
+// nil has the same effect as omitting the option.
+//
 // WithFuncs(funcs template.FuncMap) is a RendererOption that registers
 // additional template functions for use in all templates. Functions are merged
 // into the built-in FuncMap (formatDate, shortDate, year). A function whose
@@ -78,8 +86,12 @@
 //
 // GeneratorOption carries options for generator.New and outputter.NewDirectoryWriter,
 // including WithRawOutput, WithDisableTags, WithDisableReadingTime, WithSiteTitle,
-// WithEnvironment, WithCustomData, and WithHTMLPaths.
-// BaseServerOption carries options for the HTTP server (port, host, middleware).
+// WithEnvironment, WithCustomData, WithHTMLPaths, and (via the embedded BaseOption)
+// WithLogger and WithBlogRoot.
+// BaseServerOption carries options for the HTTP server (port, host, middleware,
+// and via the embedded BaseOption: WithLogger, WithBlogRoot).
+// WatcherOption carries options for watcher.New (debounce, and via the embedded
+// BaseOption: WithLogger, WithBlogRoot).
 // RendererOption carries options for generator.NewTemplateRenderer (custom funcs).
 // ServerConfig groups all three option types plus a TemplateDir filesystem for
 // the server constructor (server.New).

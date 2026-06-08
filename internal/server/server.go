@@ -75,31 +75,32 @@ func NewServeCommand(ctx context.Context, c *cli.Command) error {
 		if !strings.HasSuffix(blogRoot, "/") {
 			blogRoot += "/"
 		}
-		cfg.Server = append(cfg.Server, config.BaseServerOption{BaseOption: config.WithBlogRoot(blogRoot)})
-		cfg.Gen = append(cfg.Gen, config.WithBaseOption(config.WithBlogRoot(blogRoot)))
+		cfg.Server = append(cfg.Server, config.WithBlogRoot(blogRoot).AsServerOption())
+		cfg.Gen = append(cfg.Gen, config.WithBlogRoot(blogRoot).AsGeneratorOption())
 	}
 
-	return runServe(ctx, slog.Default(), inputPostsDir, postsFsys, cfg, c.Bool(WatchFlagName))
+	cfg.Server = append(cfg.Server, config.WithLogger(slog.Default()).AsServerOption())
+	return runServe(ctx, inputPostsDir, postsFsys, cfg, c.Bool(WatchFlagName))
 }
 
-func runServe(ctx context.Context, logger *slog.Logger, postsPath string, posts fs.FS, cfg config.ServerConfig, watch bool) error {
-	srv, err := server.New(logger, posts, cfg)
+func runServe(ctx context.Context, postsPath string, posts fs.FS, cfg config.ServerConfig, watch bool) error {
+	srv, err := server.New(nil, posts, cfg)
 	if err != nil {
 		return err
 	}
 
 	if watch {
-		w, err := watcher.New(postsPath)
+		w, err := watcher.New(postsPath, srv.Logger.AsOption().AsWatcherOption())
 		if err != nil {
 			return err
 		}
 		go func() {
 			if err := w.Run(ctx, func(ctx context.Context) {
 				if err := srv.UpdatePosts(os.DirFS(postsPath), ctx); err != nil {
-					logger.WarnContext(ctx, "watcher: failed to reload posts", slog.Any("error", err))
+					slog.Default().WarnContext(ctx, "watcher: failed to reload posts", slog.Any("error", err))
 				}
 			}); err != nil {
-				logger.WarnContext(ctx, "watcher: stopped with error", slog.Any("error", err))
+				slog.Default().WarnContext(ctx, "watcher: stopped with error", slog.Any("error", err))
 			}
 		}()
 	}

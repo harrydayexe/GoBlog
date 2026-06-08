@@ -24,6 +24,7 @@ type Watcher struct {
 	path string
 
 	config.WatcherDebounce
+	config.Logger
 
 	fw *fsnotify.Watcher
 }
@@ -54,7 +55,13 @@ func New(path string, opts ...config.WatcherOption) (*Watcher, error) {
 	for _, opt := range opts {
 		if opt.WithDebounceFunc != nil {
 			opt.WithDebounceFunc(&w.WatcherDebounce)
+		} else if opt.WithLoggerFunc != nil {
+			opt.WithLoggerFunc(&w.Logger)
 		}
+	}
+
+	if w.Logger.Logger == nil {
+		w.Logger.Logger = slog.Default()
 	}
 
 	if err := w.addDirs(path); err != nil {
@@ -75,8 +82,6 @@ func New(path string, opts ...config.WatcherOption) (*Watcher, error) {
 func (w *Watcher) Run(ctx context.Context, onChange func(context.Context)) error {
 	defer w.fw.Close()
 
-	logger := slog.Default()
-
 	timer := time.NewTimer(0)
 	<-timer.C // drain so it doesn't fire immediately
 
@@ -93,7 +98,7 @@ func (w *Watcher) Run(ctx context.Context, onChange func(context.Context)) error
 			if isNoise(event.Name) {
 				continue
 			}
-			logger.DebugContext(ctx, "file event", slog.String("path", event.Name), slog.String("op", event.Op.String()))
+			w.Logger.Logger.DebugContext(ctx, "file event", slog.String("path", event.Name), slog.String("op", event.Op.String()))
 
 			// If a new directory appeared, watch it — then skip the
 			// debounce reset since a bare directory create is not a
@@ -101,9 +106,9 @@ func (w *Watcher) Run(ctx context.Context, onChange func(context.Context)) error
 			if event.Has(fsnotify.Create) {
 				if fi, err := os.Stat(event.Name); err == nil && fi.IsDir() {
 					if err := w.fw.Add(event.Name); err != nil {
-						logger.WarnContext(ctx, "watcher: failed to add new directory", slog.String("path", event.Name), slog.Any("error", err))
+						w.Logger.Logger.WarnContext(ctx, "watcher: failed to add new directory", slog.String("path", event.Name), slog.Any("error", err))
 					} else {
-						logger.DebugContext(ctx, "watcher: watching new directory", slog.String("path", event.Name))
+						w.Logger.Logger.DebugContext(ctx, "watcher: watching new directory", slog.String("path", event.Name))
 					}
 					continue
 				}
@@ -116,9 +121,9 @@ func (w *Watcher) Run(ctx context.Context, onChange func(context.Context)) error
 			if event.Has(fsnotify.Remove) {
 				if slicesContains(w.fw.WatchList(), event.Name) {
 					if err := w.fw.Remove(event.Name); err != nil {
-						logger.DebugContext(ctx, "watcher: failed to remove watch for deleted directory", slog.String("path", event.Name), slog.Any("error", err))
+						w.Logger.Logger.DebugContext(ctx, "watcher: failed to remove watch for deleted directory", slog.String("path", event.Name), slog.Any("error", err))
 					} else {
-						logger.DebugContext(ctx, "watcher: released watch for deleted directory", slog.String("path", event.Name))
+						w.Logger.Logger.DebugContext(ctx, "watcher: released watch for deleted directory", slog.String("path", event.Name))
 					}
 					continue
 				}
@@ -137,10 +142,10 @@ func (w *Watcher) Run(ctx context.Context, onChange func(context.Context)) error
 			if !ok {
 				return nil
 			}
-			logger.WarnContext(ctx, "watcher: fsnotify error", slog.Any("error", err))
+			w.Logger.Logger.WarnContext(ctx, "watcher: fsnotify error", slog.Any("error", err))
 
 		case <-timer.C:
-			logger.InfoContext(ctx, "watcher: posts changed, regenerating")
+			w.Logger.Logger.InfoContext(ctx, "watcher: posts changed, regenerating")
 			childCtx, cancel := context.WithCancel(ctx)
 			defer cancel()
 			onChange(childCtx)
@@ -170,7 +175,7 @@ func (w *Watcher) addDirs(path string) error {
 		if err := w.fw.Add(p); err != nil {
 			return fmt.Errorf("watcher: failed to watch directory %q: %w", p, err)
 		}
-		slog.Default().Debug("watcher: watching directory", slog.String("path", p))
+		w.Logger.Logger.Debug("watcher: watching directory", slog.String("path", p))
 		return nil
 	})
 }

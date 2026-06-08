@@ -36,13 +36,13 @@ import (
 //
 // All methods are safe for concurrent use by multiple goroutines.
 type Server struct {
-	logger   *slog.Logger
 	mu       sync.RWMutex // protects postsDir and generator during refreshHandler
 	postsDir fs.FS
 
 	config.BlogRoot
 	config.Port
 	config.Host
+	config.Logger
 
 	handler    atomic.Value            // stores http.Handler
 	middleware []middleware.Middleware // middleware chain
@@ -51,7 +51,6 @@ type Server struct {
 
 // New creates a new Server instance with the specified configuration.
 //
-// The logger is used for structured logging throughout the server lifecycle.
 // The posts filesystem contains the markdown blog posts to be served.
 // The opts parameter configures server behavior via the functional options pattern.
 //
@@ -60,28 +59,20 @@ type Server struct {
 //
 // Returns an error if template rendering or initial blog generation fails.
 // The server is ready to serve requests immediately upon successful return.
+//
+// # Logger
+//
+// Supply a logger via [config.WithLogger] in cfg.Server:
+//
+//	cfg.Server = append(cfg.Server, config.WithLogger(myLogger).AsServerOption())
+//
+// Deprecated: the positional logger parameter will be removed in v3.0.0.
+// Pass nil and supply the logger via config.WithLogger in cfg.Server instead.
+// When both are provided, the config.WithLogger option takes precedence.
 func New(logger *slog.Logger, posts fs.FS, opts config.ServerConfig) (*Server, error) {
-	var templatesDir fs.FS
-	if opts.TemplateDir != nil {
-		logger.Debug("Using custom templates")
-		templatesDir = opts.TemplateDir
-	} else {
-		logger.Debug("Using default templates")
-		templatesDir = templates.Default
-	}
-
-	renderer, err := generator.NewTemplateRenderer(templatesDir, opts.RendererOpts...)
-	if err != nil {
-		return nil, err
-	}
-
-	gen := generator.New(posts, renderer, opts.Gen...)
-
 	srv := &Server{
-		logger:    logger,
-		postsDir:  posts,
-		Port:      8080,
-		generator: gen,
+		postsDir: posts,
+		Port:     8080,
 	}
 
 	for _, opt := range opts.Server {
@@ -93,8 +84,40 @@ func New(logger *slog.Logger, posts fs.FS, opts config.ServerConfig) (*Server, e
 			opt.WithBlogRootFunc(&srv.BlogRoot)
 		} else if opt.WithMiddlewareFunc != nil {
 			opt.WithMiddlewareFunc(&srv.middleware)
+		} else if opt.WithLoggerFunc != nil {
+			opt.WithLoggerFunc(&srv.Logger)
 		}
 	}
+
+	// Precedence: WithLogger option > positional logger arg > slog.Default().
+	if srv.Logger.Logger == nil {
+		if logger != nil {
+			srv.Logger.Logger = logger
+		} else {
+			srv.Logger.Logger = slog.Default()
+		}
+	}
+
+	var templatesDir fs.FS
+	if opts.TemplateDir != nil {
+		srv.Logger.Logger.Debug("Using custom templates")
+		templatesDir = opts.TemplateDir
+	} else {
+		srv.Logger.Logger.Debug("Using default templates")
+		templatesDir = templates.Default
+	}
+
+	renderer, err := generator.NewTemplateRenderer(templatesDir, opts.RendererOpts...)
+	if err != nil {
+		return nil, err
+	}
+
+	// Propagate the server's resolved logger into the generator.
+	genOpts := make([]config.GeneratorOption, 0, len(opts.Gen)+1)
+	genOpts = append(genOpts, opts.Gen...)
+	genOpts = append(genOpts, srv.Logger.AsOption().AsGeneratorOption())
+	gen := generator.New(posts, renderer, genOpts...)
+	srv.generator = gen
 
 	// Sync the resolved BlogRoot to the generator so rendered links use the correct prefix.
 	gen.BlogRoot = srv.BlogRoot
@@ -104,7 +127,7 @@ func New(logger *slog.Logger, posts fs.FS, opts config.ServerConfig) (*Server, e
 		return nil, fmt.Errorf("failed to initialize handler: %w", err)
 	}
 
-	logger.Debug("Server created successfully")
+	srv.Logger.Logger.Debug("Server created successfully")
 	return srv, nil
 }
 
@@ -120,7 +143,7 @@ func New(logger *slog.Logger, posts fs.FS, opts config.ServerConfig) (*Server, e
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	h := s.handler.Load()
 	if h == nil {
-		s.logger.ErrorContext(r.Context(), "handler not initialized")
+		s.Logger.Logger.ErrorContext(r.Context(), "handler not initialized")
 		http.Error(w, "Service Unavailable", http.StatusServiceUnavailable)
 		return
 	}
@@ -154,7 +177,7 @@ func (s *Server) Run(ctx context.Context) error {
 	// shutdown goroutine wakes and wg.Wait() can return.
 	var listenErr error
 	wg.Go(func() {
-		s.logger.Info(
+		s.Logger.Logger.Info(
 			"server listening",
 			slog.String("address", httpServer.Addr),
 		)
@@ -211,7 +234,7 @@ func (s *Server) UpdatePosts(posts fs.FS, ctx context.Context) error {
 // Returns an error if blog generation fails. In case of error, the previous
 // handler remains active and continues serving requests.
 func (s *Server) refreshHandler(ctx context.Context) error {
-	s.logger.DebugContext(ctx, "Refreshing HTTP Handler")
+	s.Logger.Logger.DebugContext(ctx, "Refreshing HTTP Handler")
 	s.generator.DebugConfig(ctx)
 
 	blog, err := s.generator.Generate(ctx)
@@ -219,9 +242,9 @@ func (s *Server) refreshHandler(ctx context.Context) error {
 		return fmt.Errorf("failed to generate blog: %w", err)
 	}
 
-	s.logger.DebugContext(ctx, "Creating New Handler for Server")
+	s.Logger.Logger.DebugContext(ctx, "Creating New Handler for Server")
 
-	handler := Handler(blog, s.logger, s.BlogRoot.AsOption())
+	handler := Handler(blog, nil, s.BlogRoot.AsOption(), s.Logger.AsOption())
 
 	// Apply middleware stack if configured
 	if len(s.middleware) > 0 {

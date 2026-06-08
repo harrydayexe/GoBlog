@@ -28,10 +28,11 @@
 //	cfg := config.ServerConfig{
 //	    Server: []config.BaseServerOption{
 //	        config.WithPort(8080),
+//	        config.WithLogger(logger).AsServerOption(),
 //	    },
 //	}
 //
-//	srv, err := server.New(logger, postsFS, cfg)
+//	srv, err := server.New(nil, postsFS, cfg)
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
@@ -71,10 +72,11 @@
 //	    Server: []config.BaseServerOption{
 //	        config.WithPort(8080),
 //	        config.WithMiddleware(logging.New(logger)),
+//	        config.WithLogger(logger).AsServerOption(),
 //	    },
 //	}
 //
-//	srv, err := server.New(logger, postsFS, cfg)
+//	srv, err := server.New(nil, postsFS, cfg)
 //
 // Custom middleware can be added following the standard pattern:
 //
@@ -123,7 +125,7 @@
 // a callback (debounced) on each change:
 //
 //	postsPath := "posts/"
-//	w, err := watcher.New(postsPath, watcher.WithLogger(logger))
+//	w, err := watcher.New(postsPath, config.WithLogger(logger).AsWatcherOption())
 //	if err != nil {
 //	    log.Fatal(err)
 //	}

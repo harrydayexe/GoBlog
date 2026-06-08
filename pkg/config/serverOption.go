@@ -11,7 +11,8 @@ import "github.com/harrydayexe/GoWebUtilities/middleware"
 // pointer that modifies a specific server setting.
 //
 // This type should not be constructed directly. Use the provided option
-// functions: WithPort, WithHost, and WithMiddleware.
+// functions: [WithPort], [WithHost], [WithMiddleware], or call
+// [BaseOption.AsServerOption] on a [BaseOption] value (e.g. from [WithLogger]).
 type BaseServerOption struct {
 	BaseOption
 
@@ -86,5 +87,15 @@ func WithMiddleware(mw ...middleware.Middleware) BaseServerOption {
 		WithMiddlewareFunc: func(middleware *[]middleware.Middleware) {
 			*middleware = append(*middleware, mw...)
 		},
+	}
+}
+
+// AsServerOption returns a BaseServerOption that applies this BaseOption to a
+// server instance, enabling a BaseOption (e.g. from [WithLogger] or
+// [WithBlogRoot]) to be passed to server constructors alongside other
+// server options.
+func (o BaseOption) AsServerOption() BaseServerOption {
+	return BaseServerOption{
+		BaseOption: o,
 	}
 }

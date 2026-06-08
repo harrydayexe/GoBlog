@@ -15,6 +15,7 @@ import (
 	"strings"
 
 	"github.com/alecthomas/chroma/v2/formatters/html"
+	goblogconfig "github.com/harrydayexe/GoBlog/v2/pkg/config"
 	"github.com/harrydayexe/GoBlog/v2/pkg/models"
 	"github.com/yuin/goldmark"
 	highlighting "github.com/yuin/goldmark-highlighting/v2"
@@ -29,7 +30,7 @@ import (
 type Parser struct {
 	md     goldmark.Markdown
 	config *Config
-	logger *slog.Logger
+	goblogconfig.Logger
 }
 
 // New creates a new Parser with the specified options.
@@ -82,8 +83,13 @@ func NewWithConfig(config *Config) *Parser {
 	)
 
 	p := &Parser{
-		md:     md,
-		logger: slog.Default(),
+		md: md,
+	}
+
+	if config.Logger != nil {
+		p.Logger.Logger = config.Logger
+	} else {
+		p.Logger.Logger = slog.Default()
 	}
 
 	return p
@@ -100,7 +106,7 @@ func NewWithConfig(config *Config) *Parser {
 // Returns an error if the file cannot be read, frontmatter is invalid,
 // required fields are missing, or markdown rendering fails.
 func (p *Parser) ParseFile(ctx context.Context, fsys fs.FS, path string) (*models.Post, error) {
-	p.logger.InfoContext(ctx, fmt.Sprintf("Parsing file %s...", path))
+	p.Logger.Logger.InfoContext(ctx, fmt.Sprintf("Parsing file %s...", path))
 	// Read file contents
 	content, err := fs.ReadFile(fsys, path)
 	if err != nil {
@@ -162,7 +168,7 @@ func (p *Parser) ParseFile(ctx context.Context, fsys fs.FS, path string) (*model
 // Only files with .md or .markdown extensions are processed. Other files
 // and directories are silently skipped.
 func (p *Parser) ParseDirectory(ctx context.Context, fsys fs.FS) (models.PostList, error) {
-	p.logger.InfoContext(ctx, "Parsing posts")
+	p.Logger.Logger.InfoContext(ctx, "Parsing posts")
 	var posts models.PostList
 	var parseErrors ParseErrors
 

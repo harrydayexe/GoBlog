@@ -21,13 +21,15 @@
 //	    "log/slog"
 //	    "os"
 //
+//	    "github.com/harrydayexe/GoBlog/v2/pkg/config"
 //	    "github.com/harrydayexe/GoBlog/v2/pkg/server"
 //	    "github.com/harrydayexe/GoBlog/v2/pkg/watcher"
 //	)
 //
 //	postsPath := "posts/"
+//	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 //
-//	w, err := watcher.New(postsPath)
+//	w, err := watcher.New(postsPath, config.WithLogger(logger).AsWatcherOption())
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
