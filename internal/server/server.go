@@ -79,27 +79,28 @@ func NewServeCommand(ctx context.Context, c *cli.Command) error {
 		cfg.Gen = append(cfg.Gen, config.WithBaseOption(config.WithBlogRoot(blogRoot)))
 	}
 
-	return runServe(ctx, slog.Default(), inputPostsDir, postsFsys, cfg, c.Bool(WatchFlagName))
+	cfg.Server = append(cfg.Server, config.BaseServerOption{BaseOption: config.WithLogger(slog.Default())})
+	return runServe(ctx, inputPostsDir, postsFsys, cfg, c.Bool(WatchFlagName))
 }
 
-func runServe(ctx context.Context, logger *slog.Logger, postsPath string, posts fs.FS, cfg config.ServerConfig, watch bool) error {
-	srv, err := server.New(logger, posts, cfg)
+func runServe(ctx context.Context, postsPath string, posts fs.FS, cfg config.ServerConfig, watch bool) error {
+	srv, err := server.New(nil, posts, cfg)
 	if err != nil {
 		return err
 	}
 
 	if watch {
-		w, err := watcher.New(postsPath)
+		w, err := watcher.New(postsPath, config.WithBaseWatcherOption(config.WithLogger(slog.Default())))
 		if err != nil {
 			return err
 		}
 		go func() {
 			if err := w.Run(ctx, func(ctx context.Context) {
 				if err := srv.UpdatePosts(os.DirFS(postsPath), ctx); err != nil {
-					logger.WarnContext(ctx, "watcher: failed to reload posts", slog.Any("error", err))
+					slog.Default().WarnContext(ctx, "watcher: failed to reload posts", slog.Any("error", err))
 				}
 			}); err != nil {
-				logger.WarnContext(ctx, "watcher: stopped with error", slog.Any("error", err))
+				slog.Default().WarnContext(ctx, "watcher: stopped with error", slog.Any("error", err))
 			}
 		}()
 	}

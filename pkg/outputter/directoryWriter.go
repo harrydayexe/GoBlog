@@ -26,8 +26,8 @@ import (
 type DirectoryWriter struct {
 	config.RawOutput
 	config.DisableTags
+	config.Logger
 	outputDir string
-	logger    *slog.Logger
 }
 
 // NewDirectoryWriter creates a new DirectoryWriter with the specified output
@@ -48,11 +48,8 @@ type DirectoryWriter struct {
 //
 // This is the recommended constructor for most use cases.
 func NewDirectoryWriter(outputDir string, opts ...config.GeneratorOption) DirectoryWriter {
-	logger := slog.Default()
-
 	dw := DirectoryWriter{
 		outputDir: outputDir,
-		logger:    logger,
 	}
 
 	for _, opt := range opts {
@@ -60,10 +57,16 @@ func NewDirectoryWriter(outputDir string, opts ...config.GeneratorOption) Direct
 			opt.WithRawOutputFunc(&dw.RawOutput)
 		} else if opt.WithDisableTagsFunc != nil {
 			opt.WithDisableTagsFunc(&dw.DisableTags)
+		} else if opt.WithLoggerFunc != nil {
+			opt.WithLoggerFunc(&dw.Logger)
 		}
 	}
 
-	logger.Debug("Directory Writer created", slog.String("output directory", outputDir))
+	if dw.Logger.Logger == nil {
+		dw.Logger.Logger = slog.Default()
+	}
+
+	dw.Logger.Logger.Debug("Directory Writer created", slog.String("output directory", outputDir))
 
 	return dw
 }
@@ -103,7 +106,7 @@ func NewDirectoryWriter(outputDir string, opts ...config.GeneratorOption) Direct
 // writes, consider writing to a temporary directory first and renaming it
 // on success.
 func (dw DirectoryWriter) HandleGeneratedBlog(ctx context.Context, blog *generator.GeneratedBlog) error {
-	dw.logger.InfoContext(ctx, "Writing blog to directory")
+	dw.Logger.Logger.InfoContext(ctx, "Writing blog to directory")
 	if err := writeMapToFiles(blog.Posts, filepath.Join(dw.outputDir, "posts")); err != nil {
 		return err
 	}
@@ -126,7 +129,7 @@ func (dw DirectoryWriter) HandleGeneratedBlog(ctx context.Context, blog *generat
 		}
 	}
 
-	dw.logger.InfoContext(ctx, "Finished writing to output directory")
+	dw.Logger.Logger.InfoContext(ctx, "Finished writing to output directory")
 	return nil
 }
 

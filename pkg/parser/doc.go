@@ -43,10 +43,14 @@
 //	// Enable footnote support
 //	p := parser.New(parser.WithFootnote())
 //
+//	// Inject a structured logger
+//	p := parser.New(parser.WithLogger(myLogger))
+//
 //	// Combine multiple options
 //	p := parser.New(
 //	    parser.WithCodeHighlighting(true),
 //	    parser.WithFootnote(),
+//	    parser.WithLogger(myLogger),
 //	)
 //
 // See the Option functions for all available configuration options.

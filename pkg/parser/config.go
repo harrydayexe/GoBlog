@@ -4,6 +4,8 @@
 
 package parser
 
+import "log/slog"
+
 // Config contains all the options for the Parser to use when reading and
 // parsing markdown files.
 type Config struct {
@@ -14,4 +16,8 @@ type Config struct {
 	// EnableFootnote controls whether the parser should allow the use of PHP
 	// Markdown Extra Footnotes.
 	EnableFootnote bool
+
+	// Logger is the structured logger used by the parser. When nil,
+	// [log/slog.Default] is used.
+	Logger *slog.Logger
 }

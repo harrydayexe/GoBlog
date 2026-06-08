@@ -35,9 +35,9 @@ type Generator struct {
 	config.Environment
 	config.CustomData
 	config.HTMLPaths
+	config.Logger
 	ParserConfig parser.Config // The config to use when parsing
 
-	logger   *slog.Logger
 	renderer *TemplateRenderer
 }
 
@@ -71,11 +71,8 @@ func (c Generator) String() string {
 // config.WithBlogRoot, config.WithEnvironment, config.WithCustomData.
 // The template renderer is supplied as a positional argument, not an option.
 func New(posts fs.FS, renderer *TemplateRenderer, opts ...config.GeneratorOption) *Generator {
-	logger := slog.Default()
-
 	gen := Generator{
 		PostsDir: posts,
-		logger:   logger,
 		renderer: renderer,
 		BlogRoot: config.BlogRoot("/"),
 	}
@@ -98,7 +95,13 @@ func New(posts fs.FS, renderer *TemplateRenderer, opts ...config.GeneratorOption
 			opt.WithCustomDataFunc(&gen.CustomData)
 		} else if opt.WithHTMLPathsFunc != nil {
 			opt.WithHTMLPathsFunc(&gen.HTMLPaths)
+		} else if opt.WithLoggerFunc != nil {
+			opt.WithLoggerFunc(&gen.Logger)
 		}
+	}
+
+	if gen.Logger.Logger == nil {
+		gen.Logger.Logger = slog.Default()
 	}
 
 	if gen.SiteTitle.SiteTitle == "" {
@@ -142,8 +145,10 @@ func New(posts fs.FS, renderer *TemplateRenderer, opts ...config.GeneratorOption
 // It returns an error if markdown files cannot be read, parsing fails, or
 // template rendering encounters an error.
 func (g *Generator) Generate(ctx context.Context) (*GeneratedBlog, error) {
-	g.logger.DebugContext(ctx, "Creating parser for generate call")
-	p := parser.NewWithConfig(&g.ParserConfig)
+	g.Logger.Logger.DebugContext(ctx, "Creating parser for generate call")
+	parserCfg := g.ParserConfig
+	parserCfg.Logger = g.Logger.Logger
+	p := parser.NewWithConfig(&parserCfg)
 
 	posts, err := p.ParseDirectory(ctx, g.PostsDir)
 	if err != nil {
@@ -152,7 +157,7 @@ func (g *Generator) Generate(ctx context.Context) (*GeneratedBlog, error) {
 
 	// Step 2: If RawOutput mode, return immediately with raw HTML
 	if g.RawOutput.RawOutput {
-		g.logger.InfoContext(ctx, "Raw output enabled, ignoring templates")
+		g.Logger.Logger.InfoContext(ctx, "Raw output enabled, ignoring templates")
 		return g.assembleRawBlog(posts), nil
 	}
 
@@ -170,7 +175,7 @@ func (g *Generator) Generate(ctx context.Context) (*GeneratedBlog, error) {
 // The log output will only appear if the logger is configured to show debug
 // level messages.
 func (g *Generator) DebugConfig(ctx context.Context) {
-	g.logger.DebugContext(ctx, g.String())
+	g.Logger.Logger.DebugContext(ctx, g.String())
 }
 
 // pagePath returns the BaseData.Path value for a given page.
@@ -218,7 +223,7 @@ func (g *Generator) assembleRawBlog(posts models.PostList) *GeneratedBlog {
 }
 
 func (g *Generator) assembleBlogWithTemplates(ctx context.Context, posts models.PostList) (*GeneratedBlog, error) {
-	g.logger.DebugContext(ctx, "Rendering posts with templates")
+	g.Logger.Logger.DebugContext(ctx, "Rendering posts with templates")
 
 	// Check if renderer is available
 	if g.renderer == nil {

@@ -19,14 +19,12 @@ import (
 // It embeds config.BlogRoot to specify the root path where the blog is served.
 type HandlerConfig struct {
 	config.BlogRoot
-
-	logger *slog.Logger
+	config.Logger
 }
 
 // Handler creates an HTTP handler that serves the generated blog content.
-// It accepts a GeneratedBlog, a logger for error reporting, and optional
-// configuration options to customize the handler behavior, such as setting
-// a custom blog root path.
+// It accepts a GeneratedBlog and optional configuration options to customize
+// the handler behavior, such as setting a custom blog root path or logger.
 //
 // The handler serves the following routes (assuming default root "/"):
 //   - GET / and GET /posts - serves the blog index page
@@ -44,15 +42,35 @@ type HandlerConfig struct {
 //
 // The handler is safe for concurrent use by multiple goroutines.
 // It does not modify the GeneratedBlog instance.
+//
+// # Logger
+//
+// Supply a logger via [config.WithLogger] in opts:
+//
+//	h := server.Handler(blog, nil, config.WithLogger(myLogger), config.WithBlogRoot("/blog/"))
+//
+// Deprecated: the positional logger parameter will be removed in v3.0.0.
+// Pass nil and supply the logger via config.WithLogger in opts instead.
+// When both are provided, the config.WithLogger option takes precedence.
 func Handler(blog *generator.GeneratedBlog, logger *slog.Logger, opts ...config.BaseOption) http.Handler {
 	cfg := HandlerConfig{
 		BlogRoot: config.BlogRoot("/"),
-		logger:   logger,
 	}
 
 	for _, opt := range opts {
 		if opt.WithBlogRootFunc != nil {
 			opt.WithBlogRootFunc(&cfg.BlogRoot)
+		} else if opt.WithLoggerFunc != nil {
+			opt.WithLoggerFunc(&cfg.Logger)
+		}
+	}
+
+	// Precedence: WithLogger option > positional logger arg > slog.Default().
+	if cfg.Logger.Logger == nil {
+		if logger != nil {
+			cfg.Logger.Logger = logger
+		} else {
+			cfg.Logger.Logger = slog.Default()
 		}
 	}
 
@@ -63,8 +81,8 @@ func Handler(blog *generator.GeneratedBlog, logger *slog.Logger, opts ...config.
 		cfg.BlogRoot = config.BlogRoot("/" + trimmed)
 	}
 
-	logger.Debug("handlerConfig set", slog.String("BlogRoot", string(cfg.BlogRoot)))
-	logger.Debug("blog index page", slog.Int("bytes", len(blog.Index)))
+	cfg.Logger.Logger.Debug("handlerConfig set", slog.String("BlogRoot", string(cfg.BlogRoot)))
+	cfg.Logger.Logger.Debug("blog index page", slog.Int("bytes", len(blog.Index)))
 
 	return middleware.NewStripHTMLExtension()(generateHandler(cfg, blog))
 }
@@ -73,7 +91,7 @@ func generateHandler(cfg HandlerConfig, blog *generator.GeneratedBlog) http.Hand
 	mux := http.NewServeMux()
 
 	root := fmt.Sprintf("GET %s/", cfg.BlogRoot)
-	cfg.logger.Debug("mux root set", slog.String("root", root))
+	cfg.Logger.Logger.Debug("mux root set", slog.String("root", root))
 	mux.Handle(root+"posts", handleIndex(cfg, blog))
 	mux.Handle(root+"{$}", handleIndex(cfg, blog))
 	mux.Handle(root+"posts/{postName}", handlePost(cfg, blog))
@@ -88,11 +106,11 @@ func generateHandler(cfg HandlerConfig, blog *generator.GeneratedBlog) http.Hand
 
 func handleIndex(cfg HandlerConfig, blog *generator.GeneratedBlog) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		cfg.logger.DebugContext(r.Context(), "handling index page", slog.Int("bytes", len(blog.Index)))
+		cfg.Logger.Logger.DebugContext(r.Context(), "handling index page", slog.Int("bytes", len(blog.Index)))
 
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		if _, err := w.Write(blog.Index); err != nil {
-			cfg.logger.ErrorContext(r.Context(), "failed to write index", "error", err)
+			cfg.Logger.Logger.ErrorContext(r.Context(), "failed to write index", "error", err)
 			return
 		}
 	})
@@ -100,7 +118,7 @@ func handleIndex(cfg HandlerConfig, blog *generator.GeneratedBlog) http.Handler 
 
 func handlePost(cfg HandlerConfig, blog *generator.GeneratedBlog) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		cfg.logger.DebugContext(r.Context(), "handling post page")
+		cfg.Logger.Logger.DebugContext(r.Context(), "handling post page")
 
 		postName := strings.TrimSuffix(r.PathValue("postName"), ".html")
 		bits, prs := blog.Posts[postName]
@@ -109,11 +127,11 @@ func handlePost(cfg HandlerConfig, blog *generator.GeneratedBlog) http.Handler {
 			return
 		}
 
-		cfg.logger.DebugContext(r.Context(), "resolved post name", slog.String("postName", postName))
+		cfg.Logger.Logger.DebugContext(r.Context(), "resolved post name", slog.String("postName", postName))
 
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		if _, err := w.Write(bits); err != nil {
-			cfg.logger.ErrorContext(r.Context(), "failed to write post", "error", err, "post", postName)
+			cfg.Logger.Logger.ErrorContext(r.Context(), "failed to write post", "error", err, "post", postName)
 			return
 		}
 	})
@@ -121,11 +139,11 @@ func handlePost(cfg HandlerConfig, blog *generator.GeneratedBlog) http.Handler {
 
 func handleTagsIndex(cfg HandlerConfig, blog *generator.GeneratedBlog) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		cfg.logger.DebugContext(r.Context(), "handling tag index")
+		cfg.Logger.Logger.DebugContext(r.Context(), "handling tag index")
 
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		if _, err := w.Write(blog.TagsIndex); err != nil {
-			cfg.logger.ErrorContext(r.Context(), "failed to write tags index", "error", err)
+			cfg.Logger.Logger.ErrorContext(r.Context(), "failed to write tags index", "error", err)
 			return
 		}
 	})
@@ -133,7 +151,7 @@ func handleTagsIndex(cfg HandlerConfig, blog *generator.GeneratedBlog) http.Hand
 
 func handleTag(cfg HandlerConfig, blog *generator.GeneratedBlog) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		cfg.logger.DebugContext(r.Context(), "handling tag page")
+		cfg.Logger.Logger.DebugContext(r.Context(), "handling tag page")
 
 		tagName := strings.TrimSuffix(r.PathValue("tagName"), ".html")
 		bits, prs := blog.Tags[tagName]
@@ -142,11 +160,11 @@ func handleTag(cfg HandlerConfig, blog *generator.GeneratedBlog) http.Handler {
 			return
 		}
 
-		cfg.logger.DebugContext(r.Context(), "resolved tag name", slog.String("tagName", tagName))
+		cfg.Logger.Logger.DebugContext(r.Context(), "resolved tag name", slog.String("tagName", tagName))
 
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		if _, err := w.Write(bits); err != nil {
-			cfg.logger.ErrorContext(r.Context(), "failed to write tag page", "error", err, "tag", tagName)
+			cfg.Logger.Logger.ErrorContext(r.Context(), "failed to write tag page", "error", err, "tag", tagName)
 			return
 		}
 	})

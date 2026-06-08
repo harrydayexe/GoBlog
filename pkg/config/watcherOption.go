@@ -11,8 +11,11 @@ import "time"
 // pointer that modifies a specific watcher setting.
 //
 // This type should not be constructed directly. Use the provided option
-// functions: WithDebounce.
+// functions: WithDebounce, or the inherited [BaseOption] functions such as
+// [WithLogger].
 type WatcherOption struct {
+	BaseOption
+
 	WithDebounceFunc func(v *WatcherDebounce)
 }
 
@@ -31,5 +34,15 @@ type WatcherDebounce struct{ Debounce time.Duration }
 func WithDebounce(d time.Duration) WatcherOption {
 	return WatcherOption{
 		WithDebounceFunc: func(v *WatcherDebounce) { v.Debounce = d },
+	}
+}
+
+// WithBaseWatcherOption wraps a [BaseOption] as a [WatcherOption] so it can be
+// passed to watcher constructors that accept [WatcherOption] values.
+// Use this when you have a BaseOption (e.g. from [WithLogger]) and need to
+// supply it alongside other WatcherOptions.
+func WithBaseWatcherOption(baseOption BaseOption) WatcherOption {
+	return WatcherOption{
+		BaseOption: baseOption,
 	}
 }

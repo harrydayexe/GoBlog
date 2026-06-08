@@ -4,8 +4,23 @@
 
 package parser
 
+import "log/slog"
+
 // Option is a function which can update the parser config
 type Option func(*Config)
+
+// WithLogger returns an Option that sets the structured logger used by the
+// parser. When not supplied, the parser falls back to [log/slog.Default] at
+// construction time.
+//
+// Example usage:
+//
+//	p := parser.New(parser.WithLogger(myLogger))
+func WithLogger(l *slog.Logger) Option {
+	return func(c *Config) {
+		c.Logger = l
+	}
+}
 
 // WithCodeHighlighting enables or disables the highlighting of ringfenced
 // code blocks. Highlighting is enabled by default.

@@ -38,6 +38,15 @@
 //
 //	gen := generator.New(fsys, nil, config.WithRawOutput())
 //
+// # Logger injection
+//
+// Supply a structured logger via config.WithLogger (a BaseOption, so it must be
+// wrapped with config.WithBaseOption when passed to generator.New):
+//
+//	gen := generator.New(fsys, renderer,
+//	    config.WithBaseOption(config.WithLogger(myLogger)),
+//	)
+//
 // # Custom Template Functions
 //
 // Additional template functions can be registered via [config.WithFuncs] and

@@ -10,6 +10,7 @@ import (
 	"errors"
 	"html/template"
 	"io/fs"
+	"log/slog"
 	"os"
 	"strings"
 	"testing"
@@ -57,7 +58,7 @@ func TestNew(t *testing.T) {
 			}
 
 			if gen != nil {
-				if gen.logger == nil {
+				if gen.Logger.Logger == nil {
 					t.Error("New() returned generator with nil logger")
 				}
 			}
@@ -1490,6 +1491,21 @@ func TestGenerator_CustomData_Merge(t *testing.T) {
 	}
 	if data["c"] != "gamma" {
 		t.Errorf("Expected 'c' = %q; got %v", "gamma", data["c"])
+	}
+}
+
+// TestNew_WithLogger verifies that a logger injected via config.WithLogger is
+// stored on the Generator and takes precedence over the slog.Default() fallback.
+func TestNew_WithLogger(t *testing.T) {
+	t.Parallel()
+
+	var buf bytes.Buffer
+	injected := slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelDebug}))
+
+	gen := New(os.DirFS("testdata"), nil, config.WithBaseOption(config.WithLogger(injected)))
+
+	if gen.Logger.Logger != injected {
+		t.Error("WithLogger option was not applied: generator logger does not match injected logger")
 	}
 }
 

@@ -131,6 +131,37 @@ func main() {
 }
 ```
 
+### Logger injection
+
+Every component accepts a structured [`log/slog`](https://pkg.go.dev/log/slog) logger via `config.WithLogger`. When not supplied, each component falls back to `slog.Default()` at construction time.
+
+```go
+logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+
+// Generator and outputter: wrap in WithBaseOption
+gen := generator.New(fsys, renderer,
+    config.WithBaseOption(config.WithLogger(logger)),
+)
+writer := outputter.NewDirectoryWriter("output/",
+    config.WithBaseOption(config.WithLogger(logger)),
+)
+
+// Server: embed in BaseServerOption
+cfg := config.ServerConfig{
+    Server: []config.BaseServerOption{
+        config.WithPort(8080),
+        {BaseOption: config.WithLogger(logger)},
+    },
+}
+srv, err := server.New(nil, postsFS, cfg)
+
+// Watcher: wrap in WithBaseWatcherOption
+w, err := watcher.New("posts/", config.WithBaseWatcherOption(config.WithLogger(logger)))
+
+// Parser: use parser.WithLogger directly
+p := parser.New(parser.WithLogger(logger))
+```
+
 Full API documentation, including all config options and template data types, is at [pkg.go.dev/github.com/harrydayexe/GoBlog/v2](https://pkg.go.dev/github.com/harrydayexe/GoBlog/v2).
 
 ## Contributing

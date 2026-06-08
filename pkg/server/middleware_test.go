@@ -5,7 +5,9 @@
 package server_test
 
 import (
+	"bytes"
 	"context"
+	"io"
 	"io/fs"
 	"log/slog"
 	"net/http"
@@ -505,6 +507,56 @@ func TestHandler_StripsHTMLExtension(t *testing.T) {
 	srv.ServeHTTP(w, req)
 	if w.Code != http.StatusOK {
 		t.Errorf("GET /index.html via bare server: got %d, want 200", w.Code)
+	}
+}
+
+// TestServer_WithLoggerOptionTakesPrecedence verifies that config.WithLogger in
+// cfg.Server takes precedence over the deprecated positional logger argument.
+func TestServer_WithLoggerOptionTakesPrecedence(t *testing.T) {
+	t.Parallel()
+
+	var optionBuf bytes.Buffer
+	optionLogger := slog.New(slog.NewTextHandler(&optionBuf, &slog.HandlerOptions{Level: slog.LevelDebug}))
+
+	positionalLogger := slog.New(slog.NewTextHandler(io.Discard, nil))
+
+	postsFS := createTestFS(t)
+	cfg := config.ServerConfig{
+		Server: []config.BaseServerOption{
+			{BaseOption: config.WithLogger(optionLogger)},
+		},
+		Gen: []config.GeneratorOption{config.WithRawOutput()},
+	}
+
+	srv, err := server.New(positionalLogger, postsFS, cfg)
+	if err != nil {
+		t.Fatalf("failed to create server: %v", err)
+	}
+
+	if srv.Logger.Logger != optionLogger {
+		t.Error("expected WithLogger option to take precedence over positional logger arg")
+	}
+}
+
+// TestServer_PositionalLoggerFallback verifies that the positional logger is
+// used when no WithLogger option is provided (deprecated path still works).
+func TestServer_PositionalLoggerFallback(t *testing.T) {
+	t.Parallel()
+
+	positionalLogger := slog.New(slog.NewTextHandler(io.Discard, nil))
+
+	postsFS := createTestFS(t)
+	cfg := config.ServerConfig{
+		Gen: []config.GeneratorOption{config.WithRawOutput()},
+	}
+
+	srv, err := server.New(positionalLogger, postsFS, cfg)
+	if err != nil {
+		t.Fatalf("failed to create server: %v", err)
+	}
+
+	if srv.Logger.Logger != positionalLogger {
+		t.Error("expected positional logger to be used when no WithLogger option is provided")
 	}
 }
 

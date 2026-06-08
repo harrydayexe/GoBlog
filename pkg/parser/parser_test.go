@@ -5,12 +5,29 @@
 package parser
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"strings"
 	"testing"
 )
+
+// TestNew_WithLogger verifies that a logger injected via parser.WithLogger
+// is stored on the Parser and takes precedence over slog.Default().
+func TestNew_WithLogger(t *testing.T) {
+	t.Parallel()
+
+	var buf bytes.Buffer
+	injected := slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelDebug}))
+
+	p := New(WithLogger(injected))
+
+	if p.Logger.Logger != injected {
+		t.Error("WithLogger option was not applied: parser logger does not match injected logger")
+	}
+}
 
 func TestParseFile_ValidPost(t *testing.T) {
 	t.Parallel()
