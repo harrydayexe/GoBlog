@@ -43,6 +43,7 @@ var ServeCommand cli.Command = cli.Command{
 			Name:    BlogRootFlagName,
 			Aliases: []string{"p"},
 			Usage:   "root path of the blog, defaults to '/'",
+			Value:   "/",
 		},
 		&cli.BoolFlag{
 			Name:    DisableTagsFlagName,
