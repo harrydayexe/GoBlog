@@ -121,9 +121,9 @@ func (w *Watcher) Run(ctx context.Context, onChange func(context.Context)) error
 			if event.Has(fsnotify.Remove) {
 				if slicesContains(w.fw.WatchList(), event.Name) {
 					if err := w.fw.Remove(event.Name); err != nil {
-						logger.DebugContext(ctx, "watcher: failed to remove watch for deleted directory", slog.String("path", event.Name), slog.Any("error", err))
+						w.Logger.Logger.DebugContext(ctx, "watcher: failed to remove watch for deleted directory", slog.String("path", event.Name), slog.Any("error", err))
 					} else {
-						logger.DebugContext(ctx, "watcher: released watch for deleted directory", slog.String("path", event.Name))
+						w.Logger.Logger.DebugContext(ctx, "watcher: released watch for deleted directory", slog.String("path", event.Name))
 					}
 					continue
 				}
