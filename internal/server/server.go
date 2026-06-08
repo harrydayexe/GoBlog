@@ -90,7 +90,7 @@ func runServe(ctx context.Context, postsPath string, posts fs.FS, cfg config.Ser
 	}
 
 	if watch {
-		w, err := watcher.New(postsPath, config.WithBaseWatcherOption(config.WithLogger(slog.Default())))
+		w, err := watcher.New(postsPath, config.WithBaseWatcherOption(srv.Logger.AsOption()))
 		if err != nil {
 			return err
 		}

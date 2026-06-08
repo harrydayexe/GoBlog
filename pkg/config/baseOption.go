@@ -70,6 +70,16 @@ func WithBlogRoot(root string) BaseOption {
 	}
 }
 
+// AsOption returns a BaseOption that re-applies this BlogRoot value to another
+// component, enabling a resolved blog root to be forwarded to sub-components
+// without reaching into its underlying string.
 func (o BlogRoot) AsOption() BaseOption {
 	return WithBlogRoot(string(o))
+}
+
+// AsOption returns a BaseOption that re-applies this Logger value to another
+// component, enabling a resolved logger to be forwarded to sub-components
+// without reaching into its underlying [log/slog.Logger].
+func (o Logger) AsOption() BaseOption {
+	return WithLogger(o.Logger)
 }

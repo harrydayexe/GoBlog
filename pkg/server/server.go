@@ -113,7 +113,7 @@ func New(logger *slog.Logger, posts fs.FS, opts config.ServerConfig) (*Server, e
 	}
 
 	// Propagate the server's resolved logger into the generator.
-	genOpts := append(opts.Gen, config.WithBaseOption(config.WithLogger(srv.Logger.Logger)))
+	genOpts := append(opts.Gen, config.WithBaseOption(srv.Logger.AsOption()))
 	gen := generator.New(posts, renderer, genOpts...)
 	srv.generator = gen
 
@@ -242,7 +242,7 @@ func (s *Server) refreshHandler(ctx context.Context) error {
 
 	s.Logger.Logger.DebugContext(ctx, "Creating New Handler for Server")
 
-	handler := Handler(blog, nil, s.BlogRoot.AsOption(), config.WithLogger(s.Logger.Logger))
+	handler := Handler(blog, nil, s.BlogRoot.AsOption(), s.Logger.AsOption())
 
 	// Apply middleware stack if configured
 	if len(s.middleware) > 0 {
