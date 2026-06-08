@@ -109,6 +109,21 @@ func (w *Watcher) Run(ctx context.Context, onChange func(context.Context)) error
 				}
 			}
 
+			// If a watched directory was removed, release its watch
+			// descriptor. WatchList() is the single source of truth for
+			// which paths are directories vs files, since os.Stat would
+			// fail on an already-deleted path.
+			if event.Has(fsnotify.Remove) {
+				if slicesContains(w.fw.WatchList(), event.Name) {
+					if err := w.fw.Remove(event.Name); err != nil {
+						logger.DebugContext(ctx, "watcher: failed to remove watch for deleted directory", slog.String("path", event.Name), slog.Any("error", err))
+					} else {
+						logger.DebugContext(ctx, "watcher: released watch for deleted directory", slog.String("path", event.Name))
+					}
+					continue
+				}
+			}
+
 			// Only regenerate for markdown file changes.
 			if filepath.Ext(event.Name) != ".md" {
 				continue
@@ -158,6 +173,16 @@ func (w *Watcher) addDirs(path string) error {
 		slog.Default().Debug("watcher: watching directory", slog.String("path", p))
 		return nil
 	})
+}
+
+// slicesContains reports whether s contains target.
+func slicesContains(s []string, target string) bool {
+	for _, v := range s {
+		if v == target {
+			return true
+		}
+	}
+	return false
 }
 
 // isNoise reports whether a filesystem event path should be ignored.
