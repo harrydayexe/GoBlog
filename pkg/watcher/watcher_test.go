@@ -205,6 +205,50 @@ func TestRun_NonMarkdownIgnored(t *testing.T) {
 	}
 }
 
+// TestRun_SubdirRemoveThenRecreateTracked verifies that removing a watched
+// subdirectory and recreating it still triggers onChange when a file is written
+// inside the new directory.
+func TestRun_SubdirRemoveThenRecreateTracked(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	sub := filepath.Join(dir, "subdir")
+	if err := os.Mkdir(sub, 0o755); err != nil {
+		t.Fatalf("Mkdir error = %v", err)
+	}
+
+	w, err := watcher.New(dir, config.WithDebounce(shortDebounce))
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+
+	var count atomic.Int64
+	go w.Run(ctx, func(context.Context) { count.Add(1) }) //nolint:errcheck
+
+	time.Sleep(50 * time.Millisecond)
+
+	// Remove the subdirectory.
+	if err := os.Remove(sub); err != nil {
+		t.Fatalf("Remove error = %v", err)
+	}
+	time.Sleep(100 * time.Millisecond)
+
+	// Recreate it and write a markdown file inside.
+	if err := os.Mkdir(sub, 0o755); err != nil {
+		t.Fatalf("Mkdir (recreate) error = %v", err)
+	}
+	time.Sleep(100 * time.Millisecond)
+
+	if err := os.WriteFile(filepath.Join(sub, "post.md"), []byte("hello"), 0o644); err != nil {
+		t.Fatalf("WriteFile error = %v", err)
+	}
+
+	waitForCount(t, &count, 1, 3*time.Second)
+}
+
 // TestRun_NoiseIgnored verifies that dot-files and editor swap files are ignored.
 func TestRun_NoiseIgnored(t *testing.T) {
 	t.Parallel()
