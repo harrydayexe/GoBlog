@@ -523,7 +523,7 @@ func TestServer_WithLoggerOptionTakesPrecedence(t *testing.T) {
 	postsFS := createTestFS(t)
 	cfg := config.ServerConfig{
 		Server: []config.BaseServerOption{
-			{BaseOption: config.WithLogger(optionLogger)},
+			config.WithLogger(optionLogger).AsServerOption(),
 		},
 		Gen: []config.GeneratorOption{config.WithRawOutput()},
 	}

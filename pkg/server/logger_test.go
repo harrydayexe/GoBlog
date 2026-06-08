@@ -42,7 +42,7 @@ func TestServer_LoggerPropagatedToGenerator(t *testing.T) {
 	postsFS := makeInternalTestFS(t)
 	cfg := config.ServerConfig{
 		Server: []config.BaseServerOption{
-			{BaseOption: config.WithLogger(injected)},
+			config.WithLogger(injected).AsServerOption(),
 		},
 		Gen: []config.GeneratorOption{config.WithRawOutput()},
 	}

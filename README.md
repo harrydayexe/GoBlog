@@ -138,27 +138,27 @@ Every component accepts a structured [`log/slog`](https://pkg.go.dev/log/slog) l
 ```go
 logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 
-// Generator and outputter: wrap in WithBaseOption
+// Generator and outputter
 gen := generator.New(fsys, renderer,
-    config.WithBaseOption(config.WithLogger(logger)),
+    config.WithLogger(logger).AsGeneratorOption(),
 )
 writer := outputter.NewDirectoryWriter("output/",
-    config.WithBaseOption(config.WithLogger(logger)),
+    config.WithLogger(logger).AsGeneratorOption(),
 )
 
-// Server: embed in BaseServerOption
+// Server
 cfg := config.ServerConfig{
     Server: []config.BaseServerOption{
         config.WithPort(8080),
-        {BaseOption: config.WithLogger(logger)},
+        config.WithLogger(logger).AsServerOption(),
     },
 }
 srv, err := server.New(nil, postsFS, cfg)
 
-// Watcher: wrap in WithBaseWatcherOption
-w, err := watcher.New("posts/", config.WithBaseWatcherOption(config.WithLogger(logger)))
+// Watcher
+w, err := watcher.New("posts/", config.WithLogger(logger).AsWatcherOption())
 
-// Parser: use parser.WithLogger directly
+// Parser
 p := parser.New(parser.WithLogger(logger))
 ```
 
