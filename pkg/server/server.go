@@ -113,7 +113,9 @@ func New(logger *slog.Logger, posts fs.FS, opts config.ServerConfig) (*Server, e
 	}
 
 	// Propagate the server's resolved logger into the generator.
-	genOpts := append(opts.Gen, srv.Logger.AsOption().AsGeneratorOption())
+	genOpts := make([]config.GeneratorOption, 0, len(opts.Gen)+1)
+	genOpts = append(genOpts, opts.Gen...)
+	genOpts = append(genOpts, srv.Logger.AsOption().AsGeneratorOption())
 	gen := generator.New(posts, renderer, genOpts...)
 	srv.generator = gen
 
