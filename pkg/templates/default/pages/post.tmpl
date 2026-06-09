@@ -12,6 +12,11 @@
                 <time datetime="{{.Post.Date.Format "2006-01-02"}}" class="text-sm text-gray-500">
                     {{.Post.FormattedDate}}{{if .Post.ReadingTimeMinutes}} · {{.Post.ReadingTimeMinutes}} min read{{end}}
                 </time>
+                {{if .Post.HasLastEdited}}
+                <time datetime="{{.Post.ShortLastEdited}}" class="block text-sm text-gray-500 italic">
+                    Edited on {{.Post.FormattedLastEdited}}
+                </time>
+                {{end}}
 
                 <!-- Title -->
                 <h1 class="mt-2 text-4xl font-bold text-gray-900 leading-tight">

@@ -12,6 +12,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 )
 
 // TestNew_WithLogger verifies that a logger injected via parser.WithLogger
@@ -473,5 +474,36 @@ func TestNew_CombinedOptions(t *testing.T) {
 
 	if !strings.Contains(string(post.Content), "<sup") {
 		t.Error("expected footnotes to still work when code highlighting is disabled")
+	}
+}
+
+func TestParseFile_WithLastEdited(t *testing.T) {
+	t.Parallel()
+	p := New()
+	fsys := os.DirFS("testdata")
+
+	post, err := p.ParseFile(context.Background(), fsys, "with-last-edited.md")
+	if err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+
+	expected := time.Date(2026, 2, 15, 10, 0, 0, 0, time.UTC)
+	if !post.LastEdited.Equal(expected) {
+		t.Errorf("expected LastEdited %v, got %v", expected, post.LastEdited)
+	}
+}
+
+func TestParseFile_NoLastEdited(t *testing.T) {
+	t.Parallel()
+	p := New()
+	fsys := os.DirFS("testdata")
+
+	post, err := p.ParseFile(context.Background(), fsys, "no-author.md")
+	if err != nil {
+		t.Fatalf("expected no error for post without lastEdited, got: %v", err)
+	}
+
+	if !post.LastEdited.IsZero() {
+		t.Errorf("expected LastEdited to be zero time, got %v", post.LastEdited)
 	}
 }

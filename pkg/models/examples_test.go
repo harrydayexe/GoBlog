@@ -113,6 +113,24 @@ func ExamplePost_ShortDate() {
 	// Output: 2024-03-05
 }
 
+func ExamplePost_FormattedLastEdited() {
+	post := &models.Post{
+		LastEdited: time.Date(2024, 12, 25, 10, 30, 0, 0, time.UTC),
+	}
+
+	fmt.Println(post.FormattedLastEdited())
+	// Output: December 25, 2024
+}
+
+func ExamplePost_ShortLastEdited() {
+	post := &models.Post{
+		LastEdited: time.Date(2024, 3, 5, 10, 30, 0, 0, time.UTC),
+	}
+
+	fmt.Println(post.ShortLastEdited())
+	// Output: 2024-03-05
+}
+
 func ExamplePostList_FilterByTag() {
 	posts := models.PostList{
 		{Title: "Go Basics", Tags: []string{"go", "tutorial"}},
