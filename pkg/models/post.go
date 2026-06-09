@@ -23,6 +23,10 @@ type Post struct {
 	// Author is the name of the post's author. It is optional; when not declared
 	// in the front matter it defaults to an empty string.
 	Author string `yaml:"author"`
+	// LastEdited is the date the post was last edited after publication. It is
+	// optional; when not declared in the front matter it remains the zero time
+	// and the default templates omit any "edited on" line.
+	LastEdited time.Time `yaml:"lastEdited"`
 
 	// Generated fields
 	Slug               string        // URL-friendly identifier
@@ -30,7 +34,6 @@ type Post struct {
 	HTMLContent        template.HTML // HTML content for templates (not escaped)
 	RawContent         string        // Original markdown content
 	SourcePath         string        // Path to source markdown file
-	PublishDate        time.Time     // Formatted publish date
 	BlogRoot           string        // Blog root path for URLs (e.g., "/" or "/blog/")
 	ReadingTimeMinutes int           // Estimated reading time in minutes (0 = disabled)
 }
@@ -53,6 +56,11 @@ func (p *Post) Validate() error {
 
 	if p.Description == "" {
 		return fmt.Errorf("post missing required field: description (source: %s)", p.SourcePath)
+	}
+
+	if !p.LastEdited.IsZero() && p.LastEdited.Before(p.Date) {
+		return fmt.Errorf("post has lastEdited (%s) before date (%s) (source: %s)",
+			p.LastEdited.Format("2006-01-02"), p.Date.Format("2006-01-02"), p.SourcePath)
 	}
 
 	return nil
@@ -141,6 +149,27 @@ func (p *Post) FormattedDate() string {
 // (e.g., "2024-03-15").
 func (p *Post) ShortDate() string {
 	return p.Date.Format("2006-01-02")
+}
+
+// HasLastEdited reports whether the post has a last-edited date set.
+// Returns false when LastEdited is the zero time (i.e. the front matter did
+// not include a lastEdited key).
+func (p *Post) HasLastEdited() bool {
+	return !p.LastEdited.IsZero()
+}
+
+// FormattedLastEdited returns the last-edited date in a human-readable format.
+// The format used is "January 2, 2006" (e.g., "March 15, 2024").
+// Call HasLastEdited first to confirm the date is set.
+func (p *Post) FormattedLastEdited() string {
+	return p.LastEdited.Format("January 2, 2006")
+}
+
+// ShortLastEdited returns the last-edited date in YYYY-MM-DD format.
+// This format is suitable for ISO 8601 compatibility and sorting
+// (e.g., "2024-03-15"). Call HasLastEdited first to confirm the date is set.
+func (p *Post) ShortLastEdited() string {
+	return p.LastEdited.Format("2006-01-02")
 }
 
 // PostList is a collection of posts with helper methods

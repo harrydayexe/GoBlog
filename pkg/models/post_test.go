@@ -73,6 +73,37 @@ func TestPost_Validate(t *testing.T) {
 			},
 			expectErr: false,
 		},
+		{
+			name: "zero lastEdited is valid",
+			post: Post{
+				Title:       "Test Post",
+				Date:        now,
+				Description: "A test post",
+			},
+			expectErr: false,
+		},
+		{
+			name: "lastEdited after date is valid",
+			post: Post{
+				Title:       "Test Post",
+				Date:        now,
+				Description: "A test post",
+				LastEdited:  now.Add(24 * time.Hour),
+			},
+			expectErr: false,
+		},
+		{
+			name: "lastEdited before date is invalid",
+			post: Post{
+				Title:       "Test Post",
+				Date:        now,
+				Description: "A test post",
+				LastEdited:  now.Add(-24 * time.Hour),
+				SourcePath:  "test.md",
+			},
+			expectErr: true,
+			errText:   "lastEdited",
+		},
 	}
 
 	for _, tt := range tests {
@@ -278,6 +309,51 @@ func TestPost_ShortDate(t *testing.T) {
 	expected := "2024-03-15"
 	if got := post.ShortDate(); got != expected {
 		t.Errorf("ShortDate() = %q, want %q", got, expected)
+	}
+}
+
+// TestPost_HasLastEdited tests the HasLastEdited helper
+func TestPost_HasLastEdited(t *testing.T) {
+	t.Parallel()
+
+	t.Run("zero LastEdited returns false", func(t *testing.T) {
+		t.Parallel()
+		post := Post{}
+		if post.HasLastEdited() {
+			t.Error("expected HasLastEdited() = false for zero time")
+		}
+	})
+
+	t.Run("non-zero LastEdited returns true", func(t *testing.T) {
+		t.Parallel()
+		post := Post{LastEdited: time.Date(2024, 6, 1, 0, 0, 0, 0, time.UTC)}
+		if !post.HasLastEdited() {
+			t.Error("expected HasLastEdited() = true for non-zero time")
+		}
+	})
+}
+
+// TestPost_FormattedLastEdited tests last-edited date formatting
+func TestPost_FormattedLastEdited(t *testing.T) {
+	t.Parallel()
+	date := time.Date(2024, 3, 15, 10, 30, 0, 0, time.UTC)
+	post := Post{LastEdited: date}
+
+	expected := "March 15, 2024"
+	if got := post.FormattedLastEdited(); got != expected {
+		t.Errorf("FormattedLastEdited() = %q, want %q", got, expected)
+	}
+}
+
+// TestPost_ShortLastEdited tests short last-edited date formatting
+func TestPost_ShortLastEdited(t *testing.T) {
+	t.Parallel()
+	date := time.Date(2024, 3, 15, 10, 30, 0, 0, time.UTC)
+	post := Post{LastEdited: date}
+
+	expected := "2024-03-15"
+	if got := post.ShortLastEdited(); got != expected {
+		t.Errorf("ShortLastEdited() = %q, want %q", got, expected)
 	}
 }
 
