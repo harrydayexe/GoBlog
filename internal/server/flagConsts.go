@@ -27,3 +27,6 @@ const DisableReadingTimeFlagName = "disable-reading-time"
 
 // WatchFlagName is the CLI flag name for enabling filesystem watching.
 const WatchFlagName = "watch"
+
+// CacheControlFlagName is the CLI flag name for setting the Cache-Control max-age TTL.
+const CacheControlFlagName = "cache-control"

@@ -47,6 +47,7 @@ func NewServeCommand(ctx context.Context, c *cli.Command) error {
 		cfg.Gen = append(cfg.Gen, config.WithDisableReadingTime())
 	}
 	cfg.Server = append(cfg.Server, config.WithPort(c.Int(PortFlagName)))
+	cfg.Server = append(cfg.Server, config.WithCacheControl(c.Duration(CacheControlFlagName)))
 
 	if host := c.String(HostFlagName); host != "" {
 		cfg.Server = append(cfg.Server, config.WithHost(host))
