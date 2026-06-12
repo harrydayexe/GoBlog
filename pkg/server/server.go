@@ -65,11 +65,7 @@ type Server struct {
 // Supply a logger via [config.WithLogger] in cfg.Server:
 //
 //	cfg.Server = append(cfg.Server, config.WithLogger(myLogger).AsServerOption())
-//
-// Deprecated: the positional logger parameter will be removed in v3.0.0.
-// Pass nil and supply the logger via config.WithLogger in cfg.Server instead.
-// When both are provided, the config.WithLogger option takes precedence.
-func New(logger *slog.Logger, posts fs.FS, opts config.ServerConfig) (*Server, error) {
+func New(posts fs.FS, opts config.ServerConfig) (*Server, error) {
 	srv := &Server{
 		postsDir: posts,
 		Port:     8080,
@@ -89,13 +85,8 @@ func New(logger *slog.Logger, posts fs.FS, opts config.ServerConfig) (*Server, e
 		}
 	}
 
-	// Precedence: WithLogger option > positional logger arg > slog.Default().
 	if srv.Logger.Logger == nil {
-		if logger != nil {
-			srv.Logger.Logger = logger
-		} else {
-			srv.Logger.Logger = slog.Default()
-		}
+		srv.Logger.Logger = slog.Default()
 	}
 
 	var templatesDir fs.FS
@@ -244,7 +235,7 @@ func (s *Server) refreshHandler(ctx context.Context) error {
 
 	s.Logger.Logger.DebugContext(ctx, "Creating New Handler for Server")
 
-	handler := Handler(blog, nil, s.BlogRoot.AsOption(), s.Logger.AsOption())
+	handler := Handler(blog, s.BlogRoot.AsOption(), s.Logger.AsOption())
 
 	// Apply middleware stack if configured
 	if len(s.middleware) > 0 {

@@ -153,7 +153,7 @@ cfg := config.ServerConfig{
         config.WithLogger(logger).AsServerOption(),
     },
 }
-srv, err := server.New(nil, postsFS, cfg)
+srv, err := server.New(postsFS, cfg)
 
 // Watcher
 w, err := watcher.New("posts/", config.WithLogger(logger).AsWatcherOption())

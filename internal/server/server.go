@@ -84,7 +84,7 @@ func NewServeCommand(ctx context.Context, c *cli.Command) error {
 }
 
 func runServe(ctx context.Context, postsPath string, posts fs.FS, cfg config.ServerConfig, watch bool) error {
-	srv, err := server.New(nil, posts, cfg)
+	srv, err := server.New(posts, cfg)
 	if err != nil {
 		return err
 	}
