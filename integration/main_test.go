@@ -33,18 +33,44 @@ var dockerSkip bool
 // heavy Dockerfile build is paid only once per test binary invocation.
 // Container tests are skipped gracefully when Docker is unavailable.
 func TestMain(m *testing.M) {
+	os.Exit(run(m))
+}
+
+// run is the real body of TestMain. It is extracted so that deferred
+// cleanup (notably cancel()) fires before os.Exit is called — os.Exit
+// bypasses deferred functions in the calling frame.
+func run(m *testing.M) int {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 
-	tag, err := buildTestImage(ctx)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "integration: Docker unavailable, container tests will be skipped: %v\n", err)
+	// First check whether Docker is reachable at all. A Health ping avoids
+	// the ambiguity of treating a Dockerfile build failure as "Docker down".
+	if !dockerHealthy(ctx) {
+		fmt.Fprintln(os.Stderr, "integration: Docker unavailable, container tests will be skipped")
 		dockerSkip = true
-	} else {
-		imageTag = tag
+		return m.Run()
 	}
 
-	os.Exit(m.Run())
+	tag, err := buildTestImage(ctx)
+	if err != nil {
+		// Docker is up, so this is a genuine image-build failure (e.g. compile
+		// error, missing COPY target). Fail loudly rather than silently skipping.
+		fmt.Fprintf(os.Stderr, "integration: image build failed: %v\n", err)
+		return 1
+	}
+	imageTag = tag
+	return m.Run()
+}
+
+// dockerHealthy reports whether a Docker daemon is reachable by performing a
+// lightweight Health ping, without building or starting any container.
+func dockerHealthy(ctx context.Context) bool {
+	provider, err := testcontainers.NewDockerProvider()
+	if err != nil {
+		return false
+	}
+	defer provider.Close()
+	return provider.Health(ctx) == nil
 }
 
 // buildTestImage builds the goblog Docker image from the repository Dockerfile.

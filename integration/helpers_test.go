@@ -38,12 +38,18 @@ func writePost(t *testing.T, dir, name, body string) {
 
 // eventually polls fn every interval until it returns true or timeout elapses.
 // The test is failed if fn does not return true within the timeout.
+//
+// The loop always calls fn() once more after the deadline to avoid missing
+// conditions that become true inside the last sleep window.
 func eventually(t *testing.T, timeout, interval time.Duration, fn func() bool) {
 	t.Helper()
 	deadline := time.Now().Add(timeout)
-	for time.Now().Before(deadline) {
+	for {
 		if fn() {
 			return
+		}
+		if !time.Now().Before(deadline) {
+			break
 		}
 		time.Sleep(interval)
 	}
@@ -63,6 +69,7 @@ func httpGet(t *testing.T, url string) (int, string) {
 	defer resp.Body.Close()
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
+		t.Logf("httpGet %s: reading body: %v", url, err)
 		return resp.StatusCode, ""
 	}
 	return resp.StatusCode, string(body)

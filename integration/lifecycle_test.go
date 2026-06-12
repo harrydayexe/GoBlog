@@ -58,6 +58,12 @@ func TestRun_GracefulShutdown(t *testing.T) {
 	writePost(t, dir, "post.md", minimalPost("Hello World"))
 
 	// Grab a free port by binding, recording it, then releasing it.
+	// NOTE: small TOCTOU window — the port is released here and re-bound by
+	// the server below. On a heavily loaded host another process could claim
+	// it in between, causing a rare spurious bind failure. Accepted: the
+	// server API binds by port number (ListenAndServe) and does not accept a
+	// pre-opened listener, so handing the fd over directly is not currently
+	// possible.
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatalf("net.Listen: %v", err)
@@ -77,6 +83,7 @@ func TestRun_GracefulShutdown(t *testing.T) {
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel() // guarantees the Run goroutine is unwound if eventually fails
 
 	done := make(chan error, 1)
 	go func() { done <- srv.Run(ctx) }()
