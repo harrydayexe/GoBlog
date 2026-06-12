@@ -27,3 +27,6 @@ const DisableReadingTimeFlagName = "disable-reading-time"
 
 // WatchFlagName is the CLI flag name for enabling filesystem watching.
 const WatchFlagName = "watch"
+
+// HealthChecksFlagName is the CLI flag name for enabling health-check endpoints.
+const HealthChecksFlagName = "health-checks"

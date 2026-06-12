@@ -34,5 +34,5 @@ RUN mkdir -p /posts
 EXPOSE 8080
 
 # Use ENTRYPOINT for the binary, CMD for default args
-ENTRYPOINT ["./goblog", "serve"]
+ENTRYPOINT ["./goblog", "serve", "--health-checks"]
 CMD ["/posts"]

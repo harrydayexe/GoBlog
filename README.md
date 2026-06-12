@@ -45,16 +45,25 @@ goblog serve posts/
 | `--root-path` | `-p` | `/` | Blog root path for subdirectory deployment |
 | `--template-dir` | `-t` | built-in | Path to a custom template directory |
 | `--watch` | `-w` | `false` | Watch the posts directory and regenerate on changes |
+| `--health-checks` | | `false` | Expose `/healthz/live`, `/healthz/ready`, and `/healthz/startup` endpoints (no auth required); server binds before loading content so probes observe startup state |
 
 ## Docker
 
-The official image is [`harrydayexe/goblog`](https://hub.docker.com/repository/docker/harrydayexe/goblog/general). It runs `goblog serve /posts` by default and exposes port `8080`. File watching is off by default; pass `--watch` to enable it.
+The official image is [`harrydayexe/goblog`](https://hub.docker.com/repository/docker/harrydayexe/goblog/general). It runs `goblog serve --health-checks /posts` by default and exposes port `8080`. Health-check endpoints are enabled in the Docker image. File watching is off by default; pass `--watch` to enable it.
 
 Mount your Markdown posts directory to `/posts`:
 
 ```bash
 docker run -v ./posts:/posts -p 8080:8080 harrydayexe/goblog
 ```
+
+The image exposes three health-check endpoints that require no authentication:
+
+| Endpoint | Purpose | Response |
+|---|---|---|
+| `GET /healthz/live` | Liveness probe | `200 ok` (always) |
+| `GET /healthz/ready` | Readiness probe | `200 ok` once posts are loaded; `503` while starting or on error |
+| `GET /healthz/startup` | Startup probe | Same semantics as `/healthz/ready` |
 
 To watch for post changes and reload automatically:
 
