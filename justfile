@@ -51,6 +51,11 @@ test-verbose:
 test-race:
     go test -race ./...
 
+# Run integration tests (requires Docker)
+[group("test")]
+test-integration:
+    cd integration && go test -v -timeout 10m ./...
+
 # Run tests with coverage profile
 [group("test")]
 test-coverage:
