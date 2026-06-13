@@ -115,7 +115,7 @@ fmt-check:
 
 # Run all linting checks
 [group("lint")]
-lint: mod-tidy vet fmt-check
+lint: mod-tidy vet fmt-check check-license
 
 # Check license headers exist
 [group("lint")]

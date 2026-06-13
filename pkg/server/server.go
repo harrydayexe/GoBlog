@@ -258,23 +258,10 @@ func (s *Server) refreshHandler(ctx context.Context) error {
 
 	// Apply cache-control as the outermost layer so it covers every route.
 	if s.CacheControlTTL.TTL > 0 {
-		handler = cacheControlMiddleware(s.CacheControlTTL.TTL)(handler)
+		handler = middleware.NewCacheControl(s.CacheControlTTL.TTL)(handler)
 	}
 
 	s.handler.Store(handler)
 
 	return nil
-}
-
-// cacheControlMiddleware returns middleware that sets the Cache-Control header
-// on every response to "public, max-age=<seconds>", where seconds is derived
-// from ttl. The header value is computed once at middleware creation time.
-func cacheControlMiddleware(ttl time.Duration) middleware.Middleware {
-	value := fmt.Sprintf("public, max-age=%d", int(ttl.Seconds()))
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("Cache-Control", value)
-			next.ServeHTTP(w, r)
-		})
-	}
 }
