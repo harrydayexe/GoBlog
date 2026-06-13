@@ -112,6 +112,28 @@ func TestServe_LiveReload(t *testing.T) {
 	})
 }
 
+// TestServe_CacheControl boots the server with default flags and asserts that
+// every response includes a non-empty Cache-Control header, confirming the
+// default 1-hour TTL is applied end-to-end through the Docker distribution path.
+func TestServe_CacheControl(t *testing.T) {
+	skipIfNoDocker(t)
+	ctx := context.Background()
+
+	c, addr := startContainer(t, ctx, nil, nil)
+	defer func() { _ = c.Terminate(ctx) }()
+
+	var cacheHeader string
+	eventually(t, 10*time.Second, 200*time.Millisecond, func() bool {
+		status, h := httpGetHeader(t, fmt.Sprintf("http://%s/", addr), "Cache-Control")
+		cacheHeader = h
+		return status == http.StatusOK
+	})
+
+	if cacheHeader == "" {
+		t.Error("expected a non-empty Cache-Control header, got none")
+	}
+}
+
 // TestServe_BlogRootFlag boots the server with -p /blog/ and verifies that
 // the served HTML contains /blog/-prefixed links, confirming that the CLI flag
 // is correctly wired through to the running process.

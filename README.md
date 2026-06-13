@@ -45,6 +45,7 @@ goblog serve posts/
 | `--root-path` | `-p` | `/` | Blog root path for subdirectory deployment |
 | `--template-dir` | `-t` | built-in | Path to a custom template directory |
 | `--watch` | `-w` | `false` | Watch the posts directory and regenerate on changes |
+| `--cache-control` | | `1h` | Max-age TTL for the `Cache-Control` header (`0` disables) |
 | `--health-checks` | | `false` | Expose `/healthz/live`, `/healthz/ready`, and `/healthz/startup` endpoints (no auth required); server binds before loading content so probes observe startup state |
 
 ## Docker

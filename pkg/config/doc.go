@@ -53,6 +53,11 @@
 // deploying at example.com/blog/. This ensures all generated links in templates
 // use the correct base path. Default is "/" for root deployment.
 //
+// WithCacheControl(ttl time.Duration) returns a BaseServerOption that sets the
+// Cache-Control max-age TTL on all HTTP responses. When ttl > 0 the server
+// adds "Cache-Control: public, max-age=<N>" to every response. Setting ttl to
+// 0 or any non-positive value disables the header. The default is one hour.
+//
 // WithLogger(l *slog.Logger) is a BaseOption that sets the structured logger
 // used by the receiving component. It flows into every constructor that
 // accepts BaseOption values (generator.New via GeneratorOption, server.New via
@@ -98,7 +103,7 @@
 // WithEnvironment, WithCustomData, WithHTMLPaths, and (via the embedded BaseOption)
 // WithLogger and WithBlogRoot.
 // BaseServerOption carries options for the HTTP server (port, host, middleware,
-// health-check endpoints, and via the embedded BaseOption: WithLogger, WithBlogRoot).
+// cache-control TTL, health-check endpoints, and via the embedded BaseOption: WithLogger, WithBlogRoot).
 // WatcherOption carries options for watcher.New (debounce, and via the embedded
 // BaseOption: WithLogger, WithBlogRoot).
 // RendererOption carries options for generator.NewTemplateRenderer (custom funcs).

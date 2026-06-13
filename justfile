@@ -105,6 +105,7 @@ vulncheck:
 [group("lint")]
 mod-tidy:
     go mod tidy 
+    cd integration && go mod tidy
 
 # Check if code is formatted
 [group("lint")]
@@ -115,7 +116,7 @@ fmt-check:
 
 # Run all linting checks
 [group("lint")]
-lint: mod-tidy vet fmt-check
+lint: mod-tidy vet fmt-check check-license
 
 # Check license headers exist
 [group("lint")]

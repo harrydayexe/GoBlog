@@ -74,3 +74,19 @@ func httpGet(t *testing.T, url string) (int, string) {
 	}
 	return resp.StatusCode, string(body)
 }
+
+// httpGetHeader performs a GET request and returns the status code and the
+// value of the named response header. Network errors are returned as (0, "")
+// so callers can handle them uniformly inside eventually loops.
+func httpGetHeader(t *testing.T, url, header string) (int, string) {
+	t.Helper()
+	//nolint:gosec // test helper — URL is always test-controlled
+	resp, err := http.Get(url)
+	if err != nil {
+		return 0, ""
+	}
+	defer resp.Body.Close()
+	// Drain body to allow connection reuse.
+	_, _ = io.Copy(io.Discard, resp.Body)
+	return resp.StatusCode, resp.Header.Get(header)
+}

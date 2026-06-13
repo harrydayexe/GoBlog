@@ -5,6 +5,8 @@
 package server
 
 import (
+	"time"
+
 	"github.com/urfave/cli/v3"
 )
 
@@ -61,6 +63,11 @@ var ServeCommand cli.Command = cli.Command{
 			Aliases: []string{"w"},
 			Usage:   "watch the posts directory and regenerate the blog on changes",
 			Value:   false,
+		},
+		&cli.DurationFlag{
+			Name:  CacheControlFlagName,
+			Usage: "max-age TTL for the Cache-Control header (0 disables the header)",
+			Value: time.Hour,
 		},
 		&cli.BoolFlag{
 			Name:  HealthChecksFlagName,

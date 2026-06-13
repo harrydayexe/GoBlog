@@ -66,6 +66,7 @@ type Server struct {
 	config.Port
 	config.Host
 	config.Logger
+	config.CacheControlTTL
 	config.HealthChecks
 
 	handler    atomic.Value // stores http.Handler
@@ -110,8 +111,9 @@ type Server struct {
 // When both are provided, the config.WithLogger option takes precedence.
 func New(logger *slog.Logger, posts fs.FS, opts config.ServerConfig) (*Server, error) {
 	srv := &Server{
-		postsDir: posts,
-		Port:     8080,
+		postsDir:        posts,
+		Port:            8080,
+		CacheControlTTL: config.CacheControlTTL{TTL: time.Hour},
 	}
 
 	for _, opt := range opts.Server {
@@ -123,6 +125,8 @@ func New(logger *slog.Logger, posts fs.FS, opts config.ServerConfig) (*Server, e
 			opt.WithBlogRootFunc(&srv.BlogRoot)
 		} else if opt.WithMiddlewareFunc != nil {
 			opt.WithMiddlewareFunc(&srv.middleware)
+		} else if opt.WithCacheControlFunc != nil {
+			opt.WithCacheControlFunc(&srv.CacheControlTTL)
 		} else if opt.WithLoggerFunc != nil {
 			opt.WithLoggerFunc(&srv.Logger)
 		} else if opt.WithHealthChecksFunc != nil {
@@ -401,6 +405,11 @@ func (s *Server) refreshHandler(ctx context.Context) error {
 	if len(s.middleware) > 0 {
 		stack := middleware.CreateStack(s.middleware...)
 		handler = stack(handler)
+	}
+
+	// Apply cache-control as the outermost layer so it covers every route.
+	if s.CacheControlTTL.TTL > 0 {
+		handler = middleware.NewCacheControl(s.CacheControlTTL.TTL)(handler)
 	}
 
 	s.handler.Store(handler)
