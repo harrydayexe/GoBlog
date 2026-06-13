@@ -33,6 +33,9 @@ RUN mkdir -p /posts
 # Expose default port
 EXPOSE 8080
 
+# Healthchecks
+HEALTHCHECK CMD wget --spider -q http://localhost:8080/healthz/startup || exit 1
+
 # Use ENTRYPOINT for the binary, CMD for default args
 ENTRYPOINT ["./goblog", "serve", "--health-checks"]
 CMD ["/posts"]
