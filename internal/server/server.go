@@ -23,8 +23,13 @@ import (
 
 // NewServeCommand handles the serve command by starting an HTTP server from a directory of markdown posts.
 func NewServeCommand(ctx context.Context, c *cli.Command) error {
+	healthChecksEnabled := c.Bool(HealthChecksFlagName)
+
 	inputPostsDir := c.StringArg(InputPostsDirArgName)
-	inputPostsDir, err := utilities.GetDirectoryFromInput(inputPostsDir, false)
+	// When health checks are enabled the posts directory may not exist yet
+	// (e.g. the volume is not mounted). Allow a non-existent path so the server
+	// can start and surface the failure via /healthz/ready rather than exiting.
+	inputPostsDir, err := utilities.GetDirectoryFromInput(inputPostsDir, healthChecksEnabled)
 	if err != nil {
 		return err
 	}
@@ -81,6 +86,11 @@ func NewServeCommand(ctx context.Context, c *cli.Command) error {
 	}
 
 	cfg.Server = append(cfg.Server, config.WithLogger(slog.Default()).AsServerOption())
+
+	if healthChecksEnabled {
+		cfg.Server = append(cfg.Server, config.WithHealthChecks())
+	}
+
 	return runServe(ctx, inputPostsDir, postsFsys, cfg, c.Bool(WatchFlagName))
 }
 

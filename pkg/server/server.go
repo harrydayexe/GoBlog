@@ -23,6 +23,22 @@ import (
 	"github.com/harrydayexe/GoWebUtilities/middleware"
 )
 
+// probeState describes the current lifecycle state of the server, used to
+// answer health-check probes.
+type probeState int
+
+const (
+	probeStarting probeState = iota // server is binding and loading content
+	probeReady                      // content loaded, ready to serve traffic
+	probeFailed                     // content loading failed; see healthStatus.reason
+)
+
+// healthStatus is stored atomically and read by serveHealth.
+type healthStatus struct {
+	state  probeState
+	reason string // non-empty when state == probeFailed
+}
+
 // Server is an HTTP server that serves generated blog content with support
 // for live content updates.
 //
@@ -34,9 +50,16 @@ import (
 // Server implements http.Handler interface, delegating requests to the current
 // handler loaded atomically.
 //
+// When health checks are enabled via [config.WithHealthChecks], the server
+// binds the HTTP listener before loading posts and templates. The three
+// health-check endpoints (/healthz/live, /healthz/ready, /healthz/startup) are
+// intercepted before the middleware stack and always available without auth.
+//
 // All methods are safe for concurrent use by multiple goroutines.
 type Server struct {
-	mu       sync.RWMutex // protects postsDir and generator during refreshHandler
+	// mu protects postsDir, generator, and generator fields during initialize
+	// and refreshHandler.
+	mu       sync.RWMutex
 	postsDir fs.FS
 
 	config.BlogRoot
@@ -44,10 +67,17 @@ type Server struct {
 	config.Host
 	config.Logger
 	config.CacheControlTTL
+	config.HealthChecks
 
-	handler    atomic.Value            // stores http.Handler
+	handler    atomic.Value // stores http.Handler
+	health     atomic.Pointer[healthStatus]
 	middleware []middleware.Middleware // middleware chain
 	generator  *generator.Generator
+
+	// deferred initialisation inputs — set in New, consumed by initialize.
+	templatesDir fs.FS
+	rendererOpts []config.RendererOption
+	genOpts      []config.GeneratorOption
 }
 
 // New creates a new Server instance with the specified configuration.
@@ -55,11 +85,20 @@ type Server struct {
 // The posts filesystem contains the markdown blog posts to be served.
 // The opts parameter configures server behavior via the functional options pattern.
 //
-// New initializes the server's HTTP handler by generating blog content from
-// the posts filesystem. If initial generation fails, an error is returned.
+// When health checks are disabled (the default), New initializes the server's
+// HTTP handler synchronously by generating blog content from the posts
+// filesystem. If initial generation fails, an error is returned and the server
+// is not started.
 //
-// Returns an error if template rendering or initial blog generation fails.
-// The server is ready to serve requests immediately upon successful return.
+// When health checks are enabled via [config.WithHealthChecks], New skips
+// content generation and returns immediately. The HTTP handler is initialized
+// asynchronously when [Run] is called, so probes can observe the startup state
+// via /healthz/ready and /healthz/startup. In this mode New does not return an
+// error on content-loading failures; instead, the failure is surfaced through
+// the /healthz/ready endpoint.
+//
+// Returns an error if template rendering or initial blog generation fails (only
+// in the synchronous / health-checks-disabled path).
 //
 // # Logger
 //
@@ -90,6 +129,8 @@ func New(logger *slog.Logger, posts fs.FS, opts config.ServerConfig) (*Server, e
 			opt.WithCacheControlFunc(&srv.CacheControlTTL)
 		} else if opt.WithLoggerFunc != nil {
 			opt.WithLoggerFunc(&srv.Logger)
+		} else if opt.WithHealthChecksFunc != nil {
+			opt.WithHealthChecksFunc(&srv.HealthChecks)
 		}
 	}
 
@@ -102,6 +143,7 @@ func New(logger *slog.Logger, posts fs.FS, opts config.ServerConfig) (*Server, e
 		}
 	}
 
+	// Resolve the template filesystem.
 	var templatesDir fs.FS
 	if opts.TemplateDir != nil {
 		srv.Logger.Logger.Debug("Using custom templates")
@@ -111,33 +153,67 @@ func New(logger *slog.Logger, posts fs.FS, opts config.ServerConfig) (*Server, e
 		templatesDir = templates.Default
 	}
 
-	renderer, err := generator.NewTemplateRenderer(templatesDir, opts.RendererOpts...)
-	if err != nil {
-		return nil, err
-	}
-
-	// Propagate the server's resolved logger into the generator.
+	// Build the generator option slice (merging caller options with logger).
 	genOpts := make([]config.GeneratorOption, 0, len(opts.Gen)+1)
 	genOpts = append(genOpts, opts.Gen...)
 	genOpts = append(genOpts, srv.Logger.AsOption().AsGeneratorOption())
-	gen := generator.New(posts, renderer, genOpts...)
-	srv.generator = gen
 
-	// Sync the resolved BlogRoot to the generator so rendered links use the correct prefix.
-	gen.BlogRoot = srv.BlogRoot
+	// Store inputs needed by initialize (both sync and async paths use them).
+	srv.templatesDir = templatesDir
+	srv.rendererOpts = opts.RendererOpts
+	srv.genOpts = genOpts
 
-	// Initialize handler before returning. Server is not yet published so no lock needed.
-	if err := srv.refreshHandler(context.Background()); err != nil {
-		return nil, fmt.Errorf("failed to initialize handler: %w", err)
+	if srv.HealthChecks.Enabled {
+		// Async path: bind first, generate in Run. Mark as starting.
+		srv.health.Store(&healthStatus{state: probeStarting})
+		srv.Logger.Logger.Debug("Health checks enabled: deferring content initialisation to Run")
+		return srv, nil
+	}
+
+	// Sync path (default): initialize before returning, same behaviour as before.
+	if err := srv.initialize(context.Background()); err != nil {
+		return nil, err
 	}
 
 	srv.Logger.Logger.Debug("Server created successfully")
 	return srv, nil
 }
 
+// initialize builds the template renderer and generator, generates the initial
+// blog content, and stores the HTTP handler atomically.
+//
+// Callers from New (sync path) invoke this before the server is published, so
+// no lock is needed for the struct itself. Callers from Run (async path) invoke
+// this concurrently with an already-published server, so the critical section
+// that touches s.generator and calls refreshHandler is protected by s.mu.
+func (s *Server) initialize(ctx context.Context) error {
+	renderer, err := generator.NewTemplateRenderer(s.templatesDir, s.rendererOpts...)
+	if err != nil {
+		return fmt.Errorf("failed to create template renderer: %w", err)
+	}
+
+	s.mu.Lock()
+	posts := s.postsDir
+	gen := generator.New(posts, renderer, s.genOpts...)
+	s.generator = gen
+	s.generator.BlogRoot = s.BlogRoot
+	err = s.refreshHandler(ctx)
+	s.mu.Unlock()
+
+	if err != nil {
+		return fmt.Errorf("failed to initialize handler: %w", err)
+	}
+	return nil
+}
+
 // ServeHTTP implements http.Handler, delegating requests to the current handler.
 // The handler is loaded atomically, allowing it to be safely updated via
 // UpdatePosts while requests are being served.
+//
+// When health checks are enabled, ServeHTTP intercepts requests to
+// /healthz/live, /healthz/ready, and /healthz/startup before the middleware
+// stack, so they are always reachable without authentication and during async
+// startup.
 //
 // ServeHTTP is safe for concurrent use by multiple goroutines. It performs
 // a lock-free atomic load of the current handler on each request.
@@ -145,6 +221,14 @@ func New(logger *slog.Logger, posts fs.FS, opts config.ServerConfig) (*Server, e
 // If the handler has not been initialized (nil), ServeHTTP returns a
 // 503 Service Unavailable error.
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if s.HealthChecks.Enabled {
+		switch r.URL.Path {
+		case "/healthz/live", "/healthz/ready", "/healthz/startup":
+			s.serveHealth(w, r)
+			return
+		}
+	}
+
 	h := s.handler.Load()
 	if h == nil {
 		s.Logger.Logger.ErrorContext(r.Context(), "handler not initialized")
@@ -154,9 +238,46 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	h.(http.Handler).ServeHTTP(w, r)
 }
 
+// serveHealth handles requests to the /healthz/* endpoints.
+// Only GET is accepted; any other method returns 405 Method Not Allowed.
+//
+// /healthz/live always returns 200 OK.
+// /healthz/ready and /healthz/startup return 200 OK once content has loaded
+// and 503 Service Unavailable while starting or after a load failure.
+func (s *Server) serveHealth(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	switch r.URL.Path {
+	case "/healthz/live":
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		fmt.Fprint(w, "ok")
+
+	case "/healthz/ready", "/healthz/startup":
+		st := s.health.Load()
+		if st == nil || st.state != probeReady {
+			reason := "starting"
+			if st != nil && st.state == probeFailed {
+				reason = "not ready: " + st.reason
+			}
+			http.Error(w, reason, http.StatusServiceUnavailable)
+			return
+		}
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		fmt.Fprint(w, "ok")
+	}
+}
+
 // Run starts the HTTP server and blocks until interrupted via context cancellation
 // or OS signal (SIGINT, SIGTERM, SIGHUP). It handles graceful shutdown with a
 // 10-second timeout.
+//
+// When health checks are enabled, Run launches content initialisation in a
+// background goroutine so that the HTTP listener is available immediately for
+// probe traffic. The /healthz/ready and /healthz/startup endpoints return
+// 503 until initialisation completes (or 503 with a reason if it fails).
 //
 // The server uses atomic handler swapping, allowing UpdatePosts to be called
 // while the server is running without interrupting in-flight requests.
@@ -176,6 +297,20 @@ func (s *Server) Run(ctx context.Context) error {
 	}
 
 	var wg sync.WaitGroup
+
+	// When health checks are enabled, initialize content asynchronously so the
+	// listener binds immediately and probes can reach /healthz/* during startup.
+	if s.HealthChecks.Enabled {
+		wg.Go(func() {
+			if err := s.initialize(ctx); err != nil {
+				s.health.Store(&healthStatus{state: probeFailed, reason: err.Error()})
+				s.Logger.Logger.ErrorContext(ctx, "async content initialisation failed", slog.Any("error", err))
+				return
+			}
+			s.health.Store(&healthStatus{state: probeReady})
+			s.Logger.Logger.DebugContext(ctx, "async content initialisation complete")
+		})
+	}
 
 	// Track ListenAndServe goroutine. On bind/listen failure, cancel ctx so the
 	// shutdown goroutine wakes and wg.Wait() can return.
@@ -215,16 +350,32 @@ func (s *Server) Run(ctx context.Context) error {
 // The handler swap is atomic, ensuring that requests see either the old or new
 // content without any intermediate inconsistent state.
 //
+// If the server has not yet completed its initial content load (health-checks
+// async path), UpdatePosts returns an error immediately rather than racing with
+// the initialisation goroutine.
+//
 // If handler refresh fails, an error is returned and the previous handler
 // remains active, continuing to serve the old content.
 func (s *Server) UpdatePosts(posts fs.FS, ctx context.Context) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
+	if s.generator == nil {
+		return fmt.Errorf("server not yet initialised; cannot update posts before initial content load completes")
+	}
+
 	s.postsDir = posts
 	s.generator.PostsDir = posts
 	if err := s.refreshHandler(ctx); err != nil {
 		return fmt.Errorf("failed to refresh handler: %w", err)
 	}
+
+	// Recover health state after a successful reload (e.g. after a prior failure
+	// in watch mode). Only meaningful when health checks are enabled.
+	if s.HealthChecks.Enabled {
+		s.health.Store(&healthStatus{state: probeReady})
+	}
+
 	return nil
 }
 

@@ -15,9 +15,9 @@ import (
 // pointer that modifies a specific server setting.
 //
 // This type should not be constructed directly. Use the provided option
-// functions: [WithPort], [WithHost], [WithMiddleware], [WithCacheControl], or
-// call [BaseOption.AsServerOption] on a [BaseOption] value (e.g. from
-// [WithLogger]).
+// functions: [WithPort], [WithHost], [WithMiddleware], [WithCacheControl],
+// [WithHealthChecks], or call [BaseOption.AsServerOption] on a [BaseOption]
+// value (e.g. from [WithLogger]).
 type BaseServerOption struct {
 	BaseOption
 
@@ -25,6 +25,7 @@ type BaseServerOption struct {
 	WithHostFunc         func(v *Host)
 	WithMiddlewareFunc   func(mw *[]middleware.Middleware)
 	WithCacheControlFunc func(v *CacheControlTTL)
+	WithHealthChecksFunc func(v *HealthChecks)
 }
 
 // Port is the TCP port number the HTTP server listens on.
@@ -139,5 +140,47 @@ type CacheControlTTL struct{ TTL time.Duration }
 func WithCacheControl(ttl time.Duration) BaseServerOption {
 	return BaseServerOption{
 		WithCacheControlFunc: func(v *CacheControlTTL) { v.TTL = ttl },
+	}
+}
+
+// HealthChecks is a configuration type that controls whether the HTTP server
+// exposes health-check endpoints at /healthz/live, /healthz/ready, and
+// /healthz/startup.
+//
+// When Enabled is true, the server binds the HTTP listener before loading posts
+// and templates, so liveness/readiness/startup probes can reach the endpoints
+// during startup. Health checks are disabled by default; the Docker image
+// enables them via the --health-checks flag.
+//
+// This type is typically embedded in the server struct and set via [WithHealthChecks].
+type HealthChecks struct{ Enabled bool }
+
+// WithHealthChecks returns a [BaseServerOption] that enables health-check
+// endpoints on the HTTP server.
+//
+// When enabled, the server exposes three unauthenticated endpoints:
+//   - GET /healthz/live    — always 200 OK (process is alive)
+//   - GET /healthz/ready   — 200 OK once posts and templates have loaded;
+//     503 Service Unavailable while starting up or if loading failed
+//   - GET /healthz/startup — same semantics as /healthz/ready
+//
+// The server binds the HTTP listener before initialising content when health
+// checks are enabled, allowing probes to observe the startup state. Response
+// bodies are plain text ("ok" or an error description).
+//
+// Health checks are disabled by default.
+//
+// Example usage:
+//
+//	cfg := config.ServerConfig{
+//	    Server: []config.BaseServerOption{
+//	        config.WithHealthChecks(),
+//	    },
+//	}
+func WithHealthChecks() BaseServerOption {
+	return BaseServerOption{
+		WithHealthChecksFunc: func(v *HealthChecks) {
+			v.Enabled = true
+		},
 	}
 }

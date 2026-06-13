@@ -69,5 +69,10 @@ var ServeCommand cli.Command = cli.Command{
 			Usage: "max-age TTL for the Cache-Control header (0 disables the header)",
 			Value: time.Hour,
 		},
+		&cli.BoolFlag{
+			Name:  HealthChecksFlagName,
+			Usage: "expose /healthz/live, /healthz/ready, and /healthz/startup endpoints (no auth required); the server binds before loading content so probes observe startup state",
+			Value: false,
+		},
 	},
 }

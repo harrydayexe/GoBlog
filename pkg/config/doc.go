@@ -87,6 +87,15 @@
 // later values overwriting earlier ones for duplicate keys. The field is nil
 // when no WithCustomData option is supplied.
 //
+// WithHealthChecks() is a BaseServerOption that enables health-check endpoints
+// on the HTTP server. When enabled, GET /healthz/live always returns 200 OK,
+// while GET /healthz/ready and GET /healthz/startup return 200 OK once posts
+// and templates have loaded and 503 Service Unavailable while starting up or
+// after a load failure. The endpoints require no authentication and are served
+// before the middleware stack. The server binds the HTTP listener before
+// initialising content so probes can observe the startup state. Health checks
+// are disabled by default; the Docker image enables them via --health-checks.
+//
 // # Option types
 //
 // GeneratorOption carries options for generator.New and outputter.NewDirectoryWriter,
@@ -94,7 +103,7 @@
 // WithEnvironment, WithCustomData, WithHTMLPaths, and (via the embedded BaseOption)
 // WithLogger and WithBlogRoot.
 // BaseServerOption carries options for the HTTP server (port, host, middleware,
-// cache-control TTL, and via the embedded BaseOption: WithLogger, WithBlogRoot).
+// cache-control TTL, health-check endpoints, and via the embedded BaseOption: WithLogger, WithBlogRoot).
 // WatcherOption carries options for watcher.New (debounce, and via the embedded
 // BaseOption: WithLogger, WithBlogRoot).
 // RendererOption carries options for generator.NewTemplateRenderer (custom funcs).

@@ -30,3 +30,6 @@ const WatchFlagName = "watch"
 
 // CacheControlFlagName is the CLI flag name for setting the Cache-Control max-age TTL.
 const CacheControlFlagName = "cache-control"
+
+// HealthChecksFlagName is the CLI flag name for enabling health-check endpoints.
+const HealthChecksFlagName = "health-checks"

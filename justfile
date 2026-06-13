@@ -149,3 +149,8 @@ docker tag="goblog:latest":
     @echo "Building Docker image..."
     docker build -t {{tag}} .
     @echo "✓ Docker image built successfully"
+
+[group("run")]
+run-image tag="goblog:latest": docker
+    @echo "Running Docker image..."
+    docker run -v ./docs/example-posts/:/posts -p 8080:8080 {{tag}}
