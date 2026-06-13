@@ -133,6 +133,31 @@
 //	    srv.UpdatePosts(os.DirFS(postsPath), ctx)
 //	})
 //
+// # Health Checks
+//
+// Enable health-check endpoints via config.WithHealthChecks():
+//
+//	cfg := config.ServerConfig{
+//	    Server: []config.BaseServerOption{
+//	        config.WithPort(8080),
+//	        config.WithHealthChecks(),
+//	    },
+//	}
+//	srv, err := server.New(nil, postsFS, cfg)
+//
+// Three unauthenticated GET endpoints are exposed:
+//
+//   - /healthz/live   — always 200 OK ("ok"); confirms the process is alive.
+//   - /healthz/ready  — 200 OK once posts and templates have loaded; 503 while
+//     starting up or if loading failed (body includes the reason).
+//   - /healthz/startup — same semantics as /healthz/ready; used as the
+//     startup probe in Kubernetes deployments.
+//
+// When health checks are enabled the server binds the HTTP listener before
+// loading posts, so probes can observe startup state. The endpoints bypass
+// middleware (including authentication) and are intercepted in ServeHTTP before
+// the content handler. The Docker image enables health checks by default.
+//
 // # Concurrency
 //
 // All Server methods are safe for concurrent use by multiple goroutines.
