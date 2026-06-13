@@ -105,6 +105,7 @@ vulncheck:
 [group("lint")]
 mod-tidy:
     go mod tidy 
+    cd integration && go mod tidy
 
 # Check if code is formatted
 [group("lint")]
