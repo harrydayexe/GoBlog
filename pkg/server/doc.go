@@ -32,7 +32,7 @@
 //	    },
 //	}
 //
-//	srv, err := server.New(nil, postsFS, cfg)
+//	srv, err := server.New(postsFS, cfg)
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
@@ -76,7 +76,7 @@
 //	    },
 //	}
 //
-//	srv, err := server.New(nil, postsFS, cfg)
+//	srv, err := server.New(postsFS, cfg)
 //
 // Custom middleware can be added following the standard pattern:
 //

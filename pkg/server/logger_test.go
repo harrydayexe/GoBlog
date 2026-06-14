@@ -47,7 +47,7 @@ func TestServer_LoggerPropagatedToGenerator(t *testing.T) {
 		Gen: []config.GeneratorOption{config.WithRawOutput()},
 	}
 
-	srv, err := New(nil, postsFS, cfg)
+	srv, err := New(postsFS, cfg)
 	if err != nil {
 		t.Fatalf("failed to create server: %v", err)
 	}

@@ -47,12 +47,8 @@ type HandlerConfig struct {
 //
 // Supply a logger via [config.WithLogger] in opts:
 //
-//	h := server.Handler(blog, nil, config.WithLogger(myLogger), config.WithBlogRoot("/blog/"))
-//
-// Deprecated: the positional logger parameter will be removed in v3.0.0.
-// Pass nil and supply the logger via config.WithLogger in opts instead.
-// When both are provided, the config.WithLogger option takes precedence.
-func Handler(blog *generator.GeneratedBlog, logger *slog.Logger, opts ...config.BaseOption) http.Handler {
+//	h := server.Handler(blog, config.WithLogger(myLogger), config.WithBlogRoot("/blog/"))
+func Handler(blog *generator.GeneratedBlog, opts ...config.BaseOption) http.Handler {
 	cfg := HandlerConfig{
 		BlogRoot: config.BlogRoot("/"),
 	}
@@ -65,13 +61,8 @@ func Handler(blog *generator.GeneratedBlog, logger *slog.Logger, opts ...config.
 		}
 	}
 
-	// Precedence: WithLogger option > positional logger arg > slog.Default().
 	if cfg.Logger.Logger == nil {
-		if logger != nil {
-			cfg.Logger.Logger = logger
-		} else {
-			cfg.Logger.Logger = slog.Default()
-		}
+		cfg.Logger.Logger = slog.Default()
 	}
 
 	trimmed := strings.Trim(string(cfg.BlogRoot), "/")
