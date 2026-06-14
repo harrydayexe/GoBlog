@@ -20,18 +20,26 @@ import (
 // version is replaced at build time by GoReleaser
 var version = "dev"
 
-// newRootCommand builds and returns the root CLI command. Extracting it from
-// main allows the command to be constructed in tests.
-func newRootCommand() *cli.Command {
+func main() {
 	var verbosity int
 	var logger *slog.Logger
 
-	return &cli.Command{
-		Name:                   "goblog",
+	cli.VersionFlag = &cli.BoolFlag{
+		Name:    "version",
+		Aliases: []string{"V"},
+		Usage:   "print only the version",
+	}
+
+	cli.VersionPrinter = func(cmd *cli.Command) {
+		fmt.Printf("GoBlog version %s\n", buildVersion())
+	}
+
+	v := buildVersion()
+	cmd := &cli.Command{
+		Name:                   "GoBlog",
 		Usage:                  "Create a blog feed from posts written in Markdown!",
 		UseShortOptionHandling: true,
-		EnableShellCompletion:  true,
-		Version:                buildVersion(),
+		Version:                v,
 		Commands: []*cli.Command{
 			&generator.GeneratorCommand,
 			&server.ServeCommand,
@@ -63,20 +71,8 @@ func newRootCommand() *cli.Command {
 			return ctx, nil
 		},
 	}
-}
 
-func main() {
-	cli.VersionFlag = &cli.BoolFlag{
-		Name:    "version",
-		Aliases: []string{"V"},
-		Usage:   "print only the version",
-	}
-
-	cli.VersionPrinter = func(cmd *cli.Command) {
-		fmt.Printf("GoBlog version %s\n", buildVersion())
-	}
-
-	if err := newRootCommand().Run(context.Background(), os.Args); err != nil {
+	if err := cmd.Run(context.Background(), os.Args); err != nil {
 		utilities.CliErrorHandler(err)
 	}
 }
