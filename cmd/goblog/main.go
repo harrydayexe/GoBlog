@@ -39,6 +39,7 @@ func main() {
 		Name:                   "goblog",
 		Usage:                  "Create a blog feed from posts written in Markdown!",
 		UseShortOptionHandling: true,
+		EnableShellCompletion:  true,
 		Version:                v,
 		Commands: []*cli.Command{
 			&generator.GeneratorCommand,
