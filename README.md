@@ -48,6 +48,25 @@ goblog serve posts/
 | `--cache-control` | | `1h` | Max-age TTL for the `Cache-Control` header (`0` disables) |
 | `--health-checks` | | `false` | Expose `/healthz/live`, `/healthz/ready`, and `/healthz/startup` endpoints (no auth required); server binds before loading content so probes observe startup state |
 
+### Shell completion
+
+`goblog` can generate shell completion scripts at runtime. After installing the
+binary, source the appropriate script to enable tab-completion of subcommands and
+flags.
+
+**Bash** — add to `~/.bashrc`:
+
+```bash
+source <(goblog completion bash)
+```
+
+**Zsh** — add to `~/.zshrc` (requires `compinit` to be loaded):
+
+```zsh
+autoload -Uz compinit && compinit
+source <(goblog completion zsh)
+```
+
 ## Docker
 
 The official image is [`harrydayexe/goblog`](https://hub.docker.com/repository/docker/harrydayexe/goblog/general). It runs `goblog serve --health-checks /posts` by default and exposes port `8080`. Health-check endpoints are enabled in the Docker image. File watching is off by default; pass `--watch` to enable it.
