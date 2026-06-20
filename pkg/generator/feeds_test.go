@@ -7,6 +7,7 @@ package generator
 import (
 	"context"
 	"encoding/xml"
+	"fmt"
 	"strings"
 	"testing"
 	"testing/fstest"
@@ -315,7 +316,7 @@ func TestAbsURL(t *testing.T) {
 			t.Parallel()
 			got := absURL(tt.base, tt.path)
 			if got != tt.want {
-				t.Errorf("AbsURL(%q, %q) = %q, want %q", tt.base, tt.path, got, tt.want)
+				t.Errorf("absURL(%q, %q) = %q, want %q", tt.base, tt.path, got, tt.want)
 			}
 		})
 	}
@@ -518,5 +519,76 @@ func TestGenerator_FeedsEnabledInBaseData(t *testing.T) {
 	}
 	if !strings.Contains(string(blog2.Index), "application/rss+xml") {
 		t.Error("index page should have RSS discovery link when base URL is set")
+	}
+}
+
+// TestGenerator_FeedPostLimitZeroIsUnlimited verifies that WithFeedPostLimit(0)
+// includes all posts — i.e. 0 means unlimited, not "use default".
+func TestGenerator_FeedPostLimitZeroIsUnlimited(t *testing.T) {
+	t.Parallel()
+
+	// Build 12 posts — more than the old library default of 10.
+	postsFS := fstest.MapFS{}
+	for i := range 12 {
+		name := fmt.Sprintf("post%02d.md", i+1)
+		date := time.Date(2024, time.January, 12-i, 0, 0, 0, 0, time.UTC)
+		postsFS[name] = &fstest.MapFile{
+			Data: []byte(fmt.Sprintf("---\ntitle: \"Post %d\"\ndate: %s\ndescription: \"p%d\"\n---\ncontent %d",
+				i+1, date.Format("2006-01-02"), i+1, i+1)),
+		}
+	}
+
+	gen := New(postsFS, newTestRenderer(t),
+		config.WithBaseURL("https://example.com"),
+		config.WithFeedPostLimit(0), // explicit 0 = unlimited
+	)
+
+	blog, err := gen.Generate(context.Background())
+	if err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+
+	rss := string(blog.RSSFeed)
+	for i := range 12 {
+		slug := fmt.Sprintf("post-%d", i+1)
+		if !strings.Contains(rss, "https://example.com/posts/"+slug) {
+			t.Errorf("post %d should be in feed when limit is 0 (unlimited)", i+1)
+		}
+	}
+}
+
+// TestGenerator_NoFeedPostLimitOptionIsUnlimited verifies that omitting
+// WithFeedPostLimit entirely includes all posts at the library level —
+// the 10-post default lives only in the CLI flag, not in generator.New.
+func TestGenerator_NoFeedPostLimitOptionIsUnlimited(t *testing.T) {
+	t.Parallel()
+
+	// Build 12 posts — more than the old library default of 10.
+	postsFS := fstest.MapFS{}
+	for i := range 12 {
+		name := fmt.Sprintf("post%02d.md", i+1)
+		date := time.Date(2024, time.January, 12-i, 0, 0, 0, 0, time.UTC)
+		postsFS[name] = &fstest.MapFile{
+			Data: []byte(fmt.Sprintf("---\ntitle: \"Post %d\"\ndate: %s\ndescription: \"p%d\"\n---\ncontent %d",
+				i+1, date.Format("2006-01-02"), i+1, i+1)),
+		}
+	}
+
+	// No WithFeedPostLimit option at all.
+	gen := New(postsFS, newTestRenderer(t),
+		config.WithBaseURL("https://example.com"),
+	)
+
+	blog, err := gen.Generate(context.Background())
+	if err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+
+	rss := string(blog.RSSFeed)
+	for i := range 12 {
+		slug := fmt.Sprintf("post-%d", i+1)
+		if !strings.Contains(rss, "https://example.com/posts/"+slug) {
+			t.Errorf("post %d should be in feed when no limit option is set", i+1)
+		}
 	}
 }

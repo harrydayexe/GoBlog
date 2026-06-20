@@ -7,6 +7,7 @@ package generator
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/gorilla/feeds"
 	"github.com/harrydayexe/GoBlog/v2/pkg/models"
@@ -54,11 +55,7 @@ func (g *Generator) buildFeedsForTitle(posts models.PostList, title string) (rss
 	// posts[0].Date would miss edits to older posts.
 	updated := posts[0].Date
 	for _, p := range posts {
-		eff := p.Date
-		if !p.LastEdited.IsZero() {
-			eff = p.LastEdited
-		}
-		if eff.After(updated) {
+		if eff := effectiveUpdated(p); eff.After(updated) {
 			updated = eff
 		}
 	}
@@ -75,12 +72,6 @@ func (g *Generator) buildFeedsForTitle(posts models.PostList, title string) (rss
 	for _, post := range posts {
 		postURL := absPostURL(post.Slug)
 
-		// Use LastEdited as the updated time when set; otherwise fall back to Date.
-		itemUpdated := post.Date
-		if !post.LastEdited.IsZero() {
-			itemUpdated = post.LastEdited
-		}
-
 		item := &feeds.Item{
 			// The post URL serves as the unique, permanent identifier.
 			Id:          postURL,
@@ -89,7 +80,7 @@ func (g *Generator) buildFeedsForTitle(posts models.PostList, title string) (rss
 			Description: post.Description,
 			Content:     string(post.Content),
 			Created:     post.Date,
-			Updated:     itemUpdated,
+			Updated:     effectiveUpdated(post),
 		}
 
 		if post.Author != "" {
@@ -110,6 +101,15 @@ func (g *Generator) buildFeedsForTitle(posts models.PostList, title string) (rss
 	}
 
 	return []byte(rssStr), []byte(atomStr), nil
+}
+
+// effectiveUpdated returns the post's last-modified instant: LastEdited when
+// set, otherwise the publication Date.
+func effectiveUpdated(p *models.Post) time.Time {
+	if !p.LastEdited.IsZero() {
+		return p.LastEdited
+	}
+	return p.Date
 }
 
 // absURL returns the absolute URL for a site-relative path by prepending the

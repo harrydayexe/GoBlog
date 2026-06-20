@@ -68,9 +68,7 @@ func NewGeneratorCommand(ctx context.Context, c *cli.Command) error {
 		opts = append(opts, config.WithDisableFeeds())
 	}
 
-	if feedLimit := c.Int(cliflags.FeedLimitFlagName); feedLimit > 0 {
-		opts = append(opts, config.WithFeedPostLimit(feedLimit))
-	}
+	opts = append(opts, config.WithFeedPostLimit(c.Int(cliflags.FeedLimitFlagName)))
 
 	templateDirPath := c.String(cliflags.TemplateDirFlagName)
 	var templateDir fs.FS

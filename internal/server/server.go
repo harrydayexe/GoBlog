@@ -61,9 +61,7 @@ func NewServeCommand(ctx context.Context, c *cli.Command) error {
 		cfg.Gen = append(cfg.Gen, config.WithDisableFeeds())
 	}
 
-	if feedLimit := c.Int(cliflags.FeedLimitFlagName); feedLimit > 0 {
-		cfg.Gen = append(cfg.Gen, config.WithFeedPostLimit(feedLimit))
-	}
+	cfg.Gen = append(cfg.Gen, config.WithFeedPostLimit(c.Int(cliflags.FeedLimitFlagName)))
 
 	cfg.Server = append(cfg.Server, config.WithPort(c.Int(PortFlagName)))
 	cfg.Server = append(cfg.Server, config.WithCacheControl(c.Duration(CacheControlFlagName)))

@@ -167,6 +167,10 @@ func handleTag(cfg HandlerConfig, blog *generator.GeneratedBlog) http.Handler {
 		rawName := r.PathValue("tagName")
 
 		// Serve per-tag feeds when the path ends with a feed extension.
+		// Go's net/http wildcard {tagName} captures the entire final path
+		// segment, including any ".rss.xml" / ".atom.xml" suffix, so feed
+		// paths cannot be registered as their own mux patterns and must be
+		// demuxed here by inspecting the captured name.
 		if tag, ok := strings.CutSuffix(rawName, ".rss.xml"); ok {
 			bits := blog.TagRSSFeeds[tag]
 			if len(bits) == 0 {

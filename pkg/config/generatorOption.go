@@ -356,7 +356,13 @@ func (o CustomData) AsOption() GeneratorOption {
 }
 
 // BaseURL is a configuration type that holds the absolute base URL of the site
-// (e.g. "https://example.com" or "https://example.com/blog").
+// (e.g. "https://example.com").
+//
+// BaseURL must contain only the scheme and host — do not include a path. If
+// the blog is deployed under a sub-path (e.g. "https://example.com/blog"),
+// use [WithBlogRoot] for the path portion; it is appended automatically when
+// building feed URLs. Including a path in BaseURL produces duplicated path
+// segments (e.g. "…/blog/blog/posts/…").
 //
 // BaseURL is required for feed generation: RSS and Atom items must reference
 // fully-qualified URLs. When BaseURL is empty, the generator skips feed
@@ -369,9 +375,10 @@ type BaseURL string
 // WithBaseURL returns a GeneratorOption that sets the site's absolute base URL.
 //
 // The base URL is prepended to site-relative paths to produce fully-qualified
-// URLs for RSS/Atom feed items. It must include the scheme and host
-// (e.g. "https://example.com") and may include a path prefix that matches
-// [BlogRoot] when the blog is not at the domain root.
+// URLs for RSS/Atom feed items. It must contain only the scheme and host
+// (e.g. "https://example.com"). If the blog lives under a sub-path, configure
+// that via [WithBlogRoot] — including the path in the base URL produces
+// duplicated path segments in every feed URL.
 //
 // Trailing slashes are trimmed before the base URL is used, so
 // "https://example.com/" and "https://example.com" are equivalent.
@@ -450,7 +457,8 @@ func (o DisableFeeds) AsOption() GeneratorOption {
 // Posts are selected in reverse-chronological order (newest first), so a
 // limit of 10 means only the 10 most recent posts appear in each feed.
 //
-// The zero value (unset) is treated as 10 by the generator.
+// A zero or negative value means no limit: all posts are included. When unset
+// the library applies no limit; the goblog CLI defaults to 10.
 //
 // This type is typically embedded in generator configuration structs and
 // should be set using the [WithFeedPostLimit] option function.
@@ -459,8 +467,10 @@ type FeedPostLimit struct{ Limit int }
 // WithFeedPostLimit returns a GeneratorOption that sets the maximum number of
 // posts included in each generated feed.
 //
-// When not set, the generator defaults to 10 posts per feed.
-// The same limit applies to the site-wide feed and every per-tag feed.
+// A value of 0 or any negative number means unlimited — all posts are
+// included. The same limit applies to the site-wide feed and every per-tag
+// feed. When this option is not set, the library applies no limit (the goblog
+// CLI uses a default of 10).
 //
 // Example usage:
 //

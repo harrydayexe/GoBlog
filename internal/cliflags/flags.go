@@ -73,7 +73,7 @@ func Shared() []cli.Flag {
 		},
 		&cli.IntFlag{
 			Name:  FeedLimitFlagName,
-			Usage: "maximum number of posts to include in each feed",
+			Usage: "maximum number of posts to include in each feed (0 = unlimited)",
 			Value: 10,
 		},
 	}

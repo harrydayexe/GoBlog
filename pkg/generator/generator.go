@@ -130,10 +130,6 @@ func New(posts fs.FS, renderer *TemplateRenderer, opts ...config.GeneratorOption
 		gen.Environment = config.Environment{Environment: "local"}
 	}
 
-	if gen.FeedPostLimit.Limit == 0 {
-		gen.FeedPostLimit = config.FeedPostLimit{Limit: 10}
-	}
-
 	return &gen
 }
 
