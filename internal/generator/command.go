@@ -56,5 +56,19 @@ var GeneratorCommand cli.Command = cli.Command{
 			Usage: "disable reading time estimation on posts",
 			Value: false,
 		},
+		&cli.StringFlag{
+			Name:  BaseURLFlagName,
+			Usage: "absolute base URL of the site (e.g. https://example.com); required for RSS/Atom feed generation",
+		},
+		&cli.BoolFlag{
+			Name:  DisableFeedsFlagName,
+			Usage: "disable RSS and Atom feed generation",
+			Value: false,
+		},
+		&cli.IntFlag{
+			Name:  FeedLimitFlagName,
+			Usage: "maximum number of posts to include in each feed (default 10)",
+			Value: 0,
+		},
 	},
 }

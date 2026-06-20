@@ -33,6 +33,9 @@ goblog serve posts/
 | `--disable-reading-time` | | `false` | Disable reading time estimation on posts |
 | `--root-path` | `-p` | `/` | Blog root path for subdirectory deployment |
 | `--template-dir` | `-t` | built-in | Path to a custom template directory |
+| `--base-url` | | _(none)_ | Absolute base URL of the site (e.g. `https://example.com`); required to generate RSS/Atom feeds |
+| `--disable-feeds` | | `false` | Disable RSS and Atom feed generation |
+| `--feed-limit` | | `10` | Maximum number of posts to include in each feed |
 
 ### `serve` flags
 

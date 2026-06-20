@@ -59,6 +59,18 @@ func NewGeneratorCommand(ctx context.Context, c *cli.Command) error {
 		opts = append(opts, config.WithDisableReadingTime())
 	}
 
+	if baseURL := c.String(BaseURLFlagName); baseURL != "" {
+		opts = append(opts, config.WithBaseURL(baseURL))
+	}
+
+	if c.Bool(DisableFeedsFlagName) {
+		opts = append(opts, config.WithDisableFeeds())
+	}
+
+	if feedLimit := c.Int(FeedLimitFlagName); feedLimit > 0 {
+		opts = append(opts, config.WithFeedPostLimit(feedLimit))
+	}
+
 	templateDirPath := c.String(TemplateDirFlagName)
 	var templateDir fs.FS
 	if templateDirPath == "" {

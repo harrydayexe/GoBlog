@@ -24,3 +24,12 @@ const DisableTagsFlagName = "disable-tags"
 
 // DisableReadingTimeFlagName is the CLI flag name for disabling reading time estimation.
 const DisableReadingTimeFlagName = "disable-reading-time"
+
+// BaseURLFlagName is the CLI flag name for setting the site's absolute base URL (required for feed generation).
+const BaseURLFlagName = "base-url"
+
+// DisableFeedsFlagName is the CLI flag name for disabling RSS and Atom feed generation.
+const DisableFeedsFlagName = "disable-feeds"
+
+// FeedLimitFlagName is the CLI flag name for setting the maximum number of posts in each feed.
+const FeedLimitFlagName = "feed-limit"
