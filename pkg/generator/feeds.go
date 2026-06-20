@@ -12,41 +12,51 @@ import (
 	"github.com/harrydayexe/GoBlog/v2/pkg/models"
 )
 
-// buildFeeds generates RSS 2.0 and Atom XML bytes for the given list of posts.
+// buildFeeds generates RSS 2.0 and Atom XML bytes for the given list of posts
+// using the generator's configured site title, base URL, blog root, and post
+// limit.
 //
-// posts must already be sorted (newest first) and will be sliced to limit
-// entries before building the feed. absPostURL is a function that accepts a
-// post slug and returns the fully-qualified URL for that post's page.
+// posts must already be sorted (newest first); they are sliced to the
+// generator's FeedPostLimit before the feed is assembled.
 //
-// The feed's own link (the href used in channel/feed metadata) is built from
-// siteURL, which is the value of config.BaseURL with the trailing slash trimmed.
+// Both the RSS 2.0 and Atom representations are returned. If the list is
+// empty both slices are nil.
 //
-// Both the RSS and Atom representations are returned; if the list is empty
-// both slices are nil.
-func buildFeeds(
-	posts models.PostList,
-	limit int,
-	siteTitle string,
-	siteURL string,
-	absPostURL func(slug string) string,
-) (rss []byte, atom []byte, err error) {
+// The post URL is derived from the generator's BaseURL and BlogRoot as:
+//
+//	<BaseURL><BlogRoot>posts/<slug>
+//
+// and is used as both the item link and its unique identifier (guid/id).
+// Each item carries the post's full rendered HTML content.
+func (g *Generator) buildFeeds(posts models.PostList) (rss []byte, atom []byte, err error) {
+	return g.buildFeedsWithTitle(posts, g.SiteTitle.SiteTitle)
+}
+
+// buildFeedsWithTitle is the internal implementation shared by BuildFeeds and
+// per-tag feed generation, where the feed title differs from the site title.
+func (g *Generator) buildFeedsWithTitle(posts models.PostList, feedTitle string) (rss []byte, atom []byte, err error) {
 	if len(posts) == 0 {
 		return nil, nil, nil
 	}
 
-	// Trim to the configured limit.
+	limit := g.FeedPostLimit.Limit
 	if limit > 0 && len(posts) > limit {
 		posts = posts[:limit]
+	}
+
+	siteURL := AbsURL(string(g.BaseURL), string(g.BlogRoot))
+	absPostURL := func(slug string) string {
+		return AbsURL(string(g.BaseURL), string(g.BlogRoot)+"posts/"+slug)
 	}
 
 	// The feed's updated time is the date of the newest post.
 	updated := posts[0].Date
 
 	feed := &feeds.Feed{
-		Title: siteTitle,
+		Title: feedTitle,
 		Link:  &feeds.Link{Href: siteURL},
 		// Description is required by RSS 2.0.
-		Description: siteTitle + " — RSS Feed",
+		Description: feedTitle + " — RSS Feed",
 		Created:     updated,
 		Updated:     updated,
 	}
@@ -93,8 +103,8 @@ func buildFeeds(
 	return []byte(rssStr), []byte(atomStr), nil
 }
 
-// absURL returns the absolute URL for a site-relative path by prepending the
+// AbsURL returns the absolute URL for a site-relative path by prepending the
 // base URL (trailing slash trimmed).
-func absURL(baseURL, path string) string {
+func AbsURL(baseURL, path string) string {
 	return strings.TrimRight(baseURL, "/") + path
 }

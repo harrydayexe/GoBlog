@@ -33,18 +33,26 @@ func makePosts(n int) models.PostList {
 	return posts
 }
 
-func absPostURLFn(base string) func(slug string) string {
-	return func(slug string) string {
-		return base + "/posts/" + slug
+// newFeedsGen constructs a minimal Generator for BuildFeeds tests,
+// using the provided base URL, site title, and post limit.
+func newFeedsGen(baseURL, siteTitle string, limit int) *Generator {
+	opts := []config.GeneratorOption{
+		config.WithBaseURL(baseURL),
+		config.WithSiteTitle(siteTitle),
 	}
+	if limit > 0 {
+		opts = append(opts, config.WithFeedPostLimit(limit))
+	}
+	return New(fstest.MapFS{}, nil, opts...)
 }
 
-// ---- buildFeeds tests -------------------------------------------------------
+// ---- BuildFeeds tests -------------------------------------------------------
 
 func TestBuildFeeds_EmptyPosts(t *testing.T) {
 	t.Parallel()
 
-	rss, atom, err := buildFeeds(nil, 10, "Blog", "https://example.com", absPostURLFn("https://example.com"))
+	gen := newFeedsGen("https://example.com", "Blog", 10)
+	rss, atom, err := gen.buildFeeds(nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -56,10 +64,11 @@ func TestBuildFeeds_EmptyPosts(t *testing.T) {
 func TestBuildFeeds_ProducesValidXML(t *testing.T) {
 	t.Parallel()
 
+	gen := newFeedsGen("https://example.com", "Test Blog", 10)
 	posts := makePosts(3)
-	rss, atom, err := buildFeeds(posts, 10, "Test Blog", "https://example.com", absPostURLFn("https://example.com"))
+	rss, atom, err := gen.buildFeeds(posts)
 	if err != nil {
-		t.Fatalf("buildFeeds error: %v", err)
+		t.Fatalf("BuildFeeds error: %v", err)
 	}
 
 	if err := xml.Unmarshal(rss, new(interface{})); err != nil {
@@ -73,10 +82,11 @@ func TestBuildFeeds_ProducesValidXML(t *testing.T) {
 func TestBuildFeeds_AbsoluteURLsInItems(t *testing.T) {
 	t.Parallel()
 
+	gen := newFeedsGen("https://myblog.com", "My Blog", 10)
 	posts := makePosts(2)
-	rss, atom, err := buildFeeds(posts, 10, "My Blog", "https://myblog.com", absPostURLFn("https://myblog.com"))
+	rss, atom, err := gen.buildFeeds(posts)
 	if err != nil {
-		t.Fatalf("buildFeeds error: %v", err)
+		t.Fatalf("BuildFeeds error: %v", err)
 	}
 
 	for _, feed := range []struct {
@@ -98,10 +108,11 @@ func TestBuildFeeds_AbsoluteURLsInItems(t *testing.T) {
 func TestBuildFeeds_LimitRespected(t *testing.T) {
 	t.Parallel()
 
+	gen := newFeedsGen("https://example.com", "Blog", 5)
 	posts := makePosts(15)
-	rss, _, err := buildFeeds(posts, 5, "Blog", "https://example.com", absPostURLFn("https://example.com"))
+	rss, _, err := gen.buildFeeds(posts)
 	if err != nil {
-		t.Fatalf("buildFeeds error: %v", err)
+		t.Fatalf("BuildFeeds error: %v", err)
 	}
 
 	// Only the first 5 posts (newest) should appear. Posts 6-15 must not.
@@ -122,6 +133,7 @@ func TestBuildFeeds_LimitRespected(t *testing.T) {
 func TestBuildFeeds_FullContentIncluded(t *testing.T) {
 	t.Parallel()
 
+	gen := newFeedsGen("https://example.com", "Blog", 10)
 	posts := models.PostList{
 		{
 			Title:   "Hello",
@@ -131,9 +143,9 @@ func TestBuildFeeds_FullContentIncluded(t *testing.T) {
 		},
 	}
 
-	rss, atom, err := buildFeeds(posts, 10, "Blog", "https://example.com", absPostURLFn("https://example.com"))
+	rss, atom, err := gen.buildFeeds(posts)
 	if err != nil {
-		t.Fatalf("buildFeeds error: %v", err)
+		t.Fatalf("BuildFeeds error: %v", err)
 	}
 
 	for _, feed := range []struct {
@@ -152,12 +164,13 @@ func TestBuildFeeds_FullContentIncluded(t *testing.T) {
 func TestBuildFeeds_PostURLIsItemID(t *testing.T) {
 	t.Parallel()
 
+	gen := newFeedsGen("https://example.com", "Blog", 10)
 	posts := models.PostList{
 		{Title: "A Post", Slug: "a-post", Date: time.Now(), Content: []byte("x")},
 	}
-	rss, atom, err := buildFeeds(posts, 10, "Blog", "https://example.com", absPostURLFn("https://example.com"))
+	rss, atom, err := gen.buildFeeds(posts)
 	if err != nil {
-		t.Fatalf("buildFeeds error: %v", err)
+		t.Fatalf("BuildFeeds error: %v", err)
 	}
 
 	wantURL := "https://example.com/posts/a-post"
@@ -170,7 +183,7 @@ func TestBuildFeeds_PostURLIsItemID(t *testing.T) {
 	}
 }
 
-// ---- absURL tests -----------------------------------------------------------
+// ---- AbsURL tests -----------------------------------------------------------
 
 func TestAbsURL(t *testing.T) {
 	t.Parallel()
@@ -189,9 +202,9 @@ func TestAbsURL(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.base+tt.path, func(t *testing.T) {
 			t.Parallel()
-			got := absURL(tt.base, tt.path)
+			got := AbsURL(tt.base, tt.path)
 			if got != tt.want {
-				t.Errorf("absURL(%q, %q) = %q, want %q", tt.base, tt.path, got, tt.want)
+				t.Errorf("AbsURL(%q, %q) = %q, want %q", tt.base, tt.path, got, tt.want)
 			}
 		})
 	}

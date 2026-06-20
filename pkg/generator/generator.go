@@ -279,11 +279,7 @@ func (g *Generator) assembleBlogWithTemplates(ctx context.Context, posts models.
 
 	// Build site-wide feeds from the already-sorted post list.
 	if feedsEnabled {
-		siteURL := absURL(string(g.BaseURL), string(g.BlogRoot))
-		absPostURL := func(slug string) string {
-			return absURL(string(g.BaseURL), string(g.BlogRoot)+"posts/"+slug)
-		}
-		rss, atom, err := buildFeeds(posts, g.FeedPostLimit.Limit, g.SiteTitle.SiteTitle, siteURL, absPostURL)
+		rss, atom, err := g.buildFeeds(posts)
 		if err != nil {
 			return nil, fmt.Errorf("building site-wide feeds: %w", err)
 		}
@@ -386,12 +382,7 @@ func (g *Generator) assembleBlogWithTemplates(ctx context.Context, posts models.
 
 			// Build per-tag feeds alongside the tag page.
 			if feedsEnabled {
-				tagSiteURL := absURL(string(g.BaseURL), string(g.BlogRoot))
-				absPostURL := func(slug string) string {
-					return absURL(string(g.BaseURL), string(g.BlogRoot)+"posts/"+slug)
-				}
-				tagTitle := g.SiteTitle.SiteTitle + " — " + tag
-				tagRSS, tagAtom, err := buildFeeds(tagPosts, g.FeedPostLimit.Limit, tagTitle, tagSiteURL, absPostURL)
+				tagRSS, tagAtom, err := g.buildFeedsWithTitle(tagPosts, g.SiteTitle.SiteTitle+" — "+tag)
 				if err != nil {
 					return nil, fmt.Errorf("building feeds for tag %q: %w", tag, err)
 				}
