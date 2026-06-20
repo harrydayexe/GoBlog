@@ -313,7 +313,7 @@ func TestAbsURL(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.base+tt.path, func(t *testing.T) {
 			t.Parallel()
-			got := AbsURL(tt.base, tt.path)
+			got := absURL(tt.base, tt.path)
 			if got != tt.want {
 				t.Errorf("AbsURL(%q, %q) = %q, want %q", tt.base, tt.path, got, tt.want)
 			}
@@ -431,21 +431,6 @@ func TestGenerator_FeedPostLimit(t *testing.T) {
 	t.Parallel()
 
 	// Create 5 posts but limit the feed to 2.
-	const postTemplate = `---
-title: "Post %d"
-date: 2024-0%d-01
-description: "Post number %d"
----
-Content %d.
-`
-	postsMap := map[string]string{}
-	for i := 1; i <= 5; i++ {
-		name := "post" + strings.Repeat("0", 1) + string(rune('0'+i)) + ".md"
-		postsMap[name] = strings.ReplaceAll(strings.ReplaceAll(strings.ReplaceAll(strings.ReplaceAll(
-			postTemplate, "%d", "%v"), "%v", strings.Repeat("%v", 1)), "%v", "x"), "x", "1")
-	}
-
-	// Simpler: use fstest directly with known slugs.
 	fs := fstest.MapFS{
 		"post1.md": {Data: []byte("---\ntitle: \"Post 1\"\ndate: 2024-05-01\ndescription: \"p1\"\n---\ncontent 1")},
 		"post2.md": {Data: []byte("---\ntitle: \"Post 2\"\ndate: 2024-04-01\ndescription: \"p2\"\n---\ncontent 2")},

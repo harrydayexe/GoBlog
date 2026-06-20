@@ -67,8 +67,8 @@ var GeneratorCommand cli.Command = cli.Command{
 		},
 		&cli.IntFlag{
 			Name:  FeedLimitFlagName,
-			Usage: "maximum number of posts to include in each feed (default 10)",
-			Value: 0,
+			Usage: "maximum number of posts to include in each feed",
+			Value: 10,
 		},
 	},
 }

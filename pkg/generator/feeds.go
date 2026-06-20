@@ -43,9 +43,9 @@ func (g *Generator) buildFeedsForTitle(posts models.PostList, title string) (rss
 		posts = posts[:limit]
 	}
 
-	siteURL := AbsURL(string(g.BaseURL), string(g.BlogRoot))
+	siteURL := absURL(string(g.BaseURL), string(g.BlogRoot))
 	absPostURL := func(slug string) string {
-		return AbsURL(string(g.BaseURL), string(g.BlogRoot)+"posts/"+slug)
+		return absURL(string(g.BaseURL), string(g.BlogRoot)+"posts/"+slug)
 	}
 
 	// The feed's updated time is the most recent effective-updated time across
@@ -112,8 +112,8 @@ func (g *Generator) buildFeedsForTitle(posts models.PostList, title string) (rss
 	return []byte(rssStr), []byte(atomStr), nil
 }
 
-// AbsURL returns the absolute URL for a site-relative path by prepending the
+// absURL returns the absolute URL for a site-relative path by prepending the
 // base URL (trailing slash trimmed).
-func AbsURL(baseURL, path string) string {
+func absURL(baseURL, path string) string {
 	return strings.TrimRight(baseURL, "/") + path
 }
