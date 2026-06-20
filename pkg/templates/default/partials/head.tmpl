@@ -11,6 +11,12 @@
     <meta property="og:description" content="{{.Description}}">
     <meta property="og:type" content="website">
 
+    <!-- Feed Discovery -->
+    {{if .FeedsEnabled}}
+    <link rel="alternate" type="application/rss+xml" title="{{.SiteTitle}} RSS Feed" href="{{.BlogRoot}}rss.xml">
+    <link rel="alternate" type="application/atom+xml" title="{{.SiteTitle}} Atom Feed" href="{{.BlogRoot}}atom.xml">
+    {{end}}
+
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
 

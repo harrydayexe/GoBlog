@@ -12,6 +12,7 @@ import (
 	"path"
 	"strings"
 
+	"github.com/harrydayexe/GoBlog/v2/internal/cliflags"
 	"github.com/harrydayexe/GoBlog/v2/internal/utilities"
 	"github.com/harrydayexe/GoBlog/v2/pkg/config"
 	"github.com/harrydayexe/GoBlog/v2/pkg/server"
@@ -44,13 +45,24 @@ func NewServeCommand(ctx context.Context, c *cli.Command) error {
 
 	cfg.Gen = append(cfg.Gen, config.WithEnvironment(string(envCfg.Environment)))
 
-	if c.Bool(DisableTagsFlagName) {
+	if c.Bool(cliflags.DisableTagsFlagName) {
 		cfg.Gen = append(cfg.Gen, config.WithDisableTags())
 	}
 
-	if c.Bool(DisableReadingTimeFlagName) {
+	if c.Bool(cliflags.DisableReadingTimeFlagName) {
 		cfg.Gen = append(cfg.Gen, config.WithDisableReadingTime())
 	}
+
+	if baseURL := c.String(cliflags.BaseURLFlagName); baseURL != "" {
+		cfg.Gen = append(cfg.Gen, config.WithBaseURL(baseURL))
+	}
+
+	if c.Bool(cliflags.DisableFeedsFlagName) {
+		cfg.Gen = append(cfg.Gen, config.WithDisableFeeds())
+	}
+
+	cfg.Gen = append(cfg.Gen, config.WithFeedPostLimit(c.Int(cliflags.FeedLimitFlagName)))
+
 	cfg.Server = append(cfg.Server, config.WithPort(c.Int(PortFlagName)))
 	cfg.Server = append(cfg.Server, config.WithCacheControl(c.Duration(CacheControlFlagName)))
 
@@ -58,7 +70,7 @@ func NewServeCommand(ctx context.Context, c *cli.Command) error {
 		cfg.Server = append(cfg.Server, config.WithHost(host))
 	}
 
-	templateDirPath := c.String(TemplateDirFlagName)
+	templateDirPath := c.String(cliflags.TemplateDirFlagName)
 	if templateDirPath == "" {
 		slog.Default().DebugContext(ctx, "Using default templates")
 		cfg.TemplateDir = templates.Default
@@ -71,7 +83,7 @@ func NewServeCommand(ctx context.Context, c *cli.Command) error {
 		cfg.TemplateDir = os.DirFS(templateDirPath)
 	}
 
-	blogRootString := c.String(BlogRootFlagName)
+	blogRootString := c.String(cliflags.BlogRootFlagName)
 	if blogRootString != "" {
 		blogRoot := path.Clean(blogRootString)
 		blogRoot = strings.TrimPrefix(blogRoot, ".")

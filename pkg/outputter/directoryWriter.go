@@ -79,6 +79,10 @@ func NewDirectoryWriter(outputDir string, opts ...config.GeneratorOption) Direct
 //   - posts/{slug}.html: individual post files, one per post
 //   - tags/{tag}.html: tag pages (only if RawOutput and DisableTags are false)
 //   - tags/index.html: tags index page (only if RawOutput and DisableTags are false)
+//   - rss.xml: site-wide RSS 2.0 feed (only when the generator produced one)
+//   - atom.xml: site-wide Atom feed (only when the generator produced one)
+//   - tags/{tag}.rss.xml: per-tag RSS 2.0 feed (only when the generator produced them)
+//   - tags/{tag}.atom.xml: per-tag Atom feed (only when the generator produced them)
 //
 // When RawOutput mode is enabled (via config.WithRawOutput()), the tags/
 // directory is not created and individual post files contain only raw HTML
@@ -89,6 +93,11 @@ func NewDirectoryWriter(outputDir string, opts ...config.GeneratorOption) Direct
 // When DisableTags mode is enabled (via config.WithDisableTags()), the tags/
 // directory is not created. Posts and the index page are still written with
 // full templates.
+//
+// Feed files are written only when the generator has populated them (i.e. when
+// config.WithBaseURL was set and config.WithDisableFeeds was not applied). The
+// outputter does not need to know about feed configuration — it simply writes
+// whatever the generator produced.
 //
 // All necessary directories are created automatically with permissions 0755.
 // Files are written with permissions 0644.
@@ -129,6 +138,30 @@ func (dw DirectoryWriter) HandleGeneratedBlog(ctx context.Context, blog *generat
 		}
 	}
 
+	// Write site-wide feed files when the generator produced them.
+	if len(blog.RSSFeed) > 0 {
+		if err := os.WriteFile(filepath.Join(dw.outputDir, "rss.xml"), blog.RSSFeed, 0644); err != nil {
+			return err
+		}
+	}
+	if len(blog.AtomFeed) > 0 {
+		if err := os.WriteFile(filepath.Join(dw.outputDir, "atom.xml"), blog.AtomFeed, 0644); err != nil {
+			return err
+		}
+	}
+
+	// Write per-tag feed files when the generator produced them.
+	// The tags directory is guaranteed to exist at this point if tag feeds were generated
+	// (tags are required for tag feeds). We still guard with MkdirAll for safety.
+	if len(blog.TagRSSFeeds) > 0 || len(blog.TagAtomFeeds) > 0 {
+		if err := writeMapToFilesExt(blog.TagRSSFeeds, filepath.Join(dw.outputDir, "tags"), ".rss.xml"); err != nil {
+			return err
+		}
+		if err := writeMapToFilesExt(blog.TagAtomFeeds, filepath.Join(dw.outputDir, "tags"), ".atom.xml"); err != nil {
+			return err
+		}
+	}
+
 	dw.Logger.Logger.InfoContext(ctx, "Finished writing to output directory")
 	return nil
 }
@@ -143,13 +176,26 @@ func (dw DirectoryWriter) HandleGeneratedBlog(ctx context.Context, blog *generat
 //
 // Returns an error if directory creation or any file write fails.
 func writeMapToFiles(data map[string][]byte, outputDir string) error {
+	return writeMapToFilesExt(data, outputDir, ".html")
+}
+
+// writeMapToFilesExt writes a map of filename->content pairs to disk, appending
+// the given extension to each key to form the on-disk filename.
+//
+// For example, with ext=".rss.xml" and key "golang", the file is written as
+// "golang.rss.xml" inside outputDir.
+//
+// The outputDir is created if it doesn't exist, with permissions 0755.
+// Files are written with permissions 0644.
+//
+// Returns an error if directory creation or any file write fails.
+func writeMapToFilesExt(data map[string][]byte, outputDir string, ext string) error {
 	if err := os.MkdirAll(outputDir, 0755); err != nil {
 		return err
 	}
 
 	for filename, content := range data {
-		htmlFile := filename + ".html"
-		path := filepath.Join(outputDir, htmlFile)
+		path := filepath.Join(outputDir, filename+ext)
 		if err := os.WriteFile(path, content, 0644); err != nil {
 			return err
 		}

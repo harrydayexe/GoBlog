@@ -24,26 +24,34 @@ goblog generate posts/ output/
 goblog serve posts/
 ```
 
+### Global flags
+
+These flags apply to both `generate` and `serve` and may be passed before or after the subcommand name.
+
+| Flag | Short | Default | Description |
+|---|---|---|---|
+| `--template-dir` | `-t` | built-in | Path to a custom template directory |
+| `--root-path` | `-p` | `/` | Blog root path for subdirectory deployment |
+| `--disable-tags` | `-T` | `false` | Disable tag tracking and tag page generation |
+| `--disable-reading-time` | | `false` | Disable reading time estimation on posts |
+| `--base-url` | | _(none)_ | Scheme + host of the site (e.g. `https://example.com`); required to generate RSS/Atom feeds. Must not include a path — use `--root-path` for subdirectory deployments |
+| `--disable-feeds` | | `false` | Disable RSS and Atom feed generation |
+| `--feed-limit` | | `10` | Maximum number of posts to include in each feed (`0` = unlimited) |
+
 ### `generate` flags
 
 | Flag | Short | Default | Description |
 |---|---|---|---|
 | `--raw` | `-r` | `false` | Output raw HTML without template wrapping |
-| `--disable-tags` | `-T` | `false` | Disable tag tracking and tag page generation |
-| `--disable-reading-time` | | `false` | Disable reading time estimation on posts |
-| `--root-path` | `-p` | `/` | Blog root path for subdirectory deployment |
-| `--template-dir` | `-t` | built-in | Path to a custom template directory |
 
 ### `serve` flags
+
+When `--base-url` is set, the server also exposes the generated feeds at `{root-path}rss.xml`, `{root-path}atom.xml`, and per-tag feeds at `{root-path}tags/{tag}.rss.xml` / `{root-path}tags/{tag}.atom.xml`.
 
 | Flag | Short | Default | Description |
 |---|---|---|---|
 | `--port` | `-P` | `8080` | TCP port to listen on |
 | `--host` | `-H` | all interfaces | Host address to bind to |
-| `--disable-tags` | `-T` | `false` | Disable tag tracking and tag page generation |
-| `--disable-reading-time` | | `false` | Disable reading time estimation on posts |
-| `--root-path` | `-p` | `/` | Blog root path for subdirectory deployment |
-| `--template-dir` | `-t` | built-in | Path to a custom template directory |
 | `--watch` | `-w` | `false` | Watch the posts directory and regenerate on changes |
 | `--cache-control` | | `1h` | Max-age TTL for the `Cache-Control` header (`0` disables) |
 | `--health-checks` | | `false` | Expose `/healthz/live`, `/healthz/ready`, and `/healthz/startup` endpoints (no auth required); server binds before loading content so probes observe startup state |

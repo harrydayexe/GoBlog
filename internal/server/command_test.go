@@ -221,3 +221,57 @@ This is a new post.
 	}
 	t.Error("new post not available after 5s of watching")
 }
+
+// TestRunServe_ServesFeedsWithBaseURL verifies that the server exposes
+// /rss.xml and /atom.xml when the generator is configured with a base URL.
+func TestRunServe_ServesFeedsWithBaseURL(t *testing.T) {
+	t.Parallel()
+
+	cfg := config.ServerConfig{
+		Server: []config.BaseServerOption{config.WithPort(0)},
+		Gen: []config.GeneratorOption{
+			config.WithBaseURL("https://example.com"),
+		},
+	}
+
+	srv, err := pkgserver.New(discardLogger(), testFS(), cfg)
+	if err != nil {
+		t.Fatalf("server.New() error = %v", err)
+	}
+
+	for _, path := range []string{"/rss.xml", "/atom.xml"} {
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodGet, path, nil)
+		srv.ServeHTTP(rec, req)
+
+		if rec.Code != http.StatusOK {
+			t.Errorf("GET %s status = %d, want %d", path, rec.Code, http.StatusOK)
+		}
+	}
+}
+
+// TestRunServe_FeedsNotAvailableWithoutBaseURL verifies that feed routes return
+// 404 when no base URL is configured (feeds are not generated).
+func TestRunServe_FeedsNotAvailableWithoutBaseURL(t *testing.T) {
+	t.Parallel()
+
+	cfg := config.ServerConfig{
+		Server: []config.BaseServerOption{config.WithPort(0)},
+		// No WithBaseURL → generator skips feed generation.
+	}
+
+	srv, err := pkgserver.New(discardLogger(), testFS(), cfg)
+	if err != nil {
+		t.Fatalf("server.New() error = %v", err)
+	}
+
+	for _, path := range []string{"/rss.xml", "/atom.xml"} {
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodGet, path, nil)
+		srv.ServeHTTP(rec, req)
+
+		if rec.Code != http.StatusNotFound {
+			t.Errorf("GET %s (no base-url) status = %d, want %d", path, rec.Code, http.StatusNotFound)
+		}
+	}
+}

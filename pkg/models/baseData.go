@@ -42,6 +42,19 @@ type BaseData struct {
 	//   {{if .TagsEnabled}}<a href="{{.BlogRoot}}tags">Tags</a>{{end}}
 	TagsEnabled bool
 
+	// FeedsEnabled indicates whether RSS and Atom feeds are available for this blog.
+	// When true, the default templates render feed discovery <link> tags in the
+	// <head> and a visible RSS navigation link. Custom templates should also gate
+	// feed UI on this field.
+	//
+	// The Go zero value is false. The Generator sets this to true when both a
+	// base URL is configured (via config.WithBaseURL) and feeds have not been
+	// disabled (via config.WithDisableFeeds).
+	//
+	// Custom templates should gate feed UI on this field:
+	//   {{if .FeedsEnabled}}<a href="{{.BlogRoot}}rss.xml">RSS</a>{{end}}
+	FeedsEnabled bool
+
 	// Custom holds arbitrary key-value data injected by the calling application
 	// via config.WithCustomData. It is nil when no custom data was configured.
 	//

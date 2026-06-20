@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/harrydayexe/GoBlog/v2/internal/cliflags"
 	"github.com/harrydayexe/GoBlog/v2/internal/utilities"
 	"github.com/harrydayexe/GoBlog/v2/pkg/config"
 	"github.com/harrydayexe/GoBlog/v2/pkg/generator"
@@ -51,15 +52,25 @@ func NewGeneratorCommand(ctx context.Context, c *cli.Command) error {
 		opts = append(opts, config.WithRawOutput())
 	}
 
-	if c.Bool(DisableTagsFlagName) {
+	if c.Bool(cliflags.DisableTagsFlagName) {
 		opts = append(opts, config.WithDisableTags())
 	}
 
-	if c.Bool(DisableReadingTimeFlagName) {
+	if c.Bool(cliflags.DisableReadingTimeFlagName) {
 		opts = append(opts, config.WithDisableReadingTime())
 	}
 
-	templateDirPath := c.String(TemplateDirFlagName)
+	if baseURL := c.String(cliflags.BaseURLFlagName); baseURL != "" {
+		opts = append(opts, config.WithBaseURL(baseURL))
+	}
+
+	if c.Bool(cliflags.DisableFeedsFlagName) {
+		opts = append(opts, config.WithDisableFeeds())
+	}
+
+	opts = append(opts, config.WithFeedPostLimit(c.Int(cliflags.FeedLimitFlagName)))
+
+	templateDirPath := c.String(cliflags.TemplateDirFlagName)
 	var templateDir fs.FS
 	if templateDirPath == "" {
 		slog.Default().DebugContext(ctx, "Using default templates")
@@ -74,7 +85,7 @@ func NewGeneratorCommand(ctx context.Context, c *cli.Command) error {
 		templateDir = os.DirFS(templateDirPath)
 	}
 
-	blogRootString := c.String(BlogRootFlagName)
+	blogRootString := c.String(cliflags.BlogRootFlagName)
 	if blogRootString != "" {
 		blogRootClean := filepath.Clean(blogRootString)
 		blogRoot := strings.TrimPrefix(blogRootClean, ".")
