@@ -48,14 +48,26 @@ func (g *Generator) buildFeedsForTitle(posts models.PostList, title string) (rss
 		return AbsURL(string(g.BaseURL), string(g.BlogRoot)+"posts/"+slug)
 	}
 
-	// The feed's updated time is the date of the newest post.
+	// The feed's updated time is the most recent effective-updated time across
+	// all included posts, per RFC 4287: a feed's <updated> must reflect the
+	// most recent instant any entry was significantly modified. Using only
+	// posts[0].Date would miss edits to older posts.
 	updated := posts[0].Date
+	for _, p := range posts {
+		eff := p.Date
+		if !p.LastEdited.IsZero() {
+			eff = p.LastEdited
+		}
+		if eff.After(updated) {
+			updated = eff
+		}
+	}
 
 	feed := &feeds.Feed{
 		Title:       title,
 		Link:        &feeds.Link{Href: siteURL},
 		Description: title + " — RSS Feed",
-		Created:     updated,
+		Created:     posts[0].Date,
 		Updated:     updated,
 	}
 

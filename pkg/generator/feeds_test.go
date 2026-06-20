@@ -183,6 +183,117 @@ func TestBuildFeeds_PostURLIsItemID(t *testing.T) {
 	}
 }
 
+// ---- LastEdited / edited-post tests ----------------------------------------
+
+// TestBuildFeeds_FeedUpdatedReflectsEdit asserts that the Atom feed-level
+// <updated> is the most recent LastEdited across all included posts, not just
+// the newest post's publication Date. Per RFC 4287 §4.2.15 the feed <updated>
+// must reflect the most recent modification to any included entry.
+func TestBuildFeeds_FeedUpdatedReflectsEdit(t *testing.T) {
+	t.Parallel()
+
+	newestPublished := time.Date(2024, time.June, 1, 0, 0, 0, 0, time.UTC)
+	editDate := time.Date(2024, time.July, 1, 0, 0, 0, 0, time.UTC) // after newestPublished
+
+	posts := models.PostList{
+		// Newest by Date — no edit.
+		{Title: "Newest", Slug: "newest", Date: newestPublished, Description: "d", Content: []byte("x")},
+		// Older post, but edited after newestPublished.
+		{Title: "Older but edited", Slug: "older-but-edited",
+			Date:        time.Date(2024, time.January, 1, 0, 0, 0, 0, time.UTC),
+			LastEdited:  editDate,
+			Description: "d", Content: []byte("x")},
+	}
+
+	gen := newFeedsGen("https://example.com", "Blog", 0)
+	_, atom, err := gen.buildFeeds(posts)
+	if err != nil {
+		t.Fatalf("buildFeeds error: %v", err)
+	}
+
+	wantUpdated := editDate.Format(time.RFC3339)
+	if !strings.Contains(string(atom), wantUpdated) {
+		t.Errorf("Atom feed <updated> should contain edit date %s; feed:\n%s", wantUpdated, atom)
+	}
+
+	// The old (pre-fix) value must not appear as the feed updated when a newer
+	// edit exists.
+	oldUpdated := newestPublished.Format(time.RFC3339)
+	// The newestPublished timestamp may appear in the entry's <published>, so
+	// we check feed.Updated specifically by asserting the edit timestamp comes
+	// first in the feed (it always precedes the entry block in Atom).
+	atomStr := string(atom)
+	editIdx := strings.Index(atomStr, wantUpdated)
+	oldIdx := strings.Index(atomStr, oldUpdated)
+	if editIdx == -1 {
+		t.Errorf("edit date %s not found in Atom feed:\n%s", wantUpdated, atom)
+	}
+	if oldIdx != -1 && oldIdx < editIdx {
+		t.Errorf("publication date %s appears before edit date %s; expected edit date to be the feed-level <updated>; feed:\n%s",
+			oldUpdated, wantUpdated, atom)
+	}
+}
+
+// TestBuildFeeds_ItemAtomTimestampsForEditedPost asserts that an edited post's
+// Atom entry <updated> reflects LastEdited, not the original publication Date.
+// Note: gorilla/feeds does not emit <published> from Item.Created at the
+// high-level Feed API, so only <updated> is checked here.
+func TestBuildFeeds_ItemAtomTimestampsForEditedPost(t *testing.T) {
+	t.Parallel()
+
+	pubDate := time.Date(2024, time.March, 1, 0, 0, 0, 0, time.UTC)
+	editDate := time.Date(2024, time.May, 1, 0, 0, 0, 0, time.UTC)
+
+	posts := models.PostList{
+		{Title: "Edited Post", Slug: "edited-post",
+			Date:        pubDate,
+			LastEdited:  editDate,
+			Description: "d", Content: []byte("x")},
+	}
+
+	gen := newFeedsGen("https://example.com", "Blog", 0)
+	_, atom, err := gen.buildFeeds(posts)
+	if err != nil {
+		t.Fatalf("buildFeeds error: %v", err)
+	}
+
+	atomStr := string(atom)
+	wantUpdated := editDate.Format(time.RFC3339)
+	wantNotUpdated := pubDate.Format(time.RFC3339)
+
+	if !strings.Contains(atomStr, "<updated>"+wantUpdated+"</updated>") {
+		t.Errorf("Atom entry missing <updated>%s</updated>; feed:\n%s", wantUpdated, atom)
+	}
+	// The publication date must not appear as the item's <updated> timestamp.
+	if strings.Contains(atomStr, "<updated>"+wantNotUpdated+"</updated>") {
+		t.Errorf("Atom entry <updated> should be LastEdited %s, not publication date %s; feed:\n%s",
+			wantUpdated, wantNotUpdated, atom)
+	}
+}
+
+// TestBuildFeeds_FeedUpdatedNoEdits asserts that when no post has LastEdited
+// the feed-level updated remains the newest post's Date (regression guard).
+func TestBuildFeeds_FeedUpdatedNoEdits(t *testing.T) {
+	t.Parallel()
+
+	newestDate := time.Date(2024, time.June, 1, 0, 0, 0, 0, time.UTC)
+	posts := models.PostList{
+		{Title: "Newest", Slug: "newest", Date: newestDate, Description: "d", Content: []byte("x")},
+		{Title: "Older", Slug: "older", Date: time.Date(2024, time.January, 1, 0, 0, 0, 0, time.UTC), Description: "d", Content: []byte("x")},
+	}
+
+	gen := newFeedsGen("https://example.com", "Blog", 0)
+	_, atom, err := gen.buildFeeds(posts)
+	if err != nil {
+		t.Fatalf("buildFeeds error: %v", err)
+	}
+
+	wantUpdated := newestDate.Format(time.RFC3339)
+	if !strings.Contains(string(atom), wantUpdated) {
+		t.Errorf("Atom feed should contain newest date %s when no edits present; feed:\n%s", wantUpdated, atom)
+	}
+}
+
 // ---- AbsURL tests -----------------------------------------------------------
 
 func TestAbsURL(t *testing.T) {
