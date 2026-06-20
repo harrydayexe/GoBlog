@@ -12,29 +12,28 @@ import (
 	"github.com/harrydayexe/GoBlog/v2/pkg/models"
 )
 
-// buildFeeds generates RSS 2.0 and Atom XML bytes for the given list of posts
-// using the generator's configured site title, base URL, blog root, and post
+// buildFeeds generates the site-wide RSS 2.0 and Atom feeds from the given
+// post list, using the generator's site title, base URL, blog root, and post
 // limit.
 //
-// posts must already be sorted (newest first); they are sliced to the
-// generator's FeedPostLimit before the feed is assembled.
-//
-// Both the RSS 2.0 and Atom representations are returned. If the list is
-// empty both slices are nil.
-//
-// The post URL is derived from the generator's BaseURL and BlogRoot as:
-//
-//	<BaseURL><BlogRoot>posts/<slug>
-//
-// and is used as both the item link and its unique identifier (guid/id).
-// Each item carries the post's full rendered HTML content.
+// posts must already be sorted newest-first. Both representations are
+// returned; if posts is empty both slices are nil.
 func (g *Generator) buildFeeds(posts models.PostList) (rss []byte, atom []byte, err error) {
-	return g.buildFeedsWithTitle(posts, g.SiteTitle.SiteTitle)
+	return g.buildFeedsForTitle(posts, g.SiteTitle.SiteTitle)
 }
 
-// buildFeedsWithTitle is the internal implementation shared by BuildFeeds and
-// per-tag feed generation, where the feed title differs from the site title.
-func (g *Generator) buildFeedsWithTitle(posts models.PostList, feedTitle string) (rss []byte, atom []byte, err error) {
+// buildTagFeeds generates per-tag RSS 2.0 and Atom feeds for the given post
+// list, titling the feed "<SiteTitle> — <tag>".
+//
+// posts must already be sorted newest-first and pre-filtered to the tag.
+// Both representations are returned; if posts is empty both slices are nil.
+func (g *Generator) buildTagFeeds(tag string, posts models.PostList) (rss []byte, atom []byte, err error) {
+	return g.buildFeedsForTitle(posts, g.SiteTitle.SiteTitle+" — "+tag)
+}
+
+// buildFeedsForTitle is the shared implementation for buildFeeds and
+// buildTagFeeds. title is the channel/feed title to embed in the output.
+func (g *Generator) buildFeedsForTitle(posts models.PostList, title string) (rss []byte, atom []byte, err error) {
 	if len(posts) == 0 {
 		return nil, nil, nil
 	}
@@ -53,10 +52,9 @@ func (g *Generator) buildFeedsWithTitle(posts models.PostList, feedTitle string)
 	updated := posts[0].Date
 
 	feed := &feeds.Feed{
-		Title: feedTitle,
-		Link:  &feeds.Link{Href: siteURL},
-		// Description is required by RSS 2.0.
-		Description: feedTitle + " — RSS Feed",
+		Title:       title,
+		Link:        &feeds.Link{Href: siteURL},
+		Description: title + " — RSS Feed",
 		Created:     updated,
 		Updated:     updated,
 	}
@@ -77,10 +75,9 @@ func (g *Generator) buildFeedsWithTitle(posts models.PostList, feedTitle string)
 			Title:       post.Title,
 			Link:        &feeds.Link{Href: postURL},
 			Description: post.Description,
-			// Full HTML content (not a summary).
-			Content: string(post.Content),
-			Created: post.Date,
-			Updated: itemUpdated,
+			Content:     string(post.Content),
+			Created:     post.Date,
+			Updated:     itemUpdated,
 		}
 
 		if post.Author != "" {

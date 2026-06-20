@@ -382,7 +382,7 @@ func (g *Generator) assembleBlogWithTemplates(ctx context.Context, posts models.
 
 			// Build per-tag feeds alongside the tag page.
 			if feedsEnabled {
-				tagRSS, tagAtom, err := g.buildFeedsWithTitle(tagPosts, g.SiteTitle.SiteTitle+" — "+tag)
+				tagRSS, tagAtom, err := g.buildTagFeeds(tag, tagPosts)
 				if err != nil {
 					return nil, fmt.Errorf("building feeds for tag %q: %w", tag, err)
 				}
