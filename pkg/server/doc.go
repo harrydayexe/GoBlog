@@ -42,6 +42,20 @@
 //	    log.Fatal(err)
 //	}
 //
+// # Feed Routes
+//
+// When the generator is configured with config.WithBaseURL (and
+// config.WithDisableFeeds is not applied), the server exposes:
+//
+//   - GET {root}rss.xml  — site-wide RSS 2.0 feed
+//   - GET {root}atom.xml — site-wide Atom feed
+//   - GET {root}tags/{tag}.rss.xml  — per-tag RSS 2.0 feed
+//   - GET {root}tags/{tag}.atom.xml — per-tag Atom feed
+//
+// Feed routes always exist in the mux but return 404 when the generator did
+// not produce feed content. This mirrors the static output written by
+// pkg/outputter at rss.xml, atom.xml, tags/{tag}.rss.xml, tags/{tag}.atom.xml.
+//
 // # HTML Extension Handling
 //
 // The server automatically accepts requests with or without .html suffixes.

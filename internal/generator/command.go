@@ -34,41 +34,5 @@ var GeneratorCommand cli.Command = cli.Command{
 			Usage:   "output raw HTML without template wrapper (skips tag pages and template rendering)",
 			Value:   false,
 		},
-		&cli.StringFlag{
-			Name:    TemplateDirFlagName,
-			Aliases: []string{"t"},
-			Usage:   "directory of templates to use when rendering",
-		},
-		&cli.StringFlag{
-			Name:    BlogRootFlagName,
-			Aliases: []string{"p"},
-			Usage:   "root path of the blog, defaults to '/'",
-			Value:   "/",
-		},
-		&cli.BoolFlag{
-			Name:    DisableTagsFlagName,
-			Aliases: []string{"T"},
-			Usage:   "disable tag tracking and tag page generation",
-			Value:   false,
-		},
-		&cli.BoolFlag{
-			Name:  DisableReadingTimeFlagName,
-			Usage: "disable reading time estimation on posts",
-			Value: false,
-		},
-		&cli.StringFlag{
-			Name:  BaseURLFlagName,
-			Usage: "absolute base URL of the site (e.g. https://example.com); required for RSS/Atom feed generation",
-		},
-		&cli.BoolFlag{
-			Name:  DisableFeedsFlagName,
-			Usage: "disable RSS and Atom feed generation",
-			Value: false,
-		},
-		&cli.IntFlag{
-			Name:  FeedLimitFlagName,
-			Usage: "maximum number of posts to include in each feed",
-			Value: 10,
-		},
 	},
 }
