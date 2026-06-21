@@ -6,8 +6,6 @@ package server
 
 import (
 	"context"
-	"io"
-	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -41,10 +39,6 @@ func testFS() fstest.MapFS {
 	}
 }
 
-func discardLogger() *slog.Logger {
-	return slog.New(slog.NewTextHandler(io.Discard, nil))
-}
-
 // TestRunServe_CanceledContext verifies that runServe returns nil when the context is canceled.
 func TestRunServe_CanceledContext(t *testing.T) {
 	t.Parallel()
@@ -70,7 +64,7 @@ func TestRunServe_ServesIndex(t *testing.T) {
 		Server: []config.BaseServerOption{config.WithPort(0)},
 	}
 
-	srv, err := pkgserver.New(discardLogger(), testFS(), cfg)
+	srv, err := pkgserver.New(testFS(), cfg)
 	if err != nil {
 		t.Fatalf("server.New() error = %v", err)
 	}
@@ -92,7 +86,7 @@ func TestRunServe_ServesPost(t *testing.T) {
 		Server: []config.BaseServerOption{config.WithPort(0)},
 	}
 
-	srv, err := pkgserver.New(discardLogger(), testFS(), cfg)
+	srv, err := pkgserver.New(testFS(), cfg)
 	if err != nil {
 		t.Fatalf("server.New() error = %v", err)
 	}
@@ -117,7 +111,7 @@ func TestRunServe_BlogRoot(t *testing.T) {
 		},
 	}
 
-	srv, err := pkgserver.New(discardLogger(), testFS(), cfg)
+	srv, err := pkgserver.New(testFS(), cfg)
 	if err != nil {
 		t.Fatalf("server.New() error = %v", err)
 	}
@@ -173,7 +167,7 @@ func TestRunServe_WatchReloadsPost(t *testing.T) {
 		Server: []config.BaseServerOption{config.WithPort(0)},
 	}
 
-	srv, err := pkgserver.New(discardLogger(), os.DirFS(dir), cfg)
+	srv, err := pkgserver.New(os.DirFS(dir), cfg)
 	if err != nil {
 		t.Fatalf("server.New() error = %v", err)
 	}
