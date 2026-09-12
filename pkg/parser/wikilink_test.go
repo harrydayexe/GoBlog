@@ -6,7 +6,6 @@ package parser
 
 import (
 	"context"
-	"errors"
 	"strings"
 	"testing"
 	"testing/fstest"
@@ -93,12 +92,30 @@ func TestParseFile_WikilinkHeadingAnchors(t *testing.T) {
 			want: []string{`<a href="#setup">&lt;script&gt;alert(1)&lt;/script&gt;</a>`},
 		},
 		{
+			name: "heading containing a hash",
+			body: "## C# Tips\n\n[[#C# Tips]]\n",
+			want: []string{
+				`<h2 id="c-tips">C# Tips</h2>`,
+				`<a href="#c-tips">C# Tips</a>`,
+			},
+		},
+		{
+			name: "label containing a hash is kept",
+			body: "## Setup\n\n[[#Setup|#1 step]]\n",
+			want: []string{`<a href="#setup">#1 step</a>`},
+		},
+		{
 			name: "regular links are unaffected",
-			body: "[text](https://example.com) and [[not a heading link]]\n",
+			body: "[text](https://example.com) and [anchor](#setup)\n\n## Setup\n",
 			want: []string{
 				`<a href="https://example.com">text</a>`,
-				`[[not a heading link]]`,
+				`<a href="#setup">anchor</a>`,
 			},
+		},
+		{
+			name: "cross-post wikilinks render as plain text",
+			body: "See [[other-post]] and [[other-post#Heading|that heading]].\n",
+			want: []string{`<p>See other-post and that heading.</p>`},
 		},
 	}
 
@@ -119,47 +136,20 @@ func TestParseFile_WikilinkHeadingAnchors(t *testing.T) {
 	}
 }
 
-func TestParseFile_WikilinkUnresolved(t *testing.T) {
+func TestParseFile_WikilinkUnresolvedRendersSilently(t *testing.T) {
 	t.Parallel()
 
-	_, err := parseBody(t, "See [[#Missing]] and [[#Also Missing]].\n\n## Present\n\n[[#Present]]\n")
-	if err == nil {
-		t.Fatal("expected error for unresolved heading link, got nil")
+	// Mirrors standard [text](#anchor) links, which are not validated.
+	got, err := parseBody(t, "See [[#Missing]] and [regular](#also-missing).\n\n## Present\n")
+	if err != nil {
+		t.Fatalf("expected no error, got: %v", err)
 	}
-	if !errors.Is(err, ErrUnresolvedHeadingLink) {
-		t.Errorf("expected error to wrap ErrUnresolvedHeadingLink, got: %v", err)
-	}
-	for _, want := range []string{"[[#Missing]]", "[[#Also Missing]]"} {
-		if !strings.Contains(err.Error(), want) {
-			t.Errorf("expected error to mention %q, got: %v", want, err)
+	for _, want := range []string{
+		`<a href="#missing">Missing</a>`,
+		`<a href="#also-missing">regular</a>`,
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("expected output to contain %q, got:\n%s", want, got)
 		}
-	}
-	if strings.Contains(err.Error(), "[[#Present]]") {
-		t.Errorf("expected resolved link not to be reported, got: %v", err)
-	}
-}
-
-func TestParseDirectory_WikilinkUnresolved(t *testing.T) {
-	t.Parallel()
-
-	fsys := fstest.MapFS{
-		"good.md": {Data: []byte(wikilinkFrontmatter + "## A\n\n[[#A]]\n")},
-		"bad.md":  {Data: []byte(wikilinkFrontmatter + "[[#Nope]]\n")},
-	}
-
-	posts, err := New().ParseDirectory(context.Background(), fsys)
-	if len(posts) != 1 {
-		t.Errorf("expected 1 valid post, got: %d", len(posts))
-	}
-
-	var parseErrs ParseErrors
-	if !errors.As(err, &parseErrs) {
-		t.Fatalf("expected ParseErrors, got: %T (%v)", err, err)
-	}
-	if len(parseErrs.Errors) != 1 || parseErrs.Errors[0].Path != "bad.md" {
-		t.Fatalf("expected a single error for bad.md, got: %v", parseErrs)
-	}
-	if !errors.Is(parseErrs.Errors[0], ErrUnresolvedHeadingLink) {
-		t.Errorf("expected error to wrap ErrUnresolvedHeadingLink, got: %v", parseErrs.Errors[0])
 	}
 }

@@ -222,7 +222,7 @@ Headings get auto-generated ids (`## Future Work` → `id="future-work"`). Besid
 See [[#Future Work]] or [[#Future Work|what comes next]].
 ```
 
-A link to a heading that does not exist in the post fails parsing with `parser.ErrUnresolvedHeadingLink`. Links to other posts (`[[other-post#heading]]`) are not supported.
+As with standard links, targets are not validated, so a link to a missing heading renders without error. Links to other posts (`[[other-post#heading]]`) are not supported and render as plain text.
 
 ## Contributing
 

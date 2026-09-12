@@ -22,10 +22,10 @@
 //	See [[#Future Work]] for details.            -> <a href="#future-work">Future Work</a>
 //	See [[#Future Work|what comes next]].        -> <a href="#future-work">what comes next</a>
 //
-// If no heading in the document matches the link target, ParseFile returns an
-// error wrapping ErrUnresolvedHeadingLink (and ParseDirectory reports it in
-// ParseErrors). Cross-post wikilinks such as [[other-post#heading]] are not
-// supported.
+// Wikilinks are parsed by go.abhg.dev/goldmark/wikilink. As with standard
+// links, targets are not validated: a link to a heading that does not exist
+// still renders, without error. Cross-post wikilinks such as [[other-post]] or
+// [[other-post#heading]] are not supported and render as their label text.
 //
 // Basic usage:
 //
