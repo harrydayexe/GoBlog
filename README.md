@@ -34,7 +34,7 @@ These flags apply to both `generate` and `serve` and may be passed before or aft
 | `--root-path` | `-p` | `/` | Blog root path for subdirectory deployment |
 | `--disable-tags` | `-T` | `false` | Disable tag tracking and tag page generation |
 | `--disable-reading-time` | | `false` | Disable reading time estimation on posts |
-| `--base-url` | | _(none)_ | Scheme + host of the site (e.g. `https://example.com`); required to generate RSS/Atom feeds. Must not include a path — use `--root-path` for subdirectory deployments |
+| `--base-url` | | _(none)_ | Scheme + host of the site (e.g. `https://example.com`); required to generate RSS/Atom feeds and canonical/Open Graph URLs. Must not include a path — use `--root-path` for subdirectory deployments |
 | `--disable-feeds` | | `false` | Disable RSS and Atom feed generation |
 | `--feed-limit` | | `10` | Maximum number of posts to include in each feed (`0` = unlimited) |
 
@@ -198,6 +198,19 @@ w, err := watcher.New("posts/", config.WithLogger(logger).AsWatcherOption())
 // Parser
 p := parser.New(parser.WithLogger(logger))
 ```
+
+### SEO metadata
+
+The default templates emit social and search metadata with no template work required:
+
+- **Open Graph** — `og:title`, `og:description`, `og:site_name`, and `og:type` (`article` on posts, `website` elsewhere). Post pages also emit `article:published_time`, `article:modified_time` (from `lastEdited`), `article:author`, and one `article:tag` per tag.
+- **Schema.org JSON-LD** — a `BlogPosting` object on post pages, carrying the publish and modified dates, author, keywords, reading time, and publisher; a `WebSite` object elsewhere.
+- **Canonical URLs** — `og:url` and `<link rel="canonical">`.
+- **X/Twitter** — `twitter:card`, which reads its content from the Open Graph tags above.
+
+Canonical URLs need to know the site's domain, so set `--base-url` (or `config.WithBaseURL`). Without it, every URL-bearing tag is omitted rather than emitted empty; the rest of the metadata is unaffected.
+
+Custom templates can read the same values from the page data: `{{.CanonicalURL}}`, `{{.OGType}}`, and `{{with .Article}}` for the post's publish date, author, and tags. `og:image` is not emitted — posts have no image field.
 
 Full API documentation, including all config options and template data types, is at [pkg.go.dev/github.com/harrydayexe/GoBlog/v2](https://pkg.go.dev/github.com/harrydayexe/GoBlog/v2).
 

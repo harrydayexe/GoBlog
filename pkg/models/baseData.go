@@ -108,4 +108,52 @@ type BaseData struct {
 	// Typical usage for an Open Graph URL tag:
 	//   <meta property="og:url" content="https://example.com{{.Path}}">
 	Path string
+
+	// CanonicalURL is the fully-qualified URL of this page: the site's base URL
+	// (config.WithBaseURL) joined with Path.
+	//
+	// It is empty when no base URL is configured, because a canonical URL
+	// cannot be derived from a site-relative path alone. Templates must guard
+	// on it so that no empty-valued tag is emitted:
+	//
+	//   {{if .CanonicalURL}}
+	//   <link rel="canonical" href="{{.CanonicalURL}}">
+	//   <meta property="og:url" content="{{.CanonicalURL}}">
+	//   {{end}}
+	//
+	// Because it is built from Path, it follows the same clean-URL or
+	// .html-suffixed form (see Path and config.WithHTMLPaths).
+	//
+	//   Examples (BaseURL = "https://example.com", BlogRoot = "/"):
+	//     Index page:       https://example.com/
+	//     Post page:        https://example.com/posts/my-first-post
+	//     Tag page:         https://example.com/tags/golang
+	//     Tags index:       https://example.com/tags
+	CanonicalURL string
+
+	// OGType is the Open Graph object type for this page, emitted as the
+	// og:type meta tag. The Generator sets it to "article" for post pages and
+	// "website" for the index, tag, and tags-index pages.
+	//
+	// The Go zero value is the empty string, so manual constructors that do not
+	// set it get no og:type at all. The default templates fall back to
+	// "website" in that case:
+	//
+	//   <meta property="og:type" content="{{or .OGType "website"}}">
+	OGType string
+
+	// Article holds the article-specific metadata for a post page: its
+	// publication date, author, and tags. The Generator populates it when
+	// rendering a post and leaves it nil for the index, tag, and tags-index
+	// pages.
+	//
+	// It lets a <head> partial shared by every page type render article:* Open
+	// Graph tags and Schema.org BlogPosting markup for posts only. Templates
+	// must guard on it, both to skip that markup on non-post pages and to avoid
+	// a nil-pointer error:
+	//
+	//   {{with .Article}}
+	//   <meta property="article:published_time" content="{{.PublishedISO}}">
+	//   {{end}}
+	Article *ArticleMeta
 }

@@ -42,6 +42,23 @@
 //	// Get all unique tags
 //	allTags := posts.GetAllTags()
 //
+// # Template Data
+//
+// Each page type has a data struct (IndexPageData, PostPageData, TagPageData,
+// TagsIndexPageData) embedding BaseData, the fields available to every
+// template. Alongside the site title, blog root, and page path, BaseData
+// carries the metadata the default templates use for SEO:
+//
+//   - CanonicalURL — the page's fully-qualified URL, empty unless a base URL
+//     is configured via config.WithBaseURL
+//   - OGType — the Open Graph object type ("article" or "website")
+//   - Article — an [ArticleMeta] with the post's publish date, author, and
+//     tags; nil on every page that is not a post
+//
+// Each is documented with the template guard it expects. Templates must honour
+// those guards: the fields are deliberately empty or nil when the underlying
+// value is unknown, so that pages omit a tag rather than emit an empty one.
+//
 // # Concurrency Safety
 //
 // Post and PostList types are not safe for concurrent modification. If you need to

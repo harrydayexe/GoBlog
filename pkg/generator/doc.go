@@ -104,8 +104,7 @@
 // Every rendered page receives a Path field on its template data containing the
 // URL path for that page. It is accessible in templates as {{.Path}}:
 //
-//	<link rel="canonical" href="https://example.com{{.Path}}">
-//	<meta property="og:url" content="https://example.com{{.Path}}">
+//	<a href="{{.Path}}">this page</a>
 //
 // By default (clean-URL mode) the value includes BlogRoot and no .html suffix:
 //   - Index page:      /  (or /blog/ when BlogRoot = "/blog/")
@@ -124,6 +123,44 @@
 // The pkg/server package accepts both clean URLs and .html URLs via its
 // built-in StripHTMLExtension middleware, so the server always uses clean-URL
 // paths regardless of the generating option.
+//
+// # Canonical URL
+//
+// When a base URL is configured via [config.WithBaseURL], each page also
+// receives a CanonicalURL field holding the fully-qualified URL for that page
+// (the base URL joined with Path). It is empty when no base URL is set, so
+// templates must guard on it rather than emitting an empty tag:
+//
+//	{{if .CanonicalURL}}
+//	<link rel="canonical" href="{{.CanonicalURL}}">
+//	<meta property="og:url" content="{{.CanonicalURL}}">
+//	{{end}}
+//
+// # Open Graph Type
+//
+// Each page also receives an OGType field naming its Open Graph object type:
+// "article" for post pages and "website" for the index, tag, and tags-index
+// pages. Templates emit it as:
+//
+//	<meta property="og:type" content="{{.OGType}}">
+//
+// # Article Metadata
+//
+// Post pages additionally receive an Article field ([models.ArticleMeta])
+// holding the post's publication date, last-edited date, author, tags, and
+// reading time. It is nil on every other page type, which lets a <head>
+// partial shared by all pages emit article-specific markup for posts only:
+//
+//	{{with .Article}}
+//	<meta property="article:published_time" content="{{.PublishedISO}}">
+//	{{with .ModifiedISO}}<meta property="article:modified_time" content="{{.}}">{{end}}
+//	{{with .Author}}<meta property="article:author" content="{{.}}">{{end}}
+//	{{range .Tags}}<meta property="article:tag" content="{{.}}">{{end}}
+//	{{end}}
+//
+// The values a post may not have — the last-edited date, the author, the tags,
+// and the reading time when disabled — are empty rather than absent, so
+// templates gate each tag on its own value.
 //
 // # Output
 //
