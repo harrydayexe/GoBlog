@@ -18,6 +18,13 @@ import (
 	"github.com/harrydayexe/GoBlog/v2/pkg/parser"
 )
 
+// Open Graph object types assigned to models.BaseData.OGType. Post pages
+// describe a single article; every other page describes the site itself.
+const (
+	ogTypeArticle = "article"
+	ogTypeWebsite = "website"
+)
+
 // Generator produces HTML output based on its input configuration.
 // It reads markdown files from a configured filesystem and renders them
 // as HTML using templates.
@@ -309,6 +316,7 @@ func (g *Generator) assembleBlogWithTemplates(ctx context.Context, posts models.
 				Custom:       g.CustomData.Data,
 				Path:         path,
 				CanonicalURL: g.canonicalURL(path),
+				OGType:       ogTypeArticle,
 			},
 			Post: post,
 		}
@@ -343,6 +351,7 @@ func (g *Generator) assembleBlogWithTemplates(ctx context.Context, posts models.
 			Custom:       g.CustomData.Data,
 			Path:         indexPath,
 			CanonicalURL: g.canonicalURL(indexPath),
+			OGType:       ogTypeWebsite,
 		},
 		Posts:      indexPosts,
 		TotalPosts: len(indexPosts),
@@ -379,6 +388,7 @@ func (g *Generator) assembleBlogWithTemplates(ctx context.Context, posts models.
 					Custom:       g.CustomData.Data,
 					Path:         tagPath,
 					CanonicalURL: g.canonicalURL(tagPath),
+					OGType:       ogTypeWebsite,
 				},
 				Tag:       tag,
 				Posts:     tagPosts,
@@ -434,6 +444,7 @@ func (g *Generator) assembleBlogWithTemplates(ctx context.Context, posts models.
 				Custom:       g.CustomData.Data,
 				Path:         tagsIndexPath,
 				CanonicalURL: g.canonicalURL(tagsIndexPath),
+				OGType:       ogTypeWebsite,
 			},
 			Tags:      tagInfos,
 			TotalTags: len(tagInfos),

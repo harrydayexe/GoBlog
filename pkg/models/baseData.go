@@ -130,4 +130,15 @@ type BaseData struct {
 	//     Tag page:         https://example.com/tags/golang
 	//     Tags index:       https://example.com/tags
 	CanonicalURL string
+
+	// OGType is the Open Graph object type for this page, emitted as the
+	// og:type meta tag. The Generator sets it to "article" for post pages and
+	// "website" for the index, tag, and tags-index pages.
+	//
+	// The Go zero value is the empty string, so manual constructors that do not
+	// set it get no og:type at all. The default templates fall back to
+	// "website" in that case:
+	//
+	//   <meta property="og:type" content="{{or .OGType "website"}}">
+	OGType string
 }

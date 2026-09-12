@@ -12,6 +12,20 @@ import (
 	"github.com/harrydayexe/GoBlog/v2/pkg/config"
 )
 
+// taggedPost is a post with every field the SEO meta tags draw on: an author
+// and a tag list as well as the required title, date, and description.
+const taggedPost = `---
+title: "Hello World"
+date: 2024-06-01T09:30:00Z
+description: "A simple post"
+author: "Alice"
+tags: ["go", "testing"]
+---
+# Hello
+
+This is content.
+`
+
 // seoTemplateFS renders only the SEO-relevant BaseData fields so tests can
 // assert on them without depending on the default templates' markup.
 func seoTemplateFS(body string) fstest.MapFS {
@@ -20,6 +34,43 @@ func seoTemplateFS(body string) fstest.MapFS {
 		"pages/post.tmpl":       {Data: []byte(body)},
 		"pages/tag.tmpl":        {Data: []byte(body)},
 		"pages/tags-index.tmpl": {Data: []byte(body)},
+	}
+}
+
+// TestGenerate_OGTypeInTemplateData verifies that post pages are typed as
+// Open Graph articles and every other page type as a website.
+func TestGenerate_OGTypeInTemplateData(t *testing.T) {
+	t.Parallel()
+
+	renderer, err := NewTemplateRenderer(seoTemplateFS(`{{.OGType}}`))
+	if err != nil {
+		t.Fatalf("NewTemplateRenderer() error = %v", err)
+	}
+
+	gen := New(newTestPostsFS(t, map[string]string{"hello.md": taggedPost}), renderer)
+	blog, err := gen.Generate(context.Background())
+	if err != nil {
+		t.Fatalf("Generate() error = %v", err)
+	}
+
+	for slug, content := range blog.Posts {
+		if string(content) != "article" {
+			t.Errorf("Post %q OGType = %q, want %q", slug, string(content), "article")
+		}
+	}
+	if got := string(blog.Index); got != "website" {
+		t.Errorf("Index OGType = %q, want %q", got, "website")
+	}
+	if got := string(blog.TagsIndex); got != "website" {
+		t.Errorf("TagsIndex OGType = %q, want %q", got, "website")
+	}
+	if len(blog.Tags) == 0 {
+		t.Fatal("expected at least one tag page")
+	}
+	for tag, content := range blog.Tags {
+		if string(content) != "website" {
+			t.Errorf("Tag %q OGType = %q, want %q", tag, string(content), "website")
+		}
 	}
 }
 

@@ -136,6 +136,14 @@
 //	<meta property="og:url" content="{{.CanonicalURL}}">
 //	{{end}}
 //
+// # Open Graph Type
+//
+// Each page also receives an OGType field naming its Open Graph object type:
+// "article" for post pages and "website" for the index, tag, and tags-index
+// pages. Templates emit it as:
+//
+//	<meta property="og:type" content="{{.OGType}}">
+//
 // # Output
 //
 // The Generator returns all generated content in memory via GeneratedBlog.
