@@ -34,7 +34,7 @@ These flags apply to both `generate` and `serve` and may be passed before or aft
 | `--root-path` | `-p` | `/` | Blog root path for subdirectory deployment |
 | `--disable-tags` | `-T` | `false` | Disable tag tracking and tag page generation |
 | `--disable-reading-time` | | `false` | Disable reading time estimation on posts |
-| `--base-url` | | _(none)_ | Scheme + host of the site (e.g. `https://example.com`); required to generate RSS/Atom feeds. Must not include a path — use `--root-path` for subdirectory deployments |
+| `--base-url` | | _(none)_ | Scheme + host of the site (e.g. `https://example.com`); required to generate RSS/Atom feeds and canonical/Open Graph URLs. Must not include a path — use `--root-path` for subdirectory deployments |
 | `--disable-feeds` | | `false` | Disable RSS and Atom feed generation |
 | `--feed-limit` | | `10` | Maximum number of posts to include in each feed (`0` = unlimited) |
 

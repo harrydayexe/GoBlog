@@ -368,6 +368,11 @@ func (o CustomData) AsOption() GeneratorOption {
 // fully-qualified URLs. When BaseURL is empty, the generator skips feed
 // generation and emits an info log. HTML page generation is not affected.
 //
+// BaseURL also populates
+// [github.com/harrydayexe/GoBlog/v2/pkg/models.BaseData].CanonicalURL, which
+// the default templates use for <link rel="canonical"> and og:url tags. Those
+// tags are omitted entirely when BaseURL is empty.
+//
 // This type is typically embedded in generator configuration structs and should
 // be set using the [WithBaseURL] option function.
 type BaseURL string
@@ -383,8 +388,13 @@ type BaseURL string
 // Trailing slashes are trimmed before the base URL is used, so
 // "https://example.com/" and "https://example.com" are equivalent.
 //
+// The base URL is also used to build each page's canonical URL, surfaced to
+// templates as {{.CanonicalURL}} and used by the default templates for
+// <link rel="canonical">, og:url, and Schema.org JSON-LD.
+//
 // When no base URL is configured, feed generation is silently skipped
-// (see [WithDisableFeeds] to explicitly opt out instead).
+// (see [WithDisableFeeds] to explicitly opt out instead) and canonical URL
+// tags are omitted from the rendered pages.
 //
 // Example usage:
 //

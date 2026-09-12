@@ -108,4 +108,26 @@ type BaseData struct {
 	// Typical usage for an Open Graph URL tag:
 	//   <meta property="og:url" content="https://example.com{{.Path}}">
 	Path string
+
+	// CanonicalURL is the fully-qualified URL of this page: the site's base URL
+	// (config.WithBaseURL) joined with Path.
+	//
+	// It is empty when no base URL is configured, because a canonical URL
+	// cannot be derived from a site-relative path alone. Templates must guard
+	// on it so that no empty-valued tag is emitted:
+	//
+	//   {{if .CanonicalURL}}
+	//   <link rel="canonical" href="{{.CanonicalURL}}">
+	//   <meta property="og:url" content="{{.CanonicalURL}}">
+	//   {{end}}
+	//
+	// Because it is built from Path, it follows the same clean-URL or
+	// .html-suffixed form (see Path and config.WithHTMLPaths).
+	//
+	//   Examples (BaseURL = "https://example.com", BlogRoot = "/"):
+	//     Index page:       https://example.com/
+	//     Post page:        https://example.com/posts/my-first-post
+	//     Tag page:         https://example.com/tags/golang
+	//     Tags index:       https://example.com/tags
+	CanonicalURL string
 }

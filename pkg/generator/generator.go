@@ -228,6 +228,16 @@ func (g *Generator) pagePath(kind, name string) string {
 	return base
 }
 
+// canonicalURL returns the fully-qualified URL for a site-relative page path.
+// It returns an empty string when no base URL is configured, so that templates
+// omit canonical and Open Graph URL tags rather than emitting empty ones.
+func (g *Generator) canonicalURL(path string) string {
+	if g.BaseURL == "" {
+		return ""
+	}
+	return absURL(string(g.BaseURL), path)
+}
+
 func (g *Generator) assembleRawBlog(posts models.PostList) *GeneratedBlog {
 	blog := NewEmptyGeneratedBlog()
 
@@ -285,6 +295,7 @@ func (g *Generator) assembleBlogWithTemplates(ctx context.Context, posts models.
 
 	// Render individual post pages
 	for _, post := range posts {
+		path := g.pagePath("post", post.Slug)
 		data := models.PostPageData{
 			BaseData: models.BaseData{
 				SiteTitle:    g.SiteTitle.SiteTitle,
@@ -296,7 +307,8 @@ func (g *Generator) assembleBlogWithTemplates(ctx context.Context, posts models.
 				TagsEnabled:  tagsEnabled,
 				FeedsEnabled: feedsEnabled,
 				Custom:       g.CustomData.Data,
-				Path:         g.pagePath("post", post.Slug),
+				Path:         path,
+				CanonicalURL: g.canonicalURL(path),
 			},
 			Post: post,
 		}
@@ -317,6 +329,7 @@ func (g *Generator) assembleBlogWithTemplates(ctx context.Context, posts models.
 	}
 
 	// Render index page
+	indexPath := g.pagePath("index", "")
 	indexData := models.IndexPageData{
 		BaseData: models.BaseData{
 			SiteTitle:    g.SiteTitle.SiteTitle,
@@ -328,7 +341,8 @@ func (g *Generator) assembleBlogWithTemplates(ctx context.Context, posts models.
 			TagsEnabled:  tagsEnabled,
 			FeedsEnabled: feedsEnabled,
 			Custom:       g.CustomData.Data,
-			Path:         g.pagePath("index", ""),
+			Path:         indexPath,
+			CanonicalURL: g.canonicalURL(indexPath),
 		},
 		Posts:      indexPosts,
 		TotalPosts: len(indexPosts),
@@ -351,6 +365,7 @@ func (g *Generator) assembleBlogWithTemplates(ctx context.Context, posts models.
 				post.BlogRoot = string(g.BlogRoot)
 			}
 
+			tagPath := g.pagePath("tag", tag)
 			tagData := models.TagPageData{
 				BaseData: models.BaseData{
 					SiteTitle:    g.SiteTitle.SiteTitle,
@@ -362,7 +377,8 @@ func (g *Generator) assembleBlogWithTemplates(ctx context.Context, posts models.
 					TagsEnabled:  true,
 					FeedsEnabled: feedsEnabled,
 					Custom:       g.CustomData.Data,
-					Path:         g.pagePath("tag", tag),
+					Path:         tagPath,
+					CanonicalURL: g.canonicalURL(tagPath),
 				},
 				Tag:       tag,
 				Posts:     tagPosts,
@@ -404,6 +420,7 @@ func (g *Generator) assembleBlogWithTemplates(ctx context.Context, posts models.
 			return strings.ToLower(tagInfos[i].Name) < strings.ToLower(tagInfos[j].Name)
 		})
 
+		tagsIndexPath := g.pagePath("tagsIndex", "")
 		tagsIndexData := models.TagsIndexPageData{
 			BaseData: models.BaseData{
 				SiteTitle:    g.SiteTitle.SiteTitle,
@@ -415,7 +432,8 @@ func (g *Generator) assembleBlogWithTemplates(ctx context.Context, posts models.
 				TagsEnabled:  true,
 				FeedsEnabled: feedsEnabled,
 				Custom:       g.CustomData.Data,
-				Path:         g.pagePath("tagsIndex", ""),
+				Path:         tagsIndexPath,
+				CanonicalURL: g.canonicalURL(tagsIndexPath),
 			},
 			Tags:      tagInfos,
 			TotalTags: len(tagInfos),
