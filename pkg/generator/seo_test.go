@@ -6,11 +6,28 @@ package generator
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"testing/fstest"
 
 	"github.com/harrydayexe/GoBlog/v2/pkg/config"
 )
+
+// wantTags asserts that every want appears in the rendered page and no
+// notWant does.
+func wantTags(t *testing.T, page, rendered string, want, notWant []string) {
+	t.Helper()
+	for _, w := range want {
+		if !strings.Contains(rendered, w) {
+			t.Errorf("%s page: missing %s", page, w)
+		}
+	}
+	for _, n := range notWant {
+		if strings.Contains(rendered, n) {
+			t.Errorf("%s page: unexpectedly contains %s", page, n)
+		}
+	}
+}
 
 // taggedPost is a post with every field the SEO meta tags draw on: an author
 // and a tag list as well as the required title, date, and description.
@@ -259,6 +276,94 @@ func TestGenerate_CanonicalURLInTemplateData(t *testing.T) {
 					t.Errorf("Post %q CanonicalURL = %q, want %q", slug, string(content), want)
 				}
 			}
+		})
+	}
+}
+
+// TestDefaultTemplates_OpenGraphTags renders the built-in templates and
+// asserts on the Open Graph and canonical markup they emit for each page type.
+func TestDefaultTemplates_OpenGraphTags(t *testing.T) {
+	t.Parallel()
+
+	postsFS := newTestPostsFS(t, map[string]string{
+		"hello.md": taggedPost,
+		"old.md":   olderPost, // no author, no tags
+	})
+
+	gen := New(postsFS, newTestRenderer(t), config.WithBaseURL("https://example.com"), config.WithSiteTitle("My Blog"))
+	blog, err := gen.Generate(context.Background())
+	if err != nil {
+		t.Fatalf("Generate() error = %v", err)
+	}
+
+	wantTags(t, "post", string(blog.Posts["hello-world"]), []string{
+		`<meta property="og:type" content="article">`,
+		`<meta property="og:site_name" content="My Blog">`,
+		`<meta property="og:url" content="https://example.com/posts/hello-world">`,
+		`<link rel="canonical" href="https://example.com/posts/hello-world">`,
+		`<meta property="article:published_time" content="2024-06-01T09:30:00Z">`,
+		`<meta property="article:author" content="Alice">`,
+		`<meta property="article:tag" content="go">`,
+		`<meta property="article:tag" content="testing">`,
+	}, nil)
+
+	// A post with neither author nor tags emits neither tag.
+	wantTags(t, "authorless post", string(blog.Posts["old-post"]), []string{
+		`<meta property="og:type" content="article">`,
+		`<meta property="article:published_time" content="2024-01-01T00:00:00Z">`,
+	}, []string{
+		`article:author`,
+		`article:tag`,
+	})
+
+	wantTags(t, "index", string(blog.Index), []string{
+		`<meta property="og:type" content="website">`,
+		`<meta property="og:site_name" content="My Blog">`,
+		`<meta property="og:url" content="https://example.com/">`,
+		`<link rel="canonical" href="https://example.com/">`,
+	}, []string{
+		`article:`,
+	})
+
+	wantTags(t, "tag", string(blog.Tags["go"]), []string{
+		`<meta property="og:type" content="website">`,
+		`<meta property="og:url" content="https://example.com/tags/go">`,
+		`<link rel="canonical" href="https://example.com/tags/go">`,
+	}, []string{
+		`article:`,
+	})
+
+	wantTags(t, "tags index", string(blog.TagsIndex), []string{
+		`<meta property="og:type" content="website">`,
+		`<meta property="og:url" content="https://example.com/tags">`,
+	}, []string{
+		`article:`,
+	})
+}
+
+// TestDefaultTemplates_NoBaseURLOmitsCanonical verifies that without a base
+// URL the templates emit no canonical or og:url tag at all, rather than one
+// with an empty value.
+func TestDefaultTemplates_NoBaseURLOmitsCanonical(t *testing.T) {
+	t.Parallel()
+
+	postsFS := newTestPostsFS(t, map[string]string{"hello.md": taggedPost})
+	gen := New(postsFS, newTestRenderer(t), config.WithSiteTitle("My Blog"))
+	blog, err := gen.Generate(context.Background())
+	if err != nil {
+		t.Fatalf("Generate() error = %v", err)
+	}
+
+	for name, page := range map[string][]byte{
+		"post":  blog.Posts["hello-world"],
+		"index": blog.Index,
+	} {
+		wantTags(t, name, string(page), []string{
+			// og:site_name is emitted regardless of base URL.
+			`<meta property="og:site_name" content="My Blog">`,
+		}, []string{
+			`og:url`,
+			`rel="canonical"`,
 		})
 	}
 }
