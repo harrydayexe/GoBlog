@@ -10,7 +10,22 @@
 //   - Syntax highlighting for code blocks
 //   - Footnotes
 //   - Auto-generated heading IDs
+//   - Wikilink-style heading anchors
 //   - HTML sanitization
+//
+// # Heading Anchor Links
+//
+// Headings are given auto-generated ids (e.g. "## Future Work" becomes
+// id="future-work"). In addition to standard [text](#future-work) links,
+// a heading in the same document can be linked with wikilink syntax:
+//
+//	See [[#Future Work]] for details.            -> <a href="#future-work">Future Work</a>
+//	See [[#Future Work|what comes next]].        -> <a href="#future-work">what comes next</a>
+//
+// Wikilinks are parsed by go.abhg.dev/goldmark/wikilink. As with standard
+// links, targets are not validated: a link to a heading that does not exist
+// still renders, without error. Cross-post wikilinks such as [[other-post]] or
+// [[other-post#heading]] are not supported and render as their label text.
 //
 // Basic usage:
 //
