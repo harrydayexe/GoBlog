@@ -16,9 +16,16 @@
     <link rel="canonical" href="{{.CanonicalURL}}">
     {{end}}
 
+    <!-- X/Twitter reads the Open Graph tags above for the card's content;
+         this only declares which card layout to use. -->
+    <meta name="twitter:card" content="summary">
+
     <!-- Article Meta Tags (post pages only) -->
     {{with .Article}}
     <meta property="article:published_time" content="{{.PublishedISO}}">
+    {{with .ModifiedISO}}
+    <meta property="article:modified_time" content="{{.}}">
+    {{end}}
     {{with .Author}}
     <meta property="article:author" content="{{.}}">
     {{end}}
@@ -36,6 +43,8 @@
         "headline": "{{$.PageTitle}}",
         "description": "{{$.Description}}",
         "datePublished": "{{.PublishedISO}}",
+        {{with .ModifiedISO}}"dateModified": "{{.}}",{{end}}
+        {{with .TimeRequired}}"timeRequired": "{{.}}",{{end}}
         {{with .Author}}"author": {"@type": "Person", "name": "{{.}}"},{{end}}
         {{if .Tags}}"keywords": [{{range $i, $tag := .Tags}}{{if $i}}, {{end}}"{{$tag}}"{{end}}],{{end}}
         {{if $.CanonicalURL}}"url": "{{$.CanonicalURL}}",

@@ -48,7 +48,7 @@ This is content.
 // editedPost is taggedPost with a lastEdited date, for the metadata that
 // describes a post revised after publication.
 const editedPost = `---
-title: "Hello World"
+title: "Edited Post"
 date: 2024-06-01T09:30:00Z
 lastEdited: 2024-07-02T11:00:00Z
 description: "A simple post"
@@ -317,8 +317,9 @@ func TestDefaultTemplates_OpenGraphTags(t *testing.T) {
 	t.Parallel()
 
 	postsFS := newTestPostsFS(t, map[string]string{
-		"hello.md": taggedPost,
-		"old.md":   olderPost, // no author, no tags
+		"hello.md":  taggedPost, // never edited after publication
+		"edited.md": editedPost,
+		"old.md":    olderPost, // no author, no tags
 	})
 
 	gen := New(postsFS, newTestRenderer(t), config.WithBaseURL("https://example.com"), config.WithSiteTitle("My Blog"))
@@ -332,10 +333,19 @@ func TestDefaultTemplates_OpenGraphTags(t *testing.T) {
 		`<meta property="og:site_name" content="My Blog">`,
 		`<meta property="og:url" content="https://example.com/posts/hello-world">`,
 		`<link rel="canonical" href="https://example.com/posts/hello-world">`,
+		`<meta name="twitter:card" content="summary">`,
 		`<meta property="article:published_time" content="2024-06-01T09:30:00Z">`,
 		`<meta property="article:author" content="Alice">`,
 		`<meta property="article:tag" content="go">`,
 		`<meta property="article:tag" content="testing">`,
+	}, []string{
+		// An unedited post claims no modification date.
+		`article:modified_time`,
+	})
+
+	wantTags(t, "edited post", string(blog.Posts["edited-post"]), []string{
+		`<meta property="article:published_time" content="2024-06-01T09:30:00Z">`,
+		`<meta property="article:modified_time" content="2024-07-02T11:00:00Z">`,
 	}, nil)
 
 	// A post with neither author nor tags emits neither tag.
@@ -345,6 +355,7 @@ func TestDefaultTemplates_OpenGraphTags(t *testing.T) {
 	}, []string{
 		`article:author`,
 		`article:tag`,
+		`article:modified_time`,
 	})
 
 	wantTags(t, "index", string(blog.Index), []string{
@@ -443,8 +454,9 @@ func TestDefaultTemplates_JSONLD(t *testing.T) {
 			}
 
 			postsFS := newTestPostsFS(t, map[string]string{
-				"hello.md": taggedPost,
-				"old.md":   olderPost, // no author, no tags
+				"hello.md":  taggedPost, // never edited after publication
+				"edited.md": editedPost,
+				"old.md":    olderPost, // no author, no tags
 			})
 			gen := New(postsFS, newTestRenderer(t), opts...)
 			blog, err := gen.Generate(context.Background())
@@ -470,6 +482,17 @@ func TestDefaultTemplates_JSONLD(t *testing.T) {
 			}
 			if publisher, ok := post["publisher"].(map[string]any); !ok || publisher["name"] != "My Blog" {
 				t.Errorf("post publisher = %v, want Organization named My Blog", post["publisher"])
+			}
+			if post["timeRequired"] != "PT1M" {
+				t.Errorf("post timeRequired = %v, want PT1M", post["timeRequired"])
+			}
+			if _, ok := post["dateModified"]; ok {
+				t.Errorf("unedited post should omit dateModified, got %v", post["dateModified"])
+			}
+
+			edited := extractJSONLD(t, string(blog.Posts["edited-post"]))
+			if edited["dateModified"] != "2024-07-02T11:00:00Z" {
+				t.Errorf("edited post dateModified = %v", edited["dateModified"])
 			}
 
 			index := extractJSONLD(t, string(blog.Index))
