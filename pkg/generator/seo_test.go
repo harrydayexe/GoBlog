@@ -45,6 +45,21 @@ tags: ["go", "testing"]
 This is content.
 `
 
+// editedPost is taggedPost with a lastEdited date, for the metadata that
+// describes a post revised after publication.
+const editedPost = `---
+title: "Hello World"
+date: 2024-06-01T09:30:00Z
+lastEdited: 2024-07-02T11:00:00Z
+description: "A simple post"
+author: "Alice"
+tags: ["go", "testing"]
+---
+# Hello
+
+This is content.
+`
+
 // seoTemplateFS renders only the SEO-relevant BaseData fields so tests can
 // assert on them without depending on the default templates' markup.
 func seoTemplateFS(body string) fstest.MapFS {
@@ -102,24 +117,38 @@ func TestGenerate_ArticleMetaInTemplateData(t *testing.T) {
 	// "-" marks a nil ArticleMeta so an absent struct is distinguishable from
 	// one whose fields are all empty.
 	renderer, err := NewTemplateRenderer(seoTemplateFS(
-		`{{with .Article}}{{.PublishedISO}}|{{.Author}}|{{range .Tags}}{{.}},{{end}}{{else}}-{{end}}`))
+		`{{with .Article}}{{.PublishedISO}}|{{.ModifiedISO}}|{{.Author}}|{{range .Tags}}{{.}},{{end}}|{{.TimeRequired}}{{else}}-{{end}}`))
 	if err != nil {
 		t.Fatalf("NewTemplateRenderer() error = %v", err)
 	}
 
 	tests := []struct {
 		name     string
+		post     string
 		opts     []config.GeneratorOption
 		wantPost string
 	}{
 		{
 			name:     "post with author and tags",
-			wantPost: "2024-06-01T09:30:00Z|Alice|go,testing,",
+			post:     taggedPost,
+			wantPost: "2024-06-01T09:30:00Z||Alice|go,testing,|PT1M",
+		},
+		{
+			name:     "edited post carries a modified time",
+			post:     editedPost,
+			wantPost: "2024-06-01T09:30:00Z|2024-07-02T11:00:00Z|Alice|go,testing,|PT1M",
 		},
 		{
 			name:     "tags disabled clears article tags",
+			post:     taggedPost,
 			opts:     []config.GeneratorOption{config.WithDisableTags()},
-			wantPost: "2024-06-01T09:30:00Z|Alice|",
+			wantPost: "2024-06-01T09:30:00Z||Alice||PT1M",
+		},
+		{
+			name:     "reading time disabled clears time required",
+			post:     taggedPost,
+			opts:     []config.GeneratorOption{config.WithDisableReadingTime()},
+			wantPost: "2024-06-01T09:30:00Z||Alice|go,testing,|",
 		},
 	}
 
@@ -127,7 +156,7 @@ func TestGenerate_ArticleMetaInTemplateData(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			gen := New(newTestPostsFS(t, map[string]string{"hello.md": taggedPost}), renderer, tt.opts...)
+			gen := New(newTestPostsFS(t, map[string]string{"hello.md": tt.post}), renderer, tt.opts...)
 			blog, err := gen.Generate(context.Background())
 			if err != nil {
 				t.Fatalf("Generate() error = %v", err)

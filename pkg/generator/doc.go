@@ -147,15 +147,20 @@
 // # Article Metadata
 //
 // Post pages additionally receive an Article field ([models.ArticleMeta])
-// holding the post's publication date, author, and tags. It is nil on every
-// other page type, which lets a <head> partial shared by all pages emit
-// article-specific markup for posts only:
+// holding the post's publication date, last-edited date, author, tags, and
+// reading time. It is nil on every other page type, which lets a <head>
+// partial shared by all pages emit article-specific markup for posts only:
 //
 //	{{with .Article}}
 //	<meta property="article:published_time" content="{{.PublishedISO}}">
+//	{{with .ModifiedISO}}<meta property="article:modified_time" content="{{.}}">{{end}}
 //	{{with .Author}}<meta property="article:author" content="{{.}}">{{end}}
 //	{{range .Tags}}<meta property="article:tag" content="{{.}}">{{end}}
 //	{{end}}
+//
+// The values a post may not have — the last-edited date, the author, the tags,
+// and the reading time when disabled — are empty rather than absent, so
+// templates gate each tag on its own value.
 //
 // # Output
 //
