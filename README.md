@@ -214,6 +214,16 @@ Custom templates can read the same values from the page data: `{{.CanonicalURL}}
 
 Full API documentation, including all config options and template data types, is at [pkg.go.dev/github.com/harrydayexe/GoBlog/v2](https://pkg.go.dev/github.com/harrydayexe/GoBlog/v2).
 
+## Heading anchor links
+
+Headings get auto-generated ids (`## Future Work` → `id="future-work"`). Besides standard `[text](#future-work)` links, posts can link to a heading in the same post with wikilink syntax:
+
+```md
+See [[#Future Work]] or [[#Future Work|what comes next]].
+```
+
+A link to a heading that does not exist in the post fails parsing with `parser.ErrUnresolvedHeadingLink`. Links to other posts (`[[other-post#heading]]`) are not supported.
+
 ## Contributing
 
 Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for how to set up the project, run tests, and submit pull requests.

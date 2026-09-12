@@ -22,6 +22,7 @@ import (
 	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/parser"
 	goldmarkhtml "github.com/yuin/goldmark/renderer/html"
+	"github.com/yuin/goldmark/text"
 	"go.abhg.dev/goldmark/frontmatter"
 )
 
@@ -39,6 +40,7 @@ type Parser struct {
 // - Syntax highlighting for code blocks (enabled by default, use WithCodeHighlighting to disable)
 // - Optional footnote support (disabled by default, use WithFootnote to enable)
 // - Auto-generated heading IDs
+// - Wikilink-style heading anchors ([[#Heading]] and [[#Heading|Label]])
 // - HTML sanitization (unsafe HTML disabled by default)
 func New(opts ...Option) *Parser {
 	config := &Config{
@@ -56,6 +58,7 @@ func New(opts ...Option) *Parser {
 func NewWithConfig(config *Config) *Parser {
 	var extensions []goldmark.Extender = []goldmark.Extender{
 		&frontmatter.Extender{},
+		wikilinkExtender{},
 	}
 	if config.EnableFootnote {
 		extensions = append(extensions, extension.Footnote)
@@ -103,8 +106,14 @@ func NewWithConfig(config *Config) *Parser {
 // description. The markdown body is rendered to HTML with syntax highlighting
 // and footnote support.
 //
+// Wikilink-style heading anchors ([[#Heading Text]] or
+// [[#Heading Text|Label]]) are rendered as links to the matching heading's
+// auto-generated id. Cross-post wikilinks are not supported.
+//
 // Returns an error if the file cannot be read, frontmatter is invalid,
-// required fields are missing, or markdown rendering fails.
+// required fields are missing, a heading anchor does not match any heading
+// in the document (wrapping ErrUnresolvedHeadingLink), or markdown rendering
+// fails.
 func (p *Parser) ParseFile(ctx context.Context, fsys fs.FS, path string) (*models.Post, error) {
 	p.Logger.Logger.InfoContext(ctx, fmt.Sprintf("Parsing file %s...", path))
 	// Read file contents
@@ -116,9 +125,13 @@ func (p *Parser) ParseFile(ctx context.Context, fsys fs.FS, path string) (*model
 	// Create parser context
 	pctx := parser.NewContext()
 
-	// Parse markdown (this also extracts frontmatter via the extension)
+	// Parse markdown (this also extracts frontmatter via the extension).
+	// Parsing and rendering are split so the AST can be inspected for
+	// unresolved heading links before rendering.
+	doc := p.md.Parser().Parse(text.NewReader(content), parser.WithContext(pctx))
+
 	var htmlBuf bytes.Buffer
-	if err := p.md.Convert(content, &htmlBuf, parser.WithContext(pctx)); err != nil {
+	if err := p.md.Renderer().Render(&htmlBuf, content, doc); err != nil {
 		return nil, fmt.Errorf("failed to render markdown: %w", err)
 	}
 
@@ -138,6 +151,11 @@ func (p *Parser) ParseFile(ctx context.Context, fsys fs.FS, path string) (*model
 
 	// Validate required fields
 	if err := post.Validate(); err != nil {
+		return nil, err
+	}
+
+	// Ensure every [[#Heading]] link targets a heading in this document
+	if err := validateWikilinks(doc, pctx); err != nil {
 		return nil, err
 	}
 

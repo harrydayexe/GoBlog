@@ -10,7 +10,22 @@
 //   - Syntax highlighting for code blocks
 //   - Footnotes
 //   - Auto-generated heading IDs
+//   - Wikilink-style heading anchors
 //   - HTML sanitization
+//
+// # Heading Anchor Links
+//
+// Headings are given auto-generated ids (e.g. "## Future Work" becomes
+// id="future-work"). In addition to standard [text](#future-work) links,
+// a heading in the same document can be linked with wikilink syntax:
+//
+//	See [[#Future Work]] for details.            -> <a href="#future-work">Future Work</a>
+//	See [[#Future Work|what comes next]].        -> <a href="#future-work">what comes next</a>
+//
+// If no heading in the document matches the link target, ParseFile returns an
+// error wrapping ErrUnresolvedHeadingLink (and ParseDirectory reports it in
+// ParseErrors). Cross-post wikilinks such as [[other-post#heading]] are not
+// supported.
 //
 // Basic usage:
 //
