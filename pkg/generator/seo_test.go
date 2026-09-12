@@ -74,6 +74,92 @@ func TestGenerate_OGTypeInTemplateData(t *testing.T) {
 	}
 }
 
+// TestGenerate_ArticleMetaInTemplateData verifies that post pages carry an
+// ArticleMeta mirroring the post's front matter, and that no other page type
+// does.
+func TestGenerate_ArticleMetaInTemplateData(t *testing.T) {
+	t.Parallel()
+
+	// "-" marks a nil ArticleMeta so an absent struct is distinguishable from
+	// one whose fields are all empty.
+	renderer, err := NewTemplateRenderer(seoTemplateFS(
+		`{{with .Article}}{{.PublishedISO}}|{{.Author}}|{{range .Tags}}{{.}},{{end}}{{else}}-{{end}}`))
+	if err != nil {
+		t.Fatalf("NewTemplateRenderer() error = %v", err)
+	}
+
+	tests := []struct {
+		name     string
+		opts     []config.GeneratorOption
+		wantPost string
+	}{
+		{
+			name:     "post with author and tags",
+			wantPost: "2024-06-01T09:30:00Z|Alice|go,testing,",
+		},
+		{
+			name:     "tags disabled clears article tags",
+			opts:     []config.GeneratorOption{config.WithDisableTags()},
+			wantPost: "2024-06-01T09:30:00Z|Alice|",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			gen := New(newTestPostsFS(t, map[string]string{"hello.md": taggedPost}), renderer, tt.opts...)
+			blog, err := gen.Generate(context.Background())
+			if err != nil {
+				t.Fatalf("Generate() error = %v", err)
+			}
+
+			for slug, content := range blog.Posts {
+				if string(content) != tt.wantPost {
+					t.Errorf("Post %q ArticleMeta = %q, want %q", slug, string(content), tt.wantPost)
+				}
+			}
+			if got := string(blog.Index); got != "-" {
+				t.Errorf("Index ArticleMeta = %q, want nil", got)
+			}
+			for tag, content := range blog.Tags {
+				if string(content) != "-" {
+					t.Errorf("Tag %q ArticleMeta = %q, want nil", tag, string(content))
+				}
+			}
+			if blog.TagsIndex != nil {
+				if got := string(blog.TagsIndex); got != "-" {
+					t.Errorf("TagsIndex ArticleMeta = %q, want nil", got)
+				}
+			}
+		})
+	}
+}
+
+// TestGenerate_ArticleMetaOmitsMissingAuthor verifies that a post without an
+// author in its front matter leaves ArticleMeta.Author empty rather than
+// inventing a value.
+func TestGenerate_ArticleMetaOmitsMissingAuthor(t *testing.T) {
+	t.Parallel()
+
+	renderer, err := NewTemplateRenderer(seoTemplateFS(`{{with .Article}}[{{.Author}}]{{end}}`))
+	if err != nil {
+		t.Fatalf("NewTemplateRenderer() error = %v", err)
+	}
+
+	gen := New(newTestPostsFS(t, map[string]string{"old.md": olderPost}), renderer)
+	blog, err := gen.Generate(context.Background())
+	if err != nil {
+		t.Fatalf("Generate() error = %v", err)
+	}
+
+	for slug, content := range blog.Posts {
+		if string(content) != "[]" {
+			t.Errorf("Post %q Author = %q, want empty", slug, string(content))
+		}
+	}
+}
+
 // TestGenerate_CanonicalURLInTemplateData verifies that CanonicalURL is the
 // base URL joined with Path for every page type, and empty when no base URL
 // is configured.

@@ -317,6 +317,11 @@ func (g *Generator) assembleBlogWithTemplates(ctx context.Context, posts models.
 				Path:         path,
 				CanonicalURL: g.canonicalURL(path),
 				OGType:       ogTypeArticle,
+				Article: &models.ArticleMeta{
+					PublishedTime: post.Date,
+					Author:        post.Author,
+					Tags:          post.Tags,
+				},
 			},
 			Post: post,
 		}

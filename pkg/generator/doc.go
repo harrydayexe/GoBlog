@@ -144,6 +144,19 @@
 //
 //	<meta property="og:type" content="{{.OGType}}">
 //
+// # Article Metadata
+//
+// Post pages additionally receive an Article field ([models.ArticleMeta])
+// holding the post's publication date, author, and tags. It is nil on every
+// other page type, which lets a <head> partial shared by all pages emit
+// article-specific markup for posts only:
+//
+//	{{with .Article}}
+//	<meta property="article:published_time" content="{{.PublishedISO}}">
+//	{{with .Author}}<meta property="article:author" content="{{.}}">{{end}}
+//	{{range .Tags}}<meta property="article:tag" content="{{.}}">{{end}}
+//	{{end}}
+//
 // # Output
 //
 // The Generator returns all generated content in memory via GeneratedBlog.

@@ -141,4 +141,19 @@ type BaseData struct {
 	//
 	//   <meta property="og:type" content="{{or .OGType "website"}}">
 	OGType string
+
+	// Article holds the article-specific metadata for a post page: its
+	// publication date, author, and tags. The Generator populates it when
+	// rendering a post and leaves it nil for the index, tag, and tags-index
+	// pages.
+	//
+	// It lets a <head> partial shared by every page type render article:* Open
+	// Graph tags and Schema.org BlogPosting markup for posts only. Templates
+	// must guard on it, both to skip that markup on non-post pages and to avoid
+	// a nil-pointer error:
+	//
+	//   {{with .Article}}
+	//   <meta property="article:published_time" content="{{.PublishedISO}}">
+	//   {{end}}
+	Article *ArticleMeta
 }
