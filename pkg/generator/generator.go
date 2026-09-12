@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io/fs"
 	"log/slog"
+	"net/url"
 	"sort"
 	"strings"
 	"time"
@@ -394,7 +395,9 @@ func (g *Generator) assembleBlogWithTemplates(ctx context.Context, posts models.
 					FeedsEnabled: feedsEnabled,
 					Custom:       g.CustomData.Data,
 					Path:         tagPath,
-					CanonicalURL: g.canonicalURL(tagPath),
+					// Tags come verbatim from front matter, so escape them
+					// to keep characters like spaces and '#' out of the URL.
+					CanonicalURL: g.canonicalURL(g.pagePath("tag", url.PathEscape(tag))),
 					OGType:       ogTypeWebsite,
 				},
 				Tag:       tag,

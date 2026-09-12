@@ -311,6 +311,46 @@ func TestGenerate_CanonicalURLInTemplateData(t *testing.T) {
 	}
 }
 
+// TestGenerate_TagCanonicalURLIsEscaped verifies that tag names containing
+// URL-reserved characters are percent-encoded in the tag page's canonical URL.
+func TestGenerate_TagCanonicalURLIsEscaped(t *testing.T) {
+	t.Parallel()
+
+	renderer, err := NewTemplateRenderer(seoTemplateFS(`{{.CanonicalURL}}`))
+	if err != nil {
+		t.Fatalf("NewTemplateRenderer() error = %v", err)
+	}
+
+	post := `---
+title: "Escaped Tags"
+date: 2024-01-15
+description: "A post with tags that need escaping"
+tags: ["machine learning", "c#"]
+---
+
+Content.
+`
+	gen := New(newTestPostsFS(t, map[string]string{"escaped.md": post}), renderer,
+		config.WithBaseURL("https://example.com"),
+		config.WithDisableFeeds(),
+	)
+
+	blog, err := gen.Generate(context.Background())
+	if err != nil {
+		t.Fatalf("Generate() error = %v", err)
+	}
+
+	want := map[string]string{
+		"machine learning": "https://example.com/tags/machine%20learning",
+		"c#":               "https://example.com/tags/c%23",
+	}
+	for tag, wantURL := range want {
+		if got := string(blog.Tags[tag]); got != wantURL {
+			t.Errorf("Tag %q CanonicalURL = %q, want %q", tag, got, wantURL)
+		}
+	}
+}
+
 // TestDefaultTemplates_OpenGraphTags renders the built-in templates and
 // asserts on the Open Graph and canonical markup they emit for each page type.
 func TestDefaultTemplates_OpenGraphTags(t *testing.T) {
