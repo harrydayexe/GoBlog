@@ -199,6 +199,18 @@ w, err := watcher.New("posts/", config.WithLogger(logger).AsWatcherOption())
 p := parser.New(parser.WithLogger(logger))
 ```
 
+### SEO metadata
+
+The default templates emit social and search metadata with no template work required:
+
+- **Open Graph** — `og:title`, `og:description`, `og:site_name`, and `og:type` (`article` on posts, `website` elsewhere). Post pages also emit `article:published_time`, `article:author`, and one `article:tag` per tag.
+- **Schema.org JSON-LD** — a `BlogPosting` object on post pages and a `WebSite` object elsewhere.
+- **Canonical URLs** — `og:url` and `<link rel="canonical">`.
+
+Canonical URLs need to know the site's domain, so set `--base-url` (or `config.WithBaseURL`). Without it, every URL-bearing tag is omitted rather than emitted empty; the rest of the metadata is unaffected.
+
+Custom templates can read the same values from the page data: `{{.CanonicalURL}}`, `{{.OGType}}`, and `{{with .Article}}` for the post's publish date, author, and tags. `og:image` is not emitted — posts have no image field.
+
 Full API documentation, including all config options and template data types, is at [pkg.go.dev/github.com/harrydayexe/GoBlog/v2](https://pkg.go.dev/github.com/harrydayexe/GoBlog/v2).
 
 ## Contributing
