@@ -6,6 +6,8 @@ package generator
 
 import (
 	"context"
+	"encoding/json"
+	"regexp"
 	"strings"
 	"testing"
 	"testing/fstest"
@@ -365,5 +367,160 @@ func TestDefaultTemplates_NoBaseURLOmitsCanonical(t *testing.T) {
 			`og:url`,
 			`rel="canonical"`,
 		})
+	}
+}
+
+var ldJSONBlock = regexp.MustCompile(`(?s)<script type="application/ld\+json">(.*?)</script>`)
+
+// extractJSONLD returns the single JSON-LD object embedded in a rendered page,
+// failing the test if the page has none, has more than one, or the block does
+// not parse as JSON.
+func extractJSONLD(t *testing.T, page string) map[string]any {
+	t.Helper()
+
+	matches := ldJSONBlock.FindAllStringSubmatch(page, -1)
+	if len(matches) != 1 {
+		t.Fatalf("expected exactly one JSON-LD block, got %d", len(matches))
+	}
+
+	var obj map[string]any
+	if err := json.Unmarshal([]byte(matches[0][1]), &obj); err != nil {
+		t.Fatalf("JSON-LD block is not valid JSON: %v\nblock:\n%s", err, matches[0][1])
+	}
+	return obj
+}
+
+// TestDefaultTemplates_JSONLD verifies that every page type emits a single
+// valid Schema.org object of the right type, with the optional URL-bearing
+// fields present only when a base URL is configured.
+func TestDefaultTemplates_JSONLD(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		baseURL string
+	}{
+		{name: "with base URL", baseURL: "https://example.com"},
+		{name: "without base URL"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			opts := []config.GeneratorOption{config.WithSiteTitle("My Blog")}
+			if tt.baseURL != "" {
+				opts = append(opts, config.WithBaseURL(tt.baseURL))
+			}
+
+			postsFS := newTestPostsFS(t, map[string]string{
+				"hello.md": taggedPost,
+				"old.md":   olderPost, // no author, no tags
+			})
+			gen := New(postsFS, newTestRenderer(t), opts...)
+			blog, err := gen.Generate(context.Background())
+			if err != nil {
+				t.Fatalf("Generate() error = %v", err)
+			}
+
+			post := extractJSONLD(t, string(blog.Posts["hello-world"]))
+			if post["@type"] != "BlogPosting" {
+				t.Errorf("post @type = %v, want BlogPosting", post["@type"])
+			}
+			if post["headline"] != "Hello World" {
+				t.Errorf("post headline = %v, want %q", post["headline"], "Hello World")
+			}
+			if post["datePublished"] != "2024-06-01T09:30:00Z" {
+				t.Errorf("post datePublished = %v", post["datePublished"])
+			}
+			if author, ok := post["author"].(map[string]any); !ok || author["name"] != "Alice" {
+				t.Errorf("post author = %v, want Person named Alice", post["author"])
+			}
+			if keywords, ok := post["keywords"].([]any); !ok || len(keywords) != 2 {
+				t.Errorf("post keywords = %v, want 2 tags", post["keywords"])
+			}
+			if publisher, ok := post["publisher"].(map[string]any); !ok || publisher["name"] != "My Blog" {
+				t.Errorf("post publisher = %v, want Organization named My Blog", post["publisher"])
+			}
+
+			index := extractJSONLD(t, string(blog.Index))
+			if index["@type"] != "WebSite" {
+				t.Errorf("index @type = %v, want WebSite", index["@type"])
+			}
+			if index["name"] != "My Blog" {
+				t.Errorf("index name = %v, want %q", index["name"], "My Blog")
+			}
+
+			// A post with no author and no tags omits those members entirely.
+			bare := extractJSONLD(t, string(blog.Posts["old-post"]))
+			if _, ok := bare["author"]; ok {
+				t.Errorf("authorless post should omit author, got %v", bare["author"])
+			}
+			if _, ok := bare["keywords"]; ok {
+				t.Errorf("untagged post should omit keywords, got %v", bare["keywords"])
+			}
+
+			// URL-bearing members appear only when a base URL is configured.
+			if tt.baseURL == "" {
+				for _, key := range []string{"url", "mainEntityOfPage"} {
+					if _, ok := post[key]; ok {
+						t.Errorf("post should omit %q without a base URL, got %v", key, post[key])
+					}
+				}
+				if _, ok := index["url"]; ok {
+					t.Errorf("index should omit url without a base URL, got %v", index["url"])
+				}
+				return
+			}
+
+			if post["url"] != "https://example.com/posts/hello-world" {
+				t.Errorf("post url = %v", post["url"])
+			}
+			if page, ok := post["mainEntityOfPage"].(map[string]any); !ok || page["@id"] != "https://example.com/posts/hello-world" {
+				t.Errorf("post mainEntityOfPage = %v", post["mainEntityOfPage"])
+			}
+			if index["url"] != "https://example.com/" {
+				t.Errorf("index url = %v", index["url"])
+			}
+		})
+	}
+}
+
+// TestDefaultTemplates_JSONLDEscaping verifies that post metadata containing
+// HTML and quote characters cannot break out of the JSON-LD script block.
+func TestDefaultTemplates_JSONLDEscaping(t *testing.T) {
+	t.Parallel()
+
+	const hostilePost = `---
+title: "Breaking </script><script>alert(1)</script> \"out\""
+date: 2024-06-01T09:30:00Z
+description: "Quotes \" and <b>tags</b>"
+author: "</script>"
+tags: ["</script>"]
+---
+Content.
+`
+
+	postsFS := newTestPostsFS(t, map[string]string{"hostile.md": hostilePost})
+	gen := New(postsFS, newTestRenderer(t), config.WithBaseURL("https://example.com"))
+	blog, err := gen.Generate(context.Background())
+	if err != nil {
+		t.Fatalf("Generate() error = %v", err)
+	}
+
+	if len(blog.Posts) != 1 {
+		t.Fatalf("expected 1 post, got %d", len(blog.Posts))
+	}
+	for slug, page := range blog.Posts {
+		rendered := string(page)
+		if strings.Contains(rendered, "<script>alert(1)</script>") {
+			t.Errorf("post %q: injected script survived escaping", slug)
+		}
+		// Parsing succeeds only if the block was neither terminated early nor
+		// left with unescaped quotes.
+		obj := extractJSONLD(t, rendered)
+		if obj["@type"] != "BlogPosting" {
+			t.Errorf("post %q: @type = %v, want BlogPosting", slug, obj["@type"])
+		}
 	}
 }

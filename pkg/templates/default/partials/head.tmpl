@@ -27,6 +27,34 @@
     {{end}}
     {{end}}
 
+    <!-- Schema.org Structured Data -->
+    {{with .Article}}
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "BlogPosting",
+        "headline": "{{$.PageTitle}}",
+        "description": "{{$.Description}}",
+        "datePublished": "{{.PublishedISO}}",
+        {{with .Author}}"author": {"@type": "Person", "name": "{{.}}"},{{end}}
+        {{if .Tags}}"keywords": [{{range $i, $tag := .Tags}}{{if $i}}, {{end}}"{{$tag}}"{{end}}],{{end}}
+        {{if $.CanonicalURL}}"url": "{{$.CanonicalURL}}",
+        "mainEntityOfPage": {"@type": "WebPage", "@id": "{{$.CanonicalURL}}"},{{end}}
+        "publisher": {"@type": "Organization", "name": "{{$.SiteTitle}}"}
+    }
+    </script>
+    {{else}}
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        {{if .CanonicalURL}}"url": "{{.CanonicalURL}}",{{end}}
+        "description": "{{.Description}}",
+        "name": "{{.SiteTitle}}"
+    }
+    </script>
+    {{end}}
+
     <!-- Feed Discovery -->
     {{if .FeedsEnabled}}
     <link rel="alternate" type="application/rss+xml" title="{{.SiteTitle}} RSS Feed" href="{{.BlogRoot}}rss.xml">
