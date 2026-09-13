@@ -59,4 +59,8 @@ Once you're comfortable with the basics, explore:
 - Building CLI tools with packages like `cobra`
 - Understanding Go modules for dependency management
 
+For inspiration, browse open source Go projects on GitHub. This blog itself is built with GoBlog, which is available as a CLI tool, a Docker image, and an embeddable Go library:
+
+![The GoBlog README on GitHub](images/github.png)
+
 Happy coding!
