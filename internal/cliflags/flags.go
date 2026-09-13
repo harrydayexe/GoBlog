@@ -34,6 +34,10 @@ const DisableFeedsFlagName = "disable-feeds"
 // in each feed.
 const FeedLimitFlagName = "feed-limit"
 
+// AssetsDirFlagName is the CLI flag name for setting the directory images are
+// served and copied from.
+const AssetsDirFlagName = "assets-dir"
+
 // Shared returns the CLI flag definitions that apply to both the generate and
 // serve subcommands. They are registered on the top-level goblog command so that
 // urfave/cli v3's default persistence makes them available in both subcommand
@@ -75,6 +79,10 @@ func Shared() []cli.Flag {
 			Name:  FeedLimitFlagName,
 			Usage: "maximum number of posts to include in each feed (0 = unlimited)",
 			Value: 10,
+		},
+		&cli.StringFlag{
+			Name:  AssetsDirFlagName,
+			Usage: "directory of images served at {root-path}images/ and copied to <output>/images/; defaults to '<posts>/images', ignored if missing",
 		},
 	}
 }

@@ -6,6 +6,8 @@ package outputter
 
 import (
 	"context"
+	"fmt"
+	"io/fs"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -17,9 +19,10 @@ import (
 // DirectoryWriter is an Outputter implementation that writes blog content
 // as static HTML files to a filesystem directory.
 //
-// It creates an index.html file, individual post HTML files, and (unless
+// It creates an index.html file, individual post HTML files, (unless
 // RawOutput or DisableTags is enabled) a tags subdirectory with tag pages
-// and a tags index.
+// and a tags index, and (when an assets directory is configured) an images
+// subdirectory containing a copy of the assets.
 //
 // DirectoryWriter is safe for concurrent use, though concurrent writes to
 // the same output directory may result in filesystem race conditions.
@@ -27,6 +30,7 @@ type DirectoryWriter struct {
 	config.RawOutput
 	config.DisableTags
 	config.Logger
+	config.AssetsDir
 	outputDir string
 }
 
@@ -45,6 +49,9 @@ type DirectoryWriter struct {
 //	writer := NewDirectoryWriter("/var/www/blog",
 //	    config.WithDisableTags(),
 //	)
+//	writer := NewDirectoryWriter("/var/www/blog",
+//	    config.WithAssetsDir(assetsFS).AsGeneratorOption(),
+//	)
 //
 // This is the recommended constructor for most use cases.
 func NewDirectoryWriter(outputDir string, opts ...config.GeneratorOption) DirectoryWriter {
@@ -59,6 +66,8 @@ func NewDirectoryWriter(outputDir string, opts ...config.GeneratorOption) Direct
 			opt.WithDisableTagsFunc(&dw.DisableTags)
 		} else if opt.WithLoggerFunc != nil {
 			opt.WithLoggerFunc(&dw.Logger)
+		} else if opt.WithAssetsDirFunc != nil {
+			opt.WithAssetsDirFunc(&dw.AssetsDir)
 		}
 	}
 
@@ -83,6 +92,14 @@ func NewDirectoryWriter(outputDir string, opts ...config.GeneratorOption) Direct
 //   - atom.xml: site-wide Atom feed (only when the generator produced one)
 //   - tags/{tag}.rss.xml: per-tag RSS 2.0 feed (only when the generator produced them)
 //   - tags/{tag}.atom.xml: per-tag Atom feed (only when the generator produced them)
+//   - images/...: a recursive copy of the assets directory (only when
+//     config.WithAssetsDir was supplied and its root is a readable directory)
+//
+// Assets are copied in both templated and RawOutput mode, since rendered image
+// src attributes point at {BlogRoot}images/ either way. Existing files in the
+// images directory are overwritten. Entries that are neither regular files,
+// directories, nor symbolic links resolving to regular files inside the assets
+// filesystem are skipped with a warning.
 //
 // When RawOutput mode is enabled (via config.WithRawOutput()), the tags/
 // directory is not created and individual post files contain only raw HTML
@@ -162,6 +179,12 @@ func (dw DirectoryWriter) HandleGeneratedBlog(ctx context.Context, blog *generat
 		}
 	}
 
+	if dw.AssetsDir.Enabled() {
+		if err := dw.copyAssets(ctx, filepath.Join(dw.outputDir, "images")); err != nil {
+			return err
+		}
+	}
+
 	dw.Logger.Logger.InfoContext(ctx, "Finished writing to output directory")
 	return nil
 }
@@ -201,4 +224,43 @@ func writeMapToFilesExt(data map[string][]byte, outputDir string, ext string) er
 		}
 	}
 	return nil
+}
+
+// copyAssets recursively copies the assets filesystem into outputDir,
+// preserving subdirectories.
+//
+// Files are read through the assets filesystem, so a filesystem rooted with
+// [os.Root.FS] cannot be used to copy files from outside the assets directory
+// via symbolic links. Such links, and any other non-regular entries, are
+// skipped with a warning.
+//
+// Directories are created with permissions 0755 and files written with 0644.
+func (dw DirectoryWriter) copyAssets(ctx context.Context, outputDir string) error {
+	dw.Logger.Logger.InfoContext(ctx, "Copying assets", slog.String("destination", outputDir))
+	fsys := dw.AssetsDir.FS
+
+	return fs.WalkDir(fsys, ".", func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return fmt.Errorf("failed to read assets: %w", err)
+		}
+		dest := filepath.Join(outputDir, filepath.FromSlash(p))
+
+		if d.IsDir() {
+			return os.MkdirAll(dest, 0755)
+		}
+
+		if !d.Type().IsRegular() {
+			fi, err := fs.Stat(fsys, p)
+			if err != nil || !fi.Mode().IsRegular() {
+				dw.Logger.Logger.WarnContext(ctx, "Skipping asset that is not a regular file", slog.String("path", p))
+				return nil
+			}
+		}
+
+		data, err := fs.ReadFile(fsys, p)
+		if err != nil {
+			return fmt.Errorf("failed to read asset %q: %w", p, err)
+		}
+		return os.WriteFile(dest, data, 0644)
+	})
 }

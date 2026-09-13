@@ -68,6 +68,7 @@ type Server struct {
 	config.Logger
 	config.CacheControlTTL
 	config.HealthChecks
+	config.AssetsDir
 
 	handler    atomic.Value // stores http.Handler
 	health     atomic.Pointer[healthStatus]
@@ -131,6 +132,8 @@ func New(logger *slog.Logger, posts fs.FS, opts config.ServerConfig) (*Server, e
 			opt.WithLoggerFunc(&srv.Logger)
 		} else if opt.WithHealthChecksFunc != nil {
 			opt.WithHealthChecksFunc(&srv.HealthChecks)
+		} else if opt.WithAssetsDirFunc != nil {
+			opt.WithAssetsDirFunc(&srv.AssetsDir)
 		}
 	}
 
@@ -399,7 +402,7 @@ func (s *Server) refreshHandler(ctx context.Context) error {
 
 	s.Logger.Logger.DebugContext(ctx, "Creating New Handler for Server")
 
-	handler := Handler(blog, nil, s.BlogRoot.AsOption(), s.Logger.AsOption())
+	handler := Handler(blog, nil, s.BlogRoot.AsOption(), s.Logger.AsOption(), s.AssetsDir.AsOption())
 
 	// Apply middleware stack if configured
 	if len(s.middleware) > 0 {

@@ -56,6 +56,29 @@
 // not produce feed content. This mirrors the static output written by
 // pkg/outputter at rss.xml, atom.xml, tags/{tag}.rss.xml, tags/{tag}.atom.xml.
 //
+// # Image Routes
+//
+// When config.WithAssetsDir supplies a filesystem whose root is a readable
+// directory, the server serves its files at:
+//
+//   - GET {root}images/{path...} — files from the assets directory
+//
+// Only the route under the blog root is registered; with a root of "/blog/",
+// /images/... returns 404. Directory requests return 404 rather than a
+// listing. Content-Type, ETag/Last-Modified, conditional and range requests
+// are handled by http.FileServerFS, and the Cache-Control header applies as it
+// does to every other route. When the option is not supplied, or the directory
+// does not exist, no image route is registered.
+//
+// Files are served live from the filesystem, so adding or replacing an image
+// takes effect immediately without regenerating the blog. Use a filesystem
+// that cannot escape its root, such as os.Root.FS, to prevent symbolic links
+// from exposing files outside the assets directory.
+//
+//	root, err := os.OpenRoot("posts/images")
+//	// handle err, defer root.Close()
+//	cfg.Server = append(cfg.Server, config.WithAssetsDir(root.FS()).AsServerOption())
+//
 // # HTML Extension Handling
 //
 // The server automatically accepts requests with or without .html suffixes.

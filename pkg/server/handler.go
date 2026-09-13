@@ -6,8 +6,10 @@ package server
 
 import (
 	"fmt"
+	"io/fs"
 	"log/slog"
 	"net/http"
+	"path"
 	"strings"
 
 	"github.com/harrydayexe/GoBlog/v2/pkg/config"
@@ -16,10 +18,12 @@ import (
 )
 
 // HandlerConfig holds configuration options for the blog HTTP handler.
-// It embeds config.BlogRoot to specify the root path where the blog is served.
+// It embeds config.BlogRoot to specify the root path where the blog is served
+// and config.AssetsDir to specify the filesystem images are served from.
 type HandlerConfig struct {
 	config.BlogRoot
 	config.Logger
+	config.AssetsDir
 }
 
 // Handler creates an HTTP handler that serves the generated blog content.
@@ -35,6 +39,13 @@ type HandlerConfig struct {
 //   - GET /atom.xml - serves the site-wide Atom feed (404 when feeds are disabled)
 //   - GET /tags/{tagName}.rss.xml - serves a per-tag RSS 2.0 feed (only if blog.Tags is non-empty)
 //   - GET /tags/{tagName}.atom.xml - serves a per-tag Atom feed (only if blog.Tags is non-empty)
+//   - GET /images/{path...} - serves files from the assets directory (only if
+//     config.WithAssetsDir was supplied and its root is a readable directory)
+//
+// Asset files are served with [http.FileServerFS], so Content-Type, ETag,
+// Last-Modified, conditional and range requests are handled. Requests for a
+// directory, or for a path that does not exist in the assets filesystem,
+// return 404; directory listings are never served.
 //
 // Tag routes are registered only when the blog contains tag content. When the
 // generator is configured with config.WithDisableTags(), blog.Tags and
@@ -70,6 +81,8 @@ func Handler(blog *generator.GeneratedBlog, logger *slog.Logger, opts ...config.
 			opt.WithBlogRootFunc(&cfg.BlogRoot)
 		} else if opt.WithLoggerFunc != nil {
 			opt.WithLoggerFunc(&cfg.Logger)
+		} else if opt.WithAssetsDirFunc != nil {
+			opt.WithAssetsDirFunc(&cfg.AssetsDir)
 		}
 	}
 
@@ -112,7 +125,28 @@ func generateHandler(cfg HandlerConfig, blog *generator.GeneratedBlog) http.Hand
 	mux.Handle(root+"rss.xml", handleRSSFeed(cfg, blog))
 	mux.Handle(root+"atom.xml", handleAtomFeed(cfg, blog))
 
+	if cfg.AssetsDir.Enabled() {
+		prefix := string(cfg.BlogRoot) + "/images/"
+		mux.Handle(root+"images/", http.StripPrefix(prefix, handleAssets(cfg)))
+	}
+
 	return mux
+}
+
+// handleAssets serves files from the assets filesystem. Directories return 404
+// so that http.FileServerFS never renders a directory listing.
+func handleAssets(cfg HandlerConfig) http.Handler {
+	fileServer := http.FileServerFS(cfg.AssetsDir.FS)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		name := strings.TrimPrefix(path.Clean("/"+r.URL.Path), "/")
+		fi, err := fs.Stat(cfg.AssetsDir.FS, name)
+		if err != nil || fi.IsDir() {
+			http.NotFound(w, r)
+			return
+		}
+		cfg.Logger.Logger.DebugContext(r.Context(), "serving asset", slog.String("path", name))
+		fileServer.ServeHTTP(w, r)
+	})
 }
 
 func handleIndex(cfg HandlerConfig, blog *generator.GeneratedBlog) http.Handler {

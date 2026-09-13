@@ -37,6 +37,7 @@ Docker-less environments.
 | `TestServe_Smoke` | container | Docker image starts and serves HTTP 200 (Docker distribution channel) |
 | `TestServe_LiveReload` | container | Watcher detects a file change and the running server reflects it |
 | `TestServe_BlogRootFlag` | container | `-p` flag correctly prefixes all links with the configured blog root |
+| `TestServe_Images` | container | Images in `<posts>/images` render with blog-root-prefixed `src` and are fetchable |
 
 ## CI
 

@@ -43,6 +43,8 @@
 //	├── posts/               # Individual post pages
 //	│   ├── slug-1.html
 //	│   └── slug-2.html
+//	├── images/              # Copy of the assets directory (when configured)
+//	│   └── screenshots/a.png
 //	└── tags/                # Tag pages (unless RawOutput is enabled)
 //	    ├── tag-1.html
 //	    ├── tag-2.html
@@ -58,6 +60,16 @@
 //	)
 //
 // When RawOutput is enabled, the tags directory is not created.
+//
+// Copy an assets directory into output/images/ via config.WithAssetsDir. The
+// copy is performed in both templated and RawOutput mode, and is skipped
+// without error when the filesystem is nil or its root does not exist:
+//
+//	root, err := os.OpenRoot("posts/images")
+//	// handle err, defer root.Close()
+//	writer := outputter.NewDirectoryWriter("output/",
+//	    config.WithAssetsDir(root.FS()).AsGeneratorOption(),
+//	)
 //
 // Inject a structured logger via config.WithLogger:
 //

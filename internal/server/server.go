@@ -99,6 +99,15 @@ func NewServeCommand(ctx context.Context, c *cli.Command) error {
 
 	cfg.Server = append(cfg.Server, config.WithLogger(slog.Default()).AsServerOption())
 
+	assetsRoot, err := utilities.OpenAssetsDir(c.String(cliflags.AssetsDirFlagName), inputPostsDir)
+	if err != nil {
+		return err
+	}
+	if assetsRoot != nil {
+		defer assetsRoot.Close()
+		cfg.Server = append(cfg.Server, config.WithAssetsDir(assetsRoot.FS()).AsServerOption())
+	}
+
 	if healthChecksEnabled {
 		cfg.Server = append(cfg.Server, config.WithHealthChecks())
 	}

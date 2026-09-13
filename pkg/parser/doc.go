@@ -27,6 +27,28 @@
 // still renders, without error. Cross-post wikilinks such as [[other-post]] or
 // [[other-post#heading]] are not supported and render as their label text.
 //
+// # Images
+//
+// Images can be written in standard markdown or as wikilink embeds. Relative
+// paths are resolved against the assets directory and rewritten to
+// root-absolute URLs under the blog root (see WithBlogRoot), so they work from
+// a post served at {BlogRoot}posts/{slug}:
+//
+//	![A diagram](images/pipeline.png)  -> <img src="/images/pipeline.png" alt="A diagram" />
+//	![A diagram](pipeline.png)         -> <img src="/images/pipeline.png" alt="A diagram" />
+//	![[pipeline.png|A diagram]]        -> <img src="/images/pipeline.png" alt="A diagram">
+//	![[pipeline.png]]                  -> <img src="/images/pipeline.png">
+//
+// A bare ![[pipeline.png]] embed has no alt attribute; give it a label with
+// "|" for accessible alt text. Subdirectories are preserved
+// ("screenshots/a.png" becomes "/images/screenshots/a.png"). Absolute URLs,
+// root-relative paths ("/static/x.png") and paths containing ".." are left
+// untouched. Embeds of non-image files, such as ![[notes.txt]], render as
+// their label text.
+//
+// As with heading links, image paths are not validated: an image missing from
+// the assets directory still renders, without error or warning.
+//
 // Basic usage:
 //
 //	import (
@@ -60,6 +82,9 @@
 //
 //	// Inject a structured logger
 //	p := parser.New(parser.WithLogger(myLogger))
+//
+//	// Resolve image URLs under a subdirectory deployment
+//	p := parser.New(parser.WithBlogRoot("/blog/"))
 //
 //	// Combine multiple options
 //	p := parser.New(

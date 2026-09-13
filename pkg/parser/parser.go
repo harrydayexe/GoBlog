@@ -22,6 +22,7 @@ import (
 	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/parser"
 	goldmarkhtml "github.com/yuin/goldmark/renderer/html"
+	"github.com/yuin/goldmark/util"
 	"go.abhg.dev/goldmark/frontmatter"
 )
 
@@ -35,12 +36,14 @@ type Parser struct {
 
 // New creates a new Parser with the specified options.
 // The parser is configured with:
-// - YAML frontmatter parsing
-// - Syntax highlighting for code blocks (enabled by default, use WithCodeHighlighting to disable)
-// - Optional footnote support (disabled by default, use WithFootnote to enable)
-// - Auto-generated heading IDs
-// - Wikilink-style heading anchors ([[#Heading]] and [[#Heading|Label]])
-// - HTML sanitization (unsafe HTML disabled by default)
+//   - YAML frontmatter parsing
+//   - Syntax highlighting for code blocks (enabled by default, use WithCodeHighlighting to disable)
+//   - Optional footnote support (disabled by default, use WithFootnote to enable)
+//   - Auto-generated heading IDs
+//   - Wikilink-style heading anchors ([[#Heading]] and [[#Heading|Label]])
+//   - Image paths rewritten to {BlogRoot}images/... for both ![alt](foo.png)
+//     and ![[foo.png]] (see WithBlogRoot)
+//   - HTML sanitization (unsafe HTML disabled by default)
 func New(opts ...Option) *Parser {
 	config := &Config{
 		EnableCodeHighlighting: true,
@@ -55,9 +58,17 @@ func New(opts ...Option) *Parser {
 }
 
 func NewWithConfig(config *Config) *Parser {
+	p := &Parser{}
+
+	if config.Logger != nil {
+		p.Logger.Logger = config.Logger
+	} else {
+		p.Logger.Logger = slog.Default()
+	}
+
 	var extensions []goldmark.Extender = []goldmark.Extender{
 		&frontmatter.Extender{},
-		headingLinkExtender{},
+		wikilinkExtender{blogRoot: config.BlogRoot},
 	}
 	if config.EnableFootnote {
 		extensions = append(extensions, extension.Footnote)
@@ -77,6 +88,9 @@ func NewWithConfig(config *Config) *Parser {
 		),
 		goldmark.WithParserOptions(
 			parser.WithAutoHeadingID(),
+			parser.WithASTTransformers(util.Prioritized(
+				imageTransformer{blogRoot: config.BlogRoot, logger: p.Logger.Logger}, 999,
+			)),
 		),
 		goldmark.WithRendererOptions(
 			goldmarkhtml.WithHardWraps(),
@@ -84,15 +98,7 @@ func NewWithConfig(config *Config) *Parser {
 		),
 	)
 
-	p := &Parser{
-		md: md,
-	}
-
-	if config.Logger != nil {
-		p.Logger.Logger = config.Logger
-	} else {
-		p.Logger.Logger = slog.Default()
-	}
+	p.md = md
 
 	return p
 }
@@ -109,6 +115,12 @@ func NewWithConfig(config *Config) *Parser {
 // [[#Heading Text|Label]]) are rendered as links to the heading's
 // auto-generated id. As with standard [text](#anchor) links, targets are not
 // validated against the document's headings.
+//
+// Relative image paths in ![alt](path) and ![[path]] are rewritten to
+// "{BlogRoot}images/path" (a leading "images/" is not duplicated). Absolute
+// URLs, root-relative paths and paths containing ".." are left untouched.
+// Image files are not checked for existence: like links, a missing image
+// renders without error.
 //
 // Returns an error if the file cannot be read, frontmatter is invalid,
 // required fields are missing, or markdown rendering fails.

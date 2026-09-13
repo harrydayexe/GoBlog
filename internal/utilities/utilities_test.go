@@ -347,3 +347,57 @@ func TestCliErrorHandler_NonInputDirectoryError(t *testing.T) {
 		t.Errorf("expected stderr to contain error message, got: %q", bufErr.String())
 	}
 }
+
+// TestOpenAssetsDir covers the default path, an explicit path, and a missing
+// directory.
+func TestOpenAssetsDir(t *testing.T) {
+	t.Parallel()
+
+	postsDir := t.TempDir()
+	if err := os.Mkdir(filepath.Join(postsDir, "images"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	explicit := t.TempDir()
+	notADir := filepath.Join(explicit, "file.txt")
+	if err := os.WriteFile(notADir, nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	tests := []struct {
+		name      string
+		assetsDir string
+		postsDir  string
+		wantRoot  string
+		wantErr   bool
+	}{
+		{name: "default under posts dir", postsDir: postsDir, wantRoot: filepath.Join(postsDir, "images")},
+		{name: "explicit dir", assetsDir: explicit, postsDir: postsDir, wantRoot: explicit},
+		{name: "default missing", postsDir: t.TempDir()},
+		{name: "explicit missing", assetsDir: filepath.Join(explicit, "nope"), postsDir: postsDir},
+		{name: "not a directory", assetsDir: notADir, postsDir: postsDir, wantErr: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			root, err := OpenAssetsDir(tt.assetsDir, tt.postsDir)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("OpenAssetsDir() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if tt.wantRoot == "" {
+				if root != nil {
+					t.Errorf("OpenAssetsDir() root = %q, want nil", root.Name())
+				}
+				return
+			}
+			if root == nil {
+				t.Fatal("OpenAssetsDir() root = nil, want non-nil")
+			}
+			defer root.Close()
+			if root.Name() != tt.wantRoot {
+				t.Errorf("OpenAssetsDir() root = %q, want %q", root.Name(), tt.wantRoot)
+			}
+		})
+	}
+}

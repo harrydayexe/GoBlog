@@ -69,6 +69,11 @@
 // Only changes to files with a .md extension trigger the onChange callback.
 // All other file types (images, CSS, YAML, etc.) are silently ignored, as
 // are common editor temporary files (dotfiles, *.swp, *~, etc.).
+// Ignoring images is deliberate: the HTTP server serves them live from the
+// assets directory and rendered posts do not depend on image contents, so
+// adding or replacing an image needs no regeneration. For the same reason an
+// assets directory outside the watched posts tree (goblog serve --assets-dir)
+// is not watched.
 // Deletion of watched subdirectories releases the corresponding watch
 // descriptor automatically. A subdirectory that is removed and then recreated
 // is re-watched when the parent fires the subsequent Create event.

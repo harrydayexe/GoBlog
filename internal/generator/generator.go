@@ -95,6 +95,15 @@ func NewGeneratorCommand(ctx context.Context, c *cli.Command) error {
 		opts = append(opts, config.WithBlogRoot(blogRoot).AsGeneratorOption())
 	}
 
+	assetsRoot, err := utilities.OpenAssetsDir(c.String(cliflags.AssetsDirFlagName), inputPostsDir)
+	if err != nil {
+		return err
+	}
+	if assetsRoot != nil {
+		defer assetsRoot.Close()
+		opts = append(opts, config.WithAssetsDir(assetsRoot.FS()).AsGeneratorOption())
+	}
+
 	renderer, err := generator.NewTemplateRenderer(templateDir)
 	if err != nil {
 		return err

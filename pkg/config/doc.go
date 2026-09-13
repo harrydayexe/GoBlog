@@ -58,6 +58,14 @@
 // adds "Cache-Control: public, max-age=<N>" to every response. Setting ttl to
 // 0 or any non-positive value disables the header. The default is one hour.
 //
+// WithAssetsDir(fsys fs.FS) is a BaseOption that sets the filesystem images
+// are served and copied from. The HTTP server serves its files at
+// {BlogRoot}images/ (server.New via BaseServerOption, server.Handler), and
+// outputter.NewDirectoryWriter (via GeneratorOption) copies it into
+// <outputDir>/images/. When fsys is nil or its root does not exist, asset
+// support is silently off. Prefer os.Root.FS over os.DirFS so symbolic links
+// cannot escape the directory.
+//
 // WithLogger(l *slog.Logger) is a BaseOption that sets the structured logger
 // used by the receiving component. It flows into every constructor that
 // accepts BaseOption values (generator.New via GeneratorOption, server.New via
@@ -101,9 +109,10 @@
 // GeneratorOption carries options for generator.New and outputter.NewDirectoryWriter,
 // including WithRawOutput, WithDisableTags, WithDisableReadingTime, WithSiteTitle,
 // WithEnvironment, WithCustomData, WithHTMLPaths, and (via the embedded BaseOption)
-// WithLogger and WithBlogRoot.
+// WithLogger, WithBlogRoot and WithAssetsDir.
 // BaseServerOption carries options for the HTTP server (port, host, middleware,
-// cache-control TTL, health-check endpoints, and via the embedded BaseOption: WithLogger, WithBlogRoot).
+// cache-control TTL, health-check endpoints, and via the embedded BaseOption:
+// WithLogger, WithBlogRoot, WithAssetsDir).
 // WatcherOption carries options for watcher.New (debounce, and via the embedded
 // BaseOption: WithLogger, WithBlogRoot).
 // RendererOption carries options for generator.NewTemplateRenderer (custom funcs).

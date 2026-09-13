@@ -37,6 +37,7 @@ These flags apply to both `generate` and `serve` and may be passed before or aft
 | `--base-url` | | _(none)_ | Scheme + host of the site (e.g. `https://example.com`); required to generate RSS/Atom feeds and canonical/Open Graph URLs. Must not include a path — use `--root-path` for subdirectory deployments |
 | `--disable-feeds` | | `false` | Disable RSS and Atom feed generation |
 | `--feed-limit` | | `10` | Maximum number of posts to include in each feed (`0` = unlimited) |
+| `--assets-dir` | | `<posts>/images` | Directory of images, served at `{root-path}images/` and copied to `<output>/images/`. Ignored if it does not exist |
 
 ### `generate` flags
 
@@ -105,6 +106,8 @@ Pass any `serve` flags after the image name — re-supply the posts path as the 
 docker run -v ./posts:/posts -p 9000:9000 harrydayexe/goblog /posts --port 9000
 docker run -v ./posts:/posts -p 8080:8080 harrydayexe/goblog /posts --root-path /blog/
 ```
+
+Images in `./posts/images` are served at `/images/` with no extra flags.
 
 For custom templates, mount your template directory and use `--template-dir`:
 
@@ -223,6 +226,33 @@ See [[#Future Work]] or [[#Future Work|what comes next]].
 ```
 
 As with standard links, targets are not validated, so a link to a missing heading renders without error. Links to other posts (`[[other-post#heading]]`) are not supported and render as plain text.
+
+## Images
+
+Put images in an `images/` directory inside your posts directory and reference them from a post in either form:
+
+```md
+![A diagram of the pipeline](images/pipeline.png)
+![A diagram of the pipeline](pipeline.png)
+![[pipeline.png|A diagram of the pipeline]]
+```
+
+All three render as `<img src="{root-path}images/pipeline.png">`. Subdirectories are preserved (`images/screenshots/a.png`). A bare `![[pipeline.png]]` has no alt text, so prefer the `|label` form. Absolute URLs and paths starting with `/` are left as written. As with heading links, missing image files are not reported.
+
+Use `--assets-dir` to keep images elsewhere; if the directory does not exist, image support is simply off. `serve` reads images straight from disk, so adding or replacing one needs no reload (the directory must exist when the server starts). `generate` copies the directory into `<output>/images/`.
+
+Library users pass the directory with `config.WithAssetsDir`, ideally via `os.Root` so symlinks cannot escape it:
+
+```go
+root, err := os.OpenRoot("posts/images")
+if err != nil {
+    panic(err)
+}
+defer root.Close()
+
+writer := outputter.NewDirectoryWriter("output/", config.WithAssetsDir(root.FS()).AsGeneratorOption())
+cfg.Server = append(cfg.Server, config.WithAssetsDir(root.FS()).AsServerOption())
+```
 
 ## Contributing
 
