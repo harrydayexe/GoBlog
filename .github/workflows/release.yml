@@ -60,6 +60,9 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Use the tag that triggered this run; otherwise goreleaser may pick
+          # a pre-release tag (e.g. v2.6.0-beta5) pointing at the same commit.
+          GORELEASER_CURRENT_TAG: ${{ github.ref_name }}
 
       - name: Notify Go checksum database
         continue-on-error: true
