@@ -1513,3 +1513,24 @@ func TestNew_WithLogger(t *testing.T) {
 func contains(s, substr string) bool {
 	return bytes.Contains([]byte(strings.ToLower(s)), []byte(strings.ToLower(substr)))
 }
+
+// TestGenerate_ImageSrcUsesBlogRoot verifies that the generator's BlogRoot is
+// passed to the parser so relative image paths resolve under it.
+func TestGenerate_ImageSrcUsesBlogRoot(t *testing.T) {
+	t.Parallel()
+
+	testFS := fstest.MapFS{
+		"post.md": {Data: []byte("---\ntitle: Images\ndate: 2026-01-10T10:00:00Z\ndescription: d\n---\n\n![a](pipeline.png)\n\n![[pipeline.png]]\n")},
+	}
+	gen := New(testFS, nil, config.WithRawOutput(), config.WithBlogRoot("/blog/").AsGeneratorOption())
+
+	blog, err := gen.Generate(context.Background())
+	if err != nil {
+		t.Fatalf("Generate() error = %v, want nil", err)
+	}
+
+	got := string(blog.Posts["images"])
+	if n := strings.Count(got, `src="/blog/images/pipeline.png"`); n != 2 {
+		t.Errorf("expected 2 image srcs under /blog/images/, got %d in:\n%s", n, got)
+	}
+}

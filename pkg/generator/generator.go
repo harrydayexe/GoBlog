@@ -172,6 +172,7 @@ func (g *Generator) Generate(ctx context.Context) (*GeneratedBlog, error) {
 	g.Logger.Logger.DebugContext(ctx, "Creating parser for generate call")
 	parserCfg := g.ParserConfig
 	parserCfg.Logger = g.Logger.Logger
+	parserCfg.BlogRoot = string(g.BlogRoot)
 	p := parser.NewWithConfig(&parserCfg)
 
 	posts, err := p.ParseDirectory(ctx, g.PostsDir)
