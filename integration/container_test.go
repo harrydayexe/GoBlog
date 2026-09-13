@@ -8,6 +8,8 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -158,5 +160,53 @@ func TestServe_BlogRootFlag(t *testing.T) {
 
 	if !strings.Contains(body, "/blog/") {
 		t.Errorf("expected response body to contain /blog/ links\nbody:\n%s", body)
+	}
+}
+
+// TestServe_Images boots the server with a post referencing an image in the
+// default <posts>/images assets directory, and verifies that the rendered post
+// points at the blog-root-prefixed asset URL and that the image is fetchable.
+func TestServe_Images(t *testing.T) {
+	skipIfNoDocker(t)
+	ctx := context.Background()
+
+	dir := t.TempDir()
+	writePost(t, dir, "images.md", `---
+title: "Image Post"
+date: 2026-01-01T00:00:00Z
+description: "A post with images"
+---
+
+![A diagram](images/diagram.png)
+
+![[diagram.png|Embedded diagram]]
+`)
+	if err := os.Mkdir(filepath.Join(dir, "images"), 0755); err != nil {
+		t.Fatalf("mkdir images: %v", err)
+	}
+	png := "\x89PNG\r\n\x1a\n"
+	if err := os.WriteFile(filepath.Join(dir, "images", "diagram.png"), []byte(png), 0644); err != nil {
+		t.Fatalf("write image: %v", err)
+	}
+
+	c, addr := startContainer(t, ctx, &dir, []string{"-p", "/blog/", "/posts"})
+	defer func() { _ = c.Terminate(ctx) }()
+
+	var body string
+	eventually(t, 10*time.Second, 500*time.Millisecond, func() bool {
+		status, b := httpGet(t, fmt.Sprintf("http://%s/blog/posts/image-post", addr))
+		body = b
+		return status == http.StatusOK
+	})
+	if n := strings.Count(body, `src="/blog/images/diagram.png"`); n != 2 {
+		t.Errorf("expected 2 img tags with src=/blog/images/diagram.png, found %d\nbody:\n%s", n, body)
+	}
+
+	status, contentType := httpGetHeader(t, fmt.Sprintf("http://%s/blog/images/diagram.png", addr), "Content-Type")
+	if status != http.StatusOK {
+		t.Fatalf("GET image: status %d, want 200", status)
+	}
+	if contentType != "image/png" {
+		t.Errorf("GET image: Content-Type %q, want image/png", contentType)
 	}
 }
