@@ -4,7 +4,10 @@
 
 package config
 
-import "log/slog"
+import (
+	"io/fs"
+	"log/slog"
+)
 
 // BaseOption represents a configuration option that can be applied to
 // many different instances during construction.
@@ -16,8 +19,58 @@ import "log/slog"
 // This type should not be constructed directly by users. Instead, use the
 // provided option functions like WithBlogRoot() or WithLogger().
 type BaseOption struct {
-	WithBlogRootFunc func(v *BlogRoot)
-	WithLoggerFunc   func(v *Logger)
+	WithBlogRootFunc  func(v *BlogRoot)
+	WithLoggerFunc    func(v *Logger)
+	WithAssetsDirFunc func(v *AssetsDir)
+}
+
+// AssetsDir is a configuration type that holds the filesystem containing the
+// blog's static assets (images).
+//
+// Assets are served by the HTTP server at {BlogRoot}images/<path> and copied
+// by the outputter into <outputDir>/images/. When FS is nil, or its root
+// cannot be stat'd as a directory, asset support is off: no route is
+// registered and nothing is copied.
+//
+// This type is typically embedded in server and outputter configuration
+// structs and should be set using the [WithAssetsDir] option function.
+type AssetsDir struct{ FS fs.FS }
+
+// WithAssetsDir returns a BaseOption that sets the filesystem images are
+// served and copied from.
+//
+// Prefer a filesystem that cannot escape its root, such as the one returned
+// by [os.Root.FS]; [os.DirFS] follows symbolic links that point outside the
+// directory. Passing nil disables asset support.
+//
+// Example usage:
+//
+//	root, err := os.OpenRoot("posts/images")
+//	if err != nil {
+//	    return err
+//	}
+//	defer root.Close()
+//
+//	writer := outputter.NewDirectoryWriter("output/", config.WithAssetsDir(root.FS()).AsGeneratorOption())
+func WithAssetsDir(fsys fs.FS) BaseOption {
+	return BaseOption{
+		WithAssetsDirFunc: func(v *AssetsDir) { v.FS = fsys },
+	}
+}
+
+// AsOption returns a BaseOption that re-applies this AssetsDir value to
+// another component.
+func (o AssetsDir) AsOption() BaseOption {
+	return WithAssetsDir(o.FS)
+}
+
+// Enabled reports whether FS is set and its root is a readable directory.
+func (o AssetsDir) Enabled() bool {
+	if o.FS == nil {
+		return false
+	}
+	fi, err := fs.Stat(o.FS, ".")
+	return err == nil && fi.IsDir()
 }
 
 // Logger is a configuration type that holds a [log/slog.Logger] for structured

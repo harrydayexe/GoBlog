@@ -6,6 +6,7 @@ package parser
 
 import (
 	"bytes"
+	"path/filepath"
 
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/ast"
@@ -15,35 +16,64 @@ import (
 	"go.abhg.dev/goldmark/wikilink"
 )
 
-// headingLinkExtender adds support for same-document heading anchors written
-// as [[#Heading Text]] or [[#Heading Text|Custom Label]].
+// wikilinkExtender adds support for wikilinks:
+//   - same-document heading anchors written as [[#Heading Text]] or
+//     [[#Heading Text|Custom Label]]
+//   - image embeds written as ![[foo.png]] or ![[foo.png|Alt text]]
 //
 // Parsing and rendering are provided by go.abhg.dev/goldmark/wikilink. Links
-// are not validated against the document's headings: like a standard
-// [text](#anchor) link, a link to a missing heading renders without error.
-type headingLinkExtender struct{}
+// are not validated against the document's headings or the assets directory:
+// like a standard [text](#anchor) link, a link to a missing heading or image
+// renders without error.
+type wikilinkExtender struct {
+	blogRoot string
+}
 
-// Extend registers the wikilink extension with a resolver for heading anchors,
-// and a transformer that drops the leading '#' from default link labels.
-func (headingLinkExtender) Extend(m goldmark.Markdown) {
-	(&wikilink.Extender{Resolver: headingLinkResolver{}}).Extend(m)
+// Extend registers the wikilink extension with a resolver for heading anchors
+// and image embeds, and a transformer that drops the leading '#' from default
+// link labels.
+func (e wikilinkExtender) Extend(m goldmark.Markdown) {
+	(&wikilink.Extender{Resolver: wikilinkResolver(e)}).Extend(m)
 	m.Parser().AddOptions(parser.WithASTTransformers(
 		util.Prioritized(headingLabelTransformer{}, 999),
 	))
 }
 
-// headingLinkResolver resolves [[#Heading Text]] to "#heading-text".
+// wikilinkResolver resolves [[#Heading Text]] to "#heading-text", and
+// ![[foo.png]] to "{blogRoot}images/foo.png" using the same rules as standard
+// markdown images (see assetURL).
 //
 // Wikilinks to other pages, such as [[other-post]] or [[other-post#heading]],
-// are not supported and resolve to nil, which renders only their label text.
-type headingLinkResolver struct{}
+// and embeds of non-image files, such as ![[notes.txt]], are not supported and
+// resolve to nil, which renders only their label text.
+type wikilinkResolver struct {
+	blogRoot string
+}
 
-func (headingLinkResolver) ResolveWikilink(n *wikilink.Node) ([]byte, error) {
+func (r wikilinkResolver) ResolveWikilink(n *wikilink.Node) ([]byte, error) {
+	if n.Embed && isImageTarget(n.Target) {
+		if dest, ok := assetURL(r.blogRoot, string(n.Target)); ok {
+			return []byte(dest), nil
+		}
+		return n.Target, nil
+	}
 	heading, ok := linkedHeading(n)
 	if !ok {
 		return nil, nil
 	}
 	return append([]byte("#"), headingID(heading)...), nil
+}
+
+// isImageTarget reports whether target has an extension that the wikilink
+// renderer emits as an <img> tag when embedded. The list must match the
+// renderer's, otherwise a resolved non-image embed would render as a link.
+func isImageTarget(target []byte) bool {
+	switch filepath.Ext(string(target)) {
+	case ".apng", ".avif", ".gif", ".jpg", ".jpeg", ".jfif", ".pjpeg", ".pjp", ".png", ".svg", ".webp":
+		return true
+	default:
+		return false
+	}
 }
 
 // headingLabelTransformer makes [[#Heading Text]] render with the label

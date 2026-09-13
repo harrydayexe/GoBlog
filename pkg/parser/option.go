@@ -47,3 +47,17 @@ func WithFootnote() Option {
 		c.EnableFootnote = true
 	}
 }
+
+// WithBlogRoot sets the root path the blog is served under, such as "/" or
+// "/blog/". It is used to rewrite relative image paths to root-absolute asset
+// URLs: ![alt](images/foo.png), ![alt](foo.png) and ![[foo.png]] all render
+// with src="{BlogRoot}images/foo.png". The default is "/".
+//
+// Example usage:
+//
+//	p := parser.New(parser.WithBlogRoot("/blog/"))
+func WithBlogRoot(root string) Option {
+	return func(c *Config) {
+		c.BlogRoot = root
+	}
+}
