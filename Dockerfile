@@ -7,15 +7,17 @@ FROM golang:1.26-alpine AS builder
 
 WORKDIR /build
 
-# Copy go mod files
+# Copy go mod files for both modules. The CLI module replaces the library with
+# ../, so the root go.mod must be present before `go mod download` can resolve.
 COPY go.mod go.sum ./
-RUN go mod download
+COPY cli/go.mod cli/go.sum ./cli/
+RUN go -C cli mod download
 
 # Copy source code
 COPY . .
 
-# Build the binary
-RUN CGO_ENABLED=0 GOOS=linux go build -o goblog ./cmd/goblog
+# Build the binary from the CLI module
+RUN CGO_ENABLED=0 GOOS=linux go -C cli build -o /build/goblog ./cmd/goblog
 
 # Runtime stage
 FROM alpine:latest
