@@ -12,8 +12,8 @@ import (
 	"path"
 	"strings"
 
-	"github.com/harrydayexe/GoBlog/v2/internal/cliflags"
-	"github.com/harrydayexe/GoBlog/v2/internal/utilities"
+	"github.com/harrydayexe/GoBlog/v2/cli/internal/cliflags"
+	"github.com/harrydayexe/GoBlog/v2/cli/internal/utilities"
 	"github.com/harrydayexe/GoBlog/v2/pkg/config"
 	"github.com/harrydayexe/GoBlog/v2/pkg/server"
 	"github.com/harrydayexe/GoBlog/v2/pkg/templates"

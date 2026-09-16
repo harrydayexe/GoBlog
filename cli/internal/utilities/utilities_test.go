@@ -12,7 +12,7 @@ import (
 	"strings"
 	"testing"
 
-	inerrors "github.com/harrydayexe/GoBlog/v2/internal/errors"
+	inerrors "github.com/harrydayexe/GoBlog/v2/cli/internal/errors"
 )
 
 // TestGetDirectoryFromInput_ValidAbsolutePath tests with a valid absolute path.

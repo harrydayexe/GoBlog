@@ -10,11 +10,29 @@ GoBlog is a blog generation and serving system for creating static blog feeds fr
 
 ## CLI
 
-Install the `goblog` binary:
+The `goblog` binary lives in its own Go module (`cli/`) that is not published to
+the module proxy, so it is installed from a package manager or a release archive
+rather than with `go install`.
+
+**Homebrew** (macOS and Linux):
 
 ```bash
-go install github.com/harrydayexe/GoBlog/v2/cmd/goblog@latest
+brew install harrydayexe/tap/goblog
 ```
+
+**Release archive** — grab the archive for your platform from the
+[releases page](https://github.com/harrydayexe/GoBlog/releases) and put the
+binary on your `PATH`:
+
+```bash
+curl -sSL https://github.com/harrydayexe/GoBlog/releases/latest/download/GoBlog_Linux_x86_64.tar.gz | tar -xz goblog
+sudo install goblog /usr/local/bin/goblog
+```
+
+Archives are published for Linux and macOS on `x86_64` and `arm64`. Windows
+archives are built as well but Windows is not a supported install target.
+
+There is also a [Docker image](#docker) if you only need to serve a blog.
 
 ```bash
 # Generate static files
@@ -59,9 +77,11 @@ When `--base-url` is set, the server also exposes the generated feeds at `{root-
 
 ### Shell completion
 
-`goblog` can generate shell completion scripts at runtime. After installing the
-binary, source the appropriate script to enable tab-completion of subcommands and
-flags.
+The Homebrew cask installs bash, zsh, and fish completions for you. Release
+archives ship the same scripts in a `completions/` directory.
+
+`goblog` can also generate them at runtime — source the appropriate script to
+enable tab-completion of subcommands and flags.
 
 **Bash** — add to `~/.bashrc`:
 
@@ -74,6 +94,12 @@ source <(goblog completion bash)
 ```zsh
 autoload -Uz compinit && compinit
 source <(goblog completion zsh)
+```
+
+**Fish** — write the script to your completions directory:
+
+```fish
+goblog completion fish > ~/.config/fish/completions/goblog.fish
 ```
 
 ## Docker
@@ -126,6 +152,9 @@ Add GoBlog as a dependency:
 ```bash
 go get github.com/harrydayexe/GoBlog/v2
 ```
+
+The CLI is a separate module (`cli/`) that is never published, so none of its
+dependencies reach your build.
 
 The main packages are:
 
