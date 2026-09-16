@@ -5,9 +5,19 @@
 All API changes (new exported types, functions, options, flags, or fields) must include corresponding documentation updates: godoc comments on the new symbols, relevant sections in `README.md`, and any package-level `doc.go` entries that reference available options or features.
 
 The README.md does not need to be flooded with documentation. Just the relevant information for a user to get started with the 3 methods to consume the library:
-1. CLI tool via go install
+1. CLI tool via Homebrew (`brew install harrydayexe/tap/goblog`) or a release archive — `go install` is not supported
 2. Docker image via docker pull/run
 3. The library itself
+
+## Modules
+
+The repository holds three Go modules:
+
+- `/go.mod` — `github.com/harrydayexe/GoBlog/v2`, the public library (`pkg/...`). Its dependency graph is a budget: anything added here is inherited by every library consumer.
+- `/cli/go.mod` — `github.com/harrydayexe/GoBlog/v2/cli`, the `goblog` binary (`cli/cmd/goblog`, `cli/internal/...`). Never published to the module proxy, so it can take any dependency it needs. Use `replace ... => ../` to reach the library.
+- `/integration/go.mod` — black-box tests requiring Docker.
+
+CLI-only code belongs under `cli/`, never at the repo root. `go test ./...`, `go vet ./...` and friends stop at a nested `go.mod`, so run them per module (the `just` recipes already do).
 
 ## Code Style
 

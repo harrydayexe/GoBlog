@@ -25,13 +25,27 @@ an acknowledgement within a few days.
 
 ## Project Structure
 
+The repository holds three Go modules:
+
 ```
-cmd/goblog/          CLI entry point (main package)
-pkg/                 Public, importable packages
-internal/            Private implementation details
+go.mod               github.com/harrydayexe/GoBlog/v2        (the public library)
+  pkg/               Public, importable packages
+cli/go.mod           github.com/harrydayexe/GoBlog/v2/cli    (never published)
+  cli/cmd/goblog/    CLI entry point (main package)
+  cli/internal/      Private CLI implementation details
+integration/go.mod   github.com/harrydayexe/GoBlog/v2/integration
 docs/example-posts/  Sample Markdown posts for local runs
 .github/workflows/   CI: tests, license-header check, release
 ```
+
+The CLI lives in its own leaf module so that anything it imports stays out of
+the library's dependency graph. Both `cli/` and `integration/` use
+`replace github.com/harrydayexe/GoBlog/v2 => ../`, so they always build against
+the library at the current commit — no tag or release is needed in between.
+
+Because `go test ./...` stops at a nested `go.mod` boundary, commands run from
+the repo root cover the library only. The `just` recipes below iterate over
+every module, and CI runs a job per module.
 
 ## Development Setup
 
@@ -79,9 +93,9 @@ Or run them directly:
 cd integration && go test -v -timeout 10m ./...
 ```
 
-The unit suite (`just test`) deliberately excludes the integration module —
-`go test ./...` stops at the nested `go.mod` boundary — so unit feedback
-stays fast in CI even when integration tests are slow.
+The unit suite (`just test`) covers the library and CLI modules but
+deliberately excludes the integration module, so unit feedback stays fast in
+CI even when integration tests are slow.
 
 In CI the integration tests run in a dedicated `integration` job so the two
 stages report separately.

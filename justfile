@@ -175,7 +175,7 @@ add-license:
 # Run generator command with arguments. Paths are relative to the repo root.
 [group('run')]
 run-gen *ARGS: build
-    {{DIST_DIR}}/{{BINARY_NAME}} gen {{ARGS}}
+    {{DIST_DIR}}/{{BINARY_NAME}} generate {{ARGS}}
 
 # Run serve command with optional arguments (defaults to example posts)
 [group('run')]
