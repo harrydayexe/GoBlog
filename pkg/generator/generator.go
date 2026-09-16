@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io/fs"
 	"log/slog"
+	"net/url"
 	"sort"
 	"strings"
 	"time"
@@ -16,6 +17,13 @@ import (
 	"github.com/harrydayexe/GoBlog/v2/pkg/config"
 	"github.com/harrydayexe/GoBlog/v2/pkg/models"
 	"github.com/harrydayexe/GoBlog/v2/pkg/parser"
+)
+
+// Open Graph object types assigned to models.BaseData.OGType. Post pages
+// describe a single article; every other page describes the site itself.
+const (
+	ogTypeArticle = "article"
+	ogTypeWebsite = "website"
 )
 
 // Generator produces HTML output based on its input configuration.
@@ -36,6 +44,9 @@ type Generator struct {
 	config.CustomData
 	config.HTMLPaths
 	config.Logger
+	config.BaseURL
+	config.DisableFeeds
+	config.FeedPostLimit
 	ParserConfig parser.Config // The config to use when parsing
 
 	renderer *TemplateRenderer
@@ -50,7 +61,10 @@ func (c Generator) String() string {
 - BlogRoot            %s,
 - Environment         %s,
 - CustomData keys     %d,
-- HTMLPaths           %t`,
+- HTMLPaths           %t,
+- BaseURL             %s,
+- DisableFeeds        %t,
+- FeedPostLimit       %d`,
 		c.RawOutput,
 		c.DisableTags.Disable,
 		c.DisableReadingTime.Disable,
@@ -59,6 +73,9 @@ func (c Generator) String() string {
 		c.Environment.Environment,
 		len(c.CustomData.Data),
 		c.HTMLPaths.Enable,
+		c.BaseURL,
+		c.DisableFeeds.Disable,
+		c.FeedPostLimit.Limit,
 	)
 }
 
@@ -68,7 +85,8 @@ func (c Generator) String() string {
 //
 // Optional config.GeneratorOption values control behavior: config.WithRawOutput,
 // config.WithDisableTags, config.WithDisableReadingTime, config.WithSiteTitle,
-// config.WithBlogRoot, config.WithEnvironment, config.WithCustomData.
+// config.WithBlogRoot, config.WithEnvironment, config.WithCustomData,
+// config.WithBaseURL, config.WithDisableFeeds, config.WithFeedPostLimit.
 // The template renderer is supplied as a positional argument, not an option.
 func New(posts fs.FS, renderer *TemplateRenderer, opts ...config.GeneratorOption) *Generator {
 	gen := Generator{
@@ -95,6 +113,12 @@ func New(posts fs.FS, renderer *TemplateRenderer, opts ...config.GeneratorOption
 			opt.WithCustomDataFunc(&gen.CustomData)
 		} else if opt.WithHTMLPathsFunc != nil {
 			opt.WithHTMLPathsFunc(&gen.HTMLPaths)
+		} else if opt.WithBaseURLFunc != nil {
+			opt.WithBaseURLFunc(&gen.BaseURL)
+		} else if opt.WithDisableFeedsFunc != nil {
+			opt.WithDisableFeedsFunc(&gen.DisableFeeds)
+		} else if opt.WithFeedPostLimitFunc != nil {
+			opt.WithFeedPostLimitFunc(&gen.FeedPostLimit)
 		} else if opt.WithLoggerFunc != nil {
 			opt.WithLoggerFunc(&gen.Logger)
 		}
@@ -148,6 +172,7 @@ func (g *Generator) Generate(ctx context.Context) (*GeneratedBlog, error) {
 	g.Logger.Logger.DebugContext(ctx, "Creating parser for generate call")
 	parserCfg := g.ParserConfig
 	parserCfg.Logger = g.Logger.Logger
+	parserCfg.BlogRoot = string(g.BlogRoot)
 	p := parser.NewWithConfig(&parserCfg)
 
 	posts, err := p.ParseDirectory(ctx, g.PostsDir)
@@ -212,6 +237,16 @@ func (g *Generator) pagePath(kind, name string) string {
 	return base
 }
 
+// canonicalURL returns the fully-qualified URL for a site-relative page path.
+// It returns an empty string when no base URL is configured, so that templates
+// omit canonical and Open Graph URL tags rather than emitting empty ones.
+func (g *Generator) canonicalURL(path string) string {
+	if g.BaseURL == "" {
+		return ""
+	}
+	return absURL(string(g.BaseURL), path)
+}
+
 func (g *Generator) assembleRawBlog(posts models.PostList) *GeneratedBlog {
 	blog := NewEmptyGeneratedBlog()
 
@@ -234,6 +269,12 @@ func (g *Generator) assembleBlogWithTemplates(ctx context.Context, posts models.
 
 	tagsEnabled := !g.DisableTags.Disable
 
+	// feeds are active when not explicitly disabled AND a base URL is configured.
+	feedsEnabled := !g.DisableFeeds.Disable && g.BaseURL != ""
+	if !g.DisableFeeds.Disable && g.BaseURL == "" {
+		g.Logger.Logger.InfoContext(ctx, "feeds enabled but no base URL configured; skipping feed generation (use WithBaseURL to enable feeds)")
+	}
+
 	// When tags are disabled, clear Post.Tags so template tag pills do not render.
 	if !tagsEnabled {
 		for _, post := range posts {
@@ -251,19 +292,40 @@ func (g *Generator) assembleBlogWithTemplates(ctx context.Context, posts models.
 	// Sort posts by date descending
 	posts.SortByDate()
 
+	// Build site-wide feeds from the already-sorted post list.
+	if feedsEnabled {
+		rss, atom, err := g.buildFeeds(posts)
+		if err != nil {
+			return nil, fmt.Errorf("building site-wide feeds: %w", err)
+		}
+		blog.RSSFeed = rss
+		blog.AtomFeed = atom
+	}
+
 	// Render individual post pages
 	for _, post := range posts {
+		path := g.pagePath("post", post.Slug)
 		data := models.PostPageData{
 			BaseData: models.BaseData{
-				SiteTitle:   g.SiteTitle.SiteTitle,
-				PageTitle:   post.Title,
-				Description: post.Description,
-				Year:        time.Now().Year(),
-				BlogRoot:    string(g.BlogRoot),
-				Environment: g.Environment.Environment,
-				TagsEnabled: tagsEnabled,
-				Custom:      g.CustomData.Data,
-				Path:        g.pagePath("post", post.Slug),
+				SiteTitle:    g.SiteTitle.SiteTitle,
+				PageTitle:    post.Title,
+				Description:  post.Description,
+				Year:         time.Now().Year(),
+				BlogRoot:     string(g.BlogRoot),
+				Environment:  g.Environment.Environment,
+				TagsEnabled:  tagsEnabled,
+				FeedsEnabled: feedsEnabled,
+				Custom:       g.CustomData.Data,
+				Path:         path,
+				CanonicalURL: g.canonicalURL(path),
+				OGType:       ogTypeArticle,
+				Article: &models.ArticleMeta{
+					PublishedTime:      post.Date,
+					ModifiedTime:       post.LastEdited,
+					Author:             post.Author,
+					Tags:               post.Tags,
+					ReadingTimeMinutes: post.ReadingTimeMinutes,
+				},
 			},
 			Post: post,
 		}
@@ -284,17 +346,21 @@ func (g *Generator) assembleBlogWithTemplates(ctx context.Context, posts models.
 	}
 
 	// Render index page
+	indexPath := g.pagePath("index", "")
 	indexData := models.IndexPageData{
 		BaseData: models.BaseData{
-			SiteTitle:   g.SiteTitle.SiteTitle,
-			PageTitle:   "Home",
-			Description: "Recent blog posts",
-			Year:        time.Now().Year(),
-			BlogRoot:    string(g.BlogRoot),
-			Environment: g.Environment.Environment,
-			TagsEnabled: tagsEnabled,
-			Custom:      g.CustomData.Data,
-			Path:        g.pagePath("index", ""),
+			SiteTitle:    g.SiteTitle.SiteTitle,
+			PageTitle:    "Home",
+			Description:  "Recent blog posts",
+			Year:         time.Now().Year(),
+			BlogRoot:     string(g.BlogRoot),
+			Environment:  g.Environment.Environment,
+			TagsEnabled:  tagsEnabled,
+			FeedsEnabled: feedsEnabled,
+			Custom:       g.CustomData.Data,
+			Path:         indexPath,
+			CanonicalURL: g.canonicalURL(indexPath),
+			OGType:       ogTypeWebsite,
 		},
 		Posts:      indexPosts,
 		TotalPosts: len(indexPosts),
@@ -317,17 +383,23 @@ func (g *Generator) assembleBlogWithTemplates(ctx context.Context, posts models.
 				post.BlogRoot = string(g.BlogRoot)
 			}
 
+			tagPath := g.pagePath("tag", tag)
 			tagData := models.TagPageData{
 				BaseData: models.BaseData{
-					SiteTitle:   g.SiteTitle.SiteTitle,
-					PageTitle:   "Tag: " + tag,
-					Description: fmt.Sprintf("Posts tagged with %s", tag),
-					Year:        time.Now().Year(),
-					BlogRoot:    string(g.BlogRoot),
-					Environment: g.Environment.Environment,
-					TagsEnabled: true,
-					Custom:      g.CustomData.Data,
-					Path:        g.pagePath("tag", tag),
+					SiteTitle:    g.SiteTitle.SiteTitle,
+					PageTitle:    "Tag: " + tag,
+					Description:  fmt.Sprintf("Posts tagged with %s", tag),
+					Year:         time.Now().Year(),
+					BlogRoot:     string(g.BlogRoot),
+					Environment:  g.Environment.Environment,
+					TagsEnabled:  true,
+					FeedsEnabled: feedsEnabled,
+					Custom:       g.CustomData.Data,
+					Path:         tagPath,
+					// Tags come verbatim from front matter, so escape them
+					// to keep characters like spaces and '#' out of the URL.
+					CanonicalURL: g.canonicalURL(g.pagePath("tag", url.PathEscape(tag))),
+					OGType:       ogTypeWebsite,
 				},
 				Tag:       tag,
 				Posts:     tagPosts,
@@ -340,6 +412,18 @@ func (g *Generator) assembleBlogWithTemplates(ctx context.Context, posts models.
 			}
 
 			blog.Tags[tag] = rendered
+
+			// Build per-tag feeds alongside the tag page.
+			if feedsEnabled {
+				tagRSS, tagAtom, err := g.buildTagFeeds(tag, tagPosts)
+				if err != nil {
+					return nil, fmt.Errorf("building feeds for tag %q: %w", tag, err)
+				}
+				if tagRSS != nil {
+					blog.TagRSSFeeds[tag] = tagRSS
+					blog.TagAtomFeeds[tag] = tagAtom
+				}
+			}
 		}
 
 		// Render tags index page
@@ -357,17 +441,21 @@ func (g *Generator) assembleBlogWithTemplates(ctx context.Context, posts models.
 			return strings.ToLower(tagInfos[i].Name) < strings.ToLower(tagInfos[j].Name)
 		})
 
+		tagsIndexPath := g.pagePath("tagsIndex", "")
 		tagsIndexData := models.TagsIndexPageData{
 			BaseData: models.BaseData{
-				SiteTitle:   g.SiteTitle.SiteTitle,
-				PageTitle:   "All Tags",
-				Description: "Browse all topics covered in this blog",
-				Year:        time.Now().Year(),
-				BlogRoot:    string(g.BlogRoot),
-				Environment: g.Environment.Environment,
-				TagsEnabled: true,
-				Custom:      g.CustomData.Data,
-				Path:        g.pagePath("tagsIndex", ""),
+				SiteTitle:    g.SiteTitle.SiteTitle,
+				PageTitle:    "All Tags",
+				Description:  "Browse all topics covered in this blog",
+				Year:         time.Now().Year(),
+				BlogRoot:     string(g.BlogRoot),
+				Environment:  g.Environment.Environment,
+				TagsEnabled:  true,
+				FeedsEnabled: feedsEnabled,
+				Custom:       g.CustomData.Data,
+				Path:         tagsIndexPath,
+				CanonicalURL: g.canonicalURL(tagsIndexPath),
+				OGType:       ogTypeWebsite,
 			},
 			Tags:      tagInfos,
 			TotalTags: len(tagInfos),

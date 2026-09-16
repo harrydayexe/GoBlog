@@ -46,16 +46,37 @@ package generator
 // templates guard the "· N min read" annotation with
 // {{if .Post.ReadingTimeMinutes}}, so the annotation is simply omitted without
 // any other changes to the output structure.
+//
+// # Feed Mode
+//
+// When the generator is configured with config.WithBaseURL() (and feeds have
+// not been disabled via config.WithDisableFeeds()), the following feed fields
+// are populated:
+//   - RSSFeed / AtomFeed: site-wide RSS 2.0 / Atom XML bytes
+//   - TagRSSFeeds / TagAtomFeeds: per-tag RSS 2.0 / Atom XML, keyed by tag name
+//
+// Feeds are empty (nil) when:
+//   - No base URL is configured (feeds are silently skipped)
+//   - config.WithDisableFeeds() was applied
+//   - config.WithRawOutput() was applied (raw mode skips all template rendering)
+//   - config.WithDisableTags() was applied (tag feeds are additionally empty in this mode)
 type GeneratedBlog struct {
 	Posts     map[string][]byte // Posts maps a slug to raw HTML bytes for each post
 	Index     []byte            // Index contains the raw HTML for the blog index page
 	Tags      map[string][]byte // Tags maps each tag name to its tag page HTML
 	TagsIndex []byte            // TagsIndex contains the raw HTML for the tags index page
+
+	RSSFeed      []byte            // RSSFeed contains the site-wide RSS 2.0 feed XML, or nil if feeds are disabled/skipped
+	AtomFeed     []byte            // AtomFeed contains the site-wide Atom feed XML, or nil if feeds are disabled/skipped
+	TagRSSFeeds  map[string][]byte // TagRSSFeeds maps each tag name to its RSS 2.0 feed XML
+	TagAtomFeeds map[string][]byte // TagAtomFeeds maps each tag name to its Atom feed XML
 }
 
 func NewEmptyGeneratedBlog() *GeneratedBlog {
 	return &GeneratedBlog{
-		Posts: make(map[string][]byte),
-		Tags:  make(map[string][]byte),
+		Posts:        make(map[string][]byte),
+		Tags:         make(map[string][]byte),
+		TagRSSFeeds:  make(map[string][]byte),
+		TagAtomFeeds: make(map[string][]byte),
 	}
 }

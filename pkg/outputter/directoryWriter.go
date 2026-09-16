@@ -6,6 +6,8 @@ package outputter
 
 import (
 	"context"
+	"fmt"
+	"io/fs"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -17,9 +19,10 @@ import (
 // DirectoryWriter is an Outputter implementation that writes blog content
 // as static HTML files to a filesystem directory.
 //
-// It creates an index.html file, individual post HTML files, and (unless
+// It creates an index.html file, individual post HTML files, (unless
 // RawOutput or DisableTags is enabled) a tags subdirectory with tag pages
-// and a tags index.
+// and a tags index, and (when an assets directory is configured) an images
+// subdirectory containing a copy of the assets.
 //
 // DirectoryWriter is safe for concurrent use, though concurrent writes to
 // the same output directory may result in filesystem race conditions.
@@ -27,6 +30,7 @@ type DirectoryWriter struct {
 	config.RawOutput
 	config.DisableTags
 	config.Logger
+	config.AssetsDir
 	outputDir string
 }
 
@@ -45,6 +49,9 @@ type DirectoryWriter struct {
 //	writer := NewDirectoryWriter("/var/www/blog",
 //	    config.WithDisableTags(),
 //	)
+//	writer := NewDirectoryWriter("/var/www/blog",
+//	    config.WithAssetsDir(assetsFS).AsGeneratorOption(),
+//	)
 //
 // This is the recommended constructor for most use cases.
 func NewDirectoryWriter(outputDir string, opts ...config.GeneratorOption) DirectoryWriter {
@@ -59,6 +66,8 @@ func NewDirectoryWriter(outputDir string, opts ...config.GeneratorOption) Direct
 			opt.WithDisableTagsFunc(&dw.DisableTags)
 		} else if opt.WithLoggerFunc != nil {
 			opt.WithLoggerFunc(&dw.Logger)
+		} else if opt.WithAssetsDirFunc != nil {
+			opt.WithAssetsDirFunc(&dw.AssetsDir)
 		}
 	}
 
@@ -79,6 +88,18 @@ func NewDirectoryWriter(outputDir string, opts ...config.GeneratorOption) Direct
 //   - posts/{slug}.html: individual post files, one per post
 //   - tags/{tag}.html: tag pages (only if RawOutput and DisableTags are false)
 //   - tags/index.html: tags index page (only if RawOutput and DisableTags are false)
+//   - rss.xml: site-wide RSS 2.0 feed (only when the generator produced one)
+//   - atom.xml: site-wide Atom feed (only when the generator produced one)
+//   - tags/{tag}.rss.xml: per-tag RSS 2.0 feed (only when the generator produced them)
+//   - tags/{tag}.atom.xml: per-tag Atom feed (only when the generator produced them)
+//   - images/...: a recursive copy of the assets directory (only when
+//     config.WithAssetsDir was supplied and its root is a readable directory)
+//
+// Assets are copied in both templated and RawOutput mode, since rendered image
+// src attributes point at {BlogRoot}images/ either way. Existing files in the
+// images directory are overwritten. Entries that are neither regular files,
+// directories, nor symbolic links resolving to regular files inside the assets
+// filesystem are skipped with a warning.
 //
 // When RawOutput mode is enabled (via config.WithRawOutput()), the tags/
 // directory is not created and individual post files contain only raw HTML
@@ -89,6 +110,11 @@ func NewDirectoryWriter(outputDir string, opts ...config.GeneratorOption) Direct
 // When DisableTags mode is enabled (via config.WithDisableTags()), the tags/
 // directory is not created. Posts and the index page are still written with
 // full templates.
+//
+// Feed files are written only when the generator has populated them (i.e. when
+// config.WithBaseURL was set and config.WithDisableFeeds was not applied). The
+// outputter does not need to know about feed configuration — it simply writes
+// whatever the generator produced.
 //
 // All necessary directories are created automatically with permissions 0755.
 // Files are written with permissions 0644.
@@ -129,6 +155,36 @@ func (dw DirectoryWriter) HandleGeneratedBlog(ctx context.Context, blog *generat
 		}
 	}
 
+	// Write site-wide feed files when the generator produced them.
+	if len(blog.RSSFeed) > 0 {
+		if err := os.WriteFile(filepath.Join(dw.outputDir, "rss.xml"), blog.RSSFeed, 0644); err != nil {
+			return err
+		}
+	}
+	if len(blog.AtomFeed) > 0 {
+		if err := os.WriteFile(filepath.Join(dw.outputDir, "atom.xml"), blog.AtomFeed, 0644); err != nil {
+			return err
+		}
+	}
+
+	// Write per-tag feed files when the generator produced them.
+	// The tags directory is guaranteed to exist at this point if tag feeds were generated
+	// (tags are required for tag feeds). We still guard with MkdirAll for safety.
+	if len(blog.TagRSSFeeds) > 0 || len(blog.TagAtomFeeds) > 0 {
+		if err := writeMapToFilesExt(blog.TagRSSFeeds, filepath.Join(dw.outputDir, "tags"), ".rss.xml"); err != nil {
+			return err
+		}
+		if err := writeMapToFilesExt(blog.TagAtomFeeds, filepath.Join(dw.outputDir, "tags"), ".atom.xml"); err != nil {
+			return err
+		}
+	}
+
+	if dw.AssetsDir.Enabled() {
+		if err := dw.copyAssets(ctx, filepath.Join(dw.outputDir, "images")); err != nil {
+			return err
+		}
+	}
+
 	dw.Logger.Logger.InfoContext(ctx, "Finished writing to output directory")
 	return nil
 }
@@ -143,16 +199,68 @@ func (dw DirectoryWriter) HandleGeneratedBlog(ctx context.Context, blog *generat
 //
 // Returns an error if directory creation or any file write fails.
 func writeMapToFiles(data map[string][]byte, outputDir string) error {
+	return writeMapToFilesExt(data, outputDir, ".html")
+}
+
+// writeMapToFilesExt writes a map of filename->content pairs to disk, appending
+// the given extension to each key to form the on-disk filename.
+//
+// For example, with ext=".rss.xml" and key "golang", the file is written as
+// "golang.rss.xml" inside outputDir.
+//
+// The outputDir is created if it doesn't exist, with permissions 0755.
+// Files are written with permissions 0644.
+//
+// Returns an error if directory creation or any file write fails.
+func writeMapToFilesExt(data map[string][]byte, outputDir string, ext string) error {
 	if err := os.MkdirAll(outputDir, 0755); err != nil {
 		return err
 	}
 
 	for filename, content := range data {
-		htmlFile := filename + ".html"
-		path := filepath.Join(outputDir, htmlFile)
+		path := filepath.Join(outputDir, filename+ext)
 		if err := os.WriteFile(path, content, 0644); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+// copyAssets recursively copies the assets filesystem into outputDir,
+// preserving subdirectories.
+//
+// Files are read through the assets filesystem, so a filesystem rooted with
+// [os.Root.FS] cannot be used to copy files from outside the assets directory
+// via symbolic links. Such links, and any other non-regular entries, are
+// skipped with a warning.
+//
+// Directories are created with permissions 0755 and files written with 0644.
+func (dw DirectoryWriter) copyAssets(ctx context.Context, outputDir string) error {
+	dw.Logger.Logger.InfoContext(ctx, "Copying assets", slog.String("destination", outputDir))
+	fsys := dw.AssetsDir.FS
+
+	return fs.WalkDir(fsys, ".", func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return fmt.Errorf("failed to read assets: %w", err)
+		}
+		dest := filepath.Join(outputDir, filepath.FromSlash(p))
+
+		if d.IsDir() {
+			return os.MkdirAll(dest, 0755)
+		}
+
+		if !d.Type().IsRegular() {
+			fi, err := fs.Stat(fsys, p)
+			if err != nil || !fi.Mode().IsRegular() {
+				dw.Logger.Logger.WarnContext(ctx, "Skipping asset that is not a regular file", slog.String("path", p))
+				return nil
+			}
+		}
+
+		data, err := fs.ReadFile(fsys, p)
+		if err != nil {
+			return fmt.Errorf("failed to read asset %q: %w", p, err)
+		}
+		return os.WriteFile(dest, data, 0644)
+	})
 }

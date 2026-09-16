@@ -13,17 +13,11 @@ const PortFlagName = "port"
 // HostFlagName is the CLI flag name for setting the HTTP bind address.
 const HostFlagName = "host"
 
-// TemplateDirFlagName is the CLI flag name for setting a template directory.
-const TemplateDirFlagName = "template-dir"
-
-// BlogRootFlagName is the CLI flag name for setting a blog root path.
-const BlogRootFlagName = "root-path"
-
-// DisableTagsFlagName is the CLI flag name for disabling tag page generation.
-const DisableTagsFlagName = "disable-tags"
-
-// DisableReadingTimeFlagName is the CLI flag name for disabling reading time estimation.
-const DisableReadingTimeFlagName = "disable-reading-time"
-
 // WatchFlagName is the CLI flag name for enabling filesystem watching.
 const WatchFlagName = "watch"
+
+// CacheControlFlagName is the CLI flag name for setting the Cache-Control max-age TTL.
+const CacheControlFlagName = "cache-control"
+
+// HealthChecksFlagName is the CLI flag name for enabling health-check endpoints.
+const HealthChecksFlagName = "health-checks"

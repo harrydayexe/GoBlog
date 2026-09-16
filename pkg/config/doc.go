@@ -53,6 +53,19 @@
 // deploying at example.com/blog/. This ensures all generated links in templates
 // use the correct base path. Default is "/" for root deployment.
 //
+// WithCacheControl(ttl time.Duration) returns a BaseServerOption that sets the
+// Cache-Control max-age TTL on all HTTP responses. When ttl > 0 the server
+// adds "Cache-Control: public, max-age=<N>" to every response. Setting ttl to
+// 0 or any non-positive value disables the header. The default is one hour.
+//
+// WithAssetsDir(fsys fs.FS) is a BaseOption that sets the filesystem images
+// are served and copied from. The HTTP server serves its files at
+// {BlogRoot}images/ (server.New via BaseServerOption, server.Handler), and
+// outputter.NewDirectoryWriter (via GeneratorOption) copies it into
+// <outputDir>/images/. When fsys is nil or its root does not exist, asset
+// support is silently off. Prefer os.Root.FS over os.DirFS so symbolic links
+// cannot escape the directory.
+//
 // WithLogger(l *slog.Logger) is a BaseOption that sets the structured logger
 // used by the receiving component. It flows into every constructor that
 // accepts BaseOption values (generator.New via GeneratorOption, server.New via
@@ -82,14 +95,24 @@
 // later values overwriting earlier ones for duplicate keys. The field is nil
 // when no WithCustomData option is supplied.
 //
+// WithHealthChecks() is a BaseServerOption that enables health-check endpoints
+// on the HTTP server. When enabled, GET /healthz/live always returns 200 OK,
+// while GET /healthz/ready and GET /healthz/startup return 200 OK once posts
+// and templates have loaded and 503 Service Unavailable while starting up or
+// after a load failure. The endpoints require no authentication and are served
+// before the middleware stack. The server binds the HTTP listener before
+// initialising content so probes can observe the startup state. Health checks
+// are disabled by default; the Docker image enables them via --health-checks.
+//
 // # Option types
 //
 // GeneratorOption carries options for generator.New and outputter.NewDirectoryWriter,
 // including WithRawOutput, WithDisableTags, WithDisableReadingTime, WithSiteTitle,
 // WithEnvironment, WithCustomData, WithHTMLPaths, and (via the embedded BaseOption)
-// WithLogger and WithBlogRoot.
+// WithLogger, WithBlogRoot and WithAssetsDir.
 // BaseServerOption carries options for the HTTP server (port, host, middleware,
-// and via the embedded BaseOption: WithLogger, WithBlogRoot).
+// cache-control TTL, health-check endpoints, and via the embedded BaseOption:
+// WithLogger, WithBlogRoot, WithAssetsDir).
 // WatcherOption carries options for watcher.New (debounce, and via the embedded
 // BaseOption: WithLogger, WithBlogRoot).
 // RendererOption carries options for generator.NewTemplateRenderer (custom funcs).

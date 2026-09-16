@@ -51,6 +51,11 @@ test-verbose:
 test-race:
     go test -race ./...
 
+# Run integration tests (requires Docker)
+[group("test")]
+test-integration:
+    cd integration && go test -v -timeout 10m ./...
+
 # Run tests with coverage profile
 [group("test")]
 test-coverage:
@@ -100,6 +105,7 @@ vulncheck:
 [group("lint")]
 mod-tidy:
     go mod tidy 
+    cd integration && go mod tidy
 
 # Check if code is formatted
 [group("lint")]
@@ -110,7 +116,7 @@ fmt-check:
 
 # Run all linting checks
 [group("lint")]
-lint: mod-tidy vet fmt-check
+lint: mod-tidy vet fmt-check check-license
 
 # Check license headers exist
 [group("lint")]
@@ -143,3 +149,8 @@ docker tag="goblog:latest":
     @echo "Building Docker image..."
     docker build -t {{tag}} .
     @echo "✓ Docker image built successfully"
+
+[group("run")]
+run-image tag="goblog:latest": docker
+    @echo "Running Docker image..."
+    docker run -v ./docs/example-posts/:/posts -p 8080:8080 {{tag}}

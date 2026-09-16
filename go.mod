@@ -6,11 +6,13 @@ require (
 	github.com/alecthomas/chroma/v2 v2.22.0
 	github.com/fatih/color v1.18.0
 	github.com/fsnotify/fsnotify v1.10.1
-	github.com/harrydayexe/GoWebUtilities v1.4.0
+	github.com/gorilla/feeds v1.2.0
+	github.com/harrydayexe/GoWebUtilities v1.5.1
 	github.com/urfave/cli/v3 v3.6.1
 	github.com/yuin/goldmark v1.7.16
 	github.com/yuin/goldmark-highlighting/v2 v2.0.0-20230729083705-37449abec8cc
 	go.abhg.dev/goldmark/frontmatter v0.3.0
+	go.abhg.dev/goldmark/wikilink v0.6.0
 )
 
 require (

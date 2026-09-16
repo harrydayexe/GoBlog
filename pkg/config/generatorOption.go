@@ -14,6 +14,7 @@ package config
 // This type should not be constructed directly by users. Instead, use the
 // provided option functions like WithRawOutput(), WithDisableTags(),
 // WithDisableReadingTime(), WithSiteTitle(), WithEnvironment(), WithCustomData(),
+// WithBaseURL(), WithDisableFeeds(), WithFeedPostLimit(),
 // or call [BaseOption.AsGeneratorOption] on a [BaseOption] value.
 type GeneratorOption struct {
 	BaseOption
@@ -25,6 +26,9 @@ type GeneratorOption struct {
 	WithEnvironmentFunc        func(v *Environment)
 	WithCustomDataFunc         func(v *CustomData)
 	WithHTMLPathsFunc          func(v *HTMLPaths)
+	WithBaseURLFunc            func(v *BaseURL)
+	WithDisableFeedsFunc       func(v *DisableFeeds)
+	WithFeedPostLimitFunc      func(v *FeedPostLimit)
 }
 
 // WithBaseOption wraps a BaseOption as a GeneratorOption so it can be passed
@@ -349,4 +353,150 @@ func WithCustomData(data map[string]any) GeneratorOption {
 // values (e.g. when round-tripping through a ServerConfig).
 func (o CustomData) AsOption() GeneratorOption {
 	return WithCustomData(o.Data)
+}
+
+// BaseURL is a configuration type that holds the absolute base URL of the site
+// (e.g. "https://example.com").
+//
+// BaseURL must contain only the scheme and host — do not include a path. If
+// the blog is deployed under a sub-path (e.g. "https://example.com/blog"),
+// use [WithBlogRoot] for the path portion; it is appended automatically when
+// building feed URLs. Including a path in BaseURL produces duplicated path
+// segments (e.g. "…/blog/blog/posts/…").
+//
+// BaseURL is required for feed generation: RSS and Atom items must reference
+// fully-qualified URLs. When BaseURL is empty, the generator skips feed
+// generation and emits an info log. HTML page generation is not affected.
+//
+// BaseURL also populates
+// [github.com/harrydayexe/GoBlog/v2/pkg/models.BaseData].CanonicalURL, which
+// the default templates use for <link rel="canonical"> and og:url tags. Those
+// tags are omitted entirely when BaseURL is empty.
+//
+// This type is typically embedded in generator configuration structs and should
+// be set using the [WithBaseURL] option function.
+type BaseURL string
+
+// WithBaseURL returns a GeneratorOption that sets the site's absolute base URL.
+//
+// The base URL is prepended to site-relative paths to produce fully-qualified
+// URLs for RSS/Atom feed items. It must contain only the scheme and host
+// (e.g. "https://example.com"). If the blog lives under a sub-path, configure
+// that via [WithBlogRoot] — including the path in the base URL produces
+// duplicated path segments in every feed URL.
+//
+// Trailing slashes are trimmed before the base URL is used, so
+// "https://example.com/" and "https://example.com" are equivalent.
+//
+// The base URL is also used to build each page's canonical URL, surfaced to
+// templates as {{.CanonicalURL}} and used by the default templates for
+// <link rel="canonical">, og:url, and Schema.org JSON-LD.
+//
+// When no base URL is configured, feed generation is silently skipped
+// (see [WithDisableFeeds] to explicitly opt out instead) and canonical URL
+// tags are omitted from the rendered pages.
+//
+// Example usage:
+//
+//	gen := generator.New(fsys, renderer, config.WithBaseURL("https://example.com"))
+func WithBaseURL(url string) GeneratorOption {
+	return GeneratorOption{
+		WithBaseURLFunc: func(v *BaseURL) {
+			*v = BaseURL(url)
+		},
+	}
+}
+
+// AsOption returns a GeneratorOption that re-applies this BaseURL value to
+// another component.
+func (o BaseURL) AsOption() GeneratorOption {
+	return WithBaseURL(string(o))
+}
+
+// DisableFeeds is a configuration type that controls whether RSS and Atom
+// feeds are generated.
+//
+// When Disable is true:
+//   - The generator skips all feed generation even if a BaseURL is configured
+//   - GeneratedBlog feed fields are left empty
+//   - The outputter writes no feed files
+//   - BaseData.FeedsEnabled is set to false for all templates
+//
+// This type is typically embedded in generator and outputter configuration
+// structs and should be set using the [WithDisableFeeds] option function.
+type DisableFeeds struct{ Disable bool }
+
+// WithDisableFeeds returns a GeneratorOption that disables all feed generation.
+//
+// By default, GoBlog generates RSS 2.0 and Atom feeds when a base URL is
+// configured via [WithBaseURL]. Applying this option suppresses that behaviour
+// entirely, regardless of whether a base URL is set.
+//
+// When applied to the outputter, no feed files are written.
+// Templates receive BaseData.FeedsEnabled = false and will suppress any
+// feed discovery links and visible RSS navigation.
+//
+// Example usage:
+//
+//	gen := generator.New(fsys, renderer, config.WithDisableFeeds())
+//	writer := outputter.NewDirectoryWriter("output/", config.WithDisableFeeds())
+func WithDisableFeeds() GeneratorOption {
+	return GeneratorOption{
+		WithDisableFeedsFunc: func(v *DisableFeeds) {
+			v.Disable = true
+		},
+	}
+}
+
+// AsOption converts this DisableFeeds value back into a GeneratorOption.
+func (o DisableFeeds) AsOption() GeneratorOption {
+	if o.Disable {
+		return WithDisableFeeds()
+	}
+	return GeneratorOption{
+		WithDisableFeedsFunc: func(v *DisableFeeds) {
+			v.Disable = false
+		},
+	}
+}
+
+// FeedPostLimit is a configuration type that controls the maximum number of
+// posts included in each generated feed.
+//
+// The limit applies to both the site-wide feed and every per-tag feed.
+// Posts are selected in reverse-chronological order (newest first), so a
+// limit of 10 means only the 10 most recent posts appear in each feed.
+//
+// A zero or negative value means no limit: all posts are included. When unset
+// the library applies no limit; the goblog CLI defaults to 10.
+//
+// This type is typically embedded in generator configuration structs and
+// should be set using the [WithFeedPostLimit] option function.
+type FeedPostLimit struct{ Limit int }
+
+// WithFeedPostLimit returns a GeneratorOption that sets the maximum number of
+// posts included in each generated feed.
+//
+// A value of 0 or any negative number means unlimited — all posts are
+// included. The same limit applies to the site-wide feed and every per-tag
+// feed. When this option is not set, the library applies no limit (the goblog
+// CLI uses a default of 10).
+//
+// Example usage:
+//
+//	gen := generator.New(fsys, renderer,
+//	    config.WithBaseURL("https://example.com"),
+//	    config.WithFeedPostLimit(20),
+//	)
+func WithFeedPostLimit(limit int) GeneratorOption {
+	return GeneratorOption{
+		WithFeedPostLimitFunc: func(v *FeedPostLimit) {
+			v.Limit = limit
+		},
+	}
+}
+
+// AsOption converts this FeedPostLimit value back into a GeneratorOption.
+func (o FeedPostLimit) AsOption() GeneratorOption {
+	return WithFeedPostLimit(o.Limit)
 }

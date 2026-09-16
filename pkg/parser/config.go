@@ -20,4 +20,9 @@ type Config struct {
 	// Logger is the structured logger used by the parser. When nil,
 	// [log/slog.Default] is used.
 	Logger *slog.Logger
+
+	// BlogRoot is the root path the blog is served under, such as "/" or
+	// "/blog/". Relative image paths are rewritten to "{BlogRoot}images/...".
+	// An empty BlogRoot is treated as "/".
+	BlogRoot string
 }

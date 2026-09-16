@@ -42,6 +42,19 @@ type BaseData struct {
 	//   {{if .TagsEnabled}}<a href="{{.BlogRoot}}tags">Tags</a>{{end}}
 	TagsEnabled bool
 
+	// FeedsEnabled indicates whether RSS and Atom feeds are available for this blog.
+	// When true, the default templates render feed discovery <link> tags in the
+	// <head> and a visible RSS navigation link. Custom templates should also gate
+	// feed UI on this field.
+	//
+	// The Go zero value is false. The Generator sets this to true when both a
+	// base URL is configured (via config.WithBaseURL) and feeds have not been
+	// disabled (via config.WithDisableFeeds).
+	//
+	// Custom templates should gate feed UI on this field:
+	//   {{if .FeedsEnabled}}<a href="{{.BlogRoot}}rss.xml">RSS</a>{{end}}
+	FeedsEnabled bool
+
 	// Custom holds arbitrary key-value data injected by the calling application
 	// via config.WithCustomData. It is nil when no custom data was configured.
 	//
@@ -95,4 +108,52 @@ type BaseData struct {
 	// Typical usage for an Open Graph URL tag:
 	//   <meta property="og:url" content="https://example.com{{.Path}}">
 	Path string
+
+	// CanonicalURL is the fully-qualified URL of this page: the site's base URL
+	// (config.WithBaseURL) joined with Path.
+	//
+	// It is empty when no base URL is configured, because a canonical URL
+	// cannot be derived from a site-relative path alone. Templates must guard
+	// on it so that no empty-valued tag is emitted:
+	//
+	//   {{if .CanonicalURL}}
+	//   <link rel="canonical" href="{{.CanonicalURL}}">
+	//   <meta property="og:url" content="{{.CanonicalURL}}">
+	//   {{end}}
+	//
+	// Because it is built from Path, it follows the same clean-URL or
+	// .html-suffixed form (see Path and config.WithHTMLPaths).
+	//
+	//   Examples (BaseURL = "https://example.com", BlogRoot = "/"):
+	//     Index page:       https://example.com/
+	//     Post page:        https://example.com/posts/my-first-post
+	//     Tag page:         https://example.com/tags/golang
+	//     Tags index:       https://example.com/tags
+	CanonicalURL string
+
+	// OGType is the Open Graph object type for this page, emitted as the
+	// og:type meta tag. The Generator sets it to "article" for post pages and
+	// "website" for the index, tag, and tags-index pages.
+	//
+	// The Go zero value is the empty string, so manual constructors that do not
+	// set it get no og:type at all. The default templates fall back to
+	// "website" in that case:
+	//
+	//   <meta property="og:type" content="{{or .OGType "website"}}">
+	OGType string
+
+	// Article holds the article-specific metadata for a post page: its
+	// publication date, author, and tags. The Generator populates it when
+	// rendering a post and leaves it nil for the index, tag, and tags-index
+	// pages.
+	//
+	// It lets a <head> partial shared by every page type render article:* Open
+	// Graph tags and Schema.org BlogPosting markup for posts only. Templates
+	// must guard on it, both to skip that markup on non-post pages and to avoid
+	// a nil-pointer error:
+	//
+	//   {{with .Article}}
+	//   <meta property="article:published_time" content="{{.PublishedISO}}">
+	//   {{end}}
+	Article *ArticleMeta
 }

@@ -10,6 +10,7 @@ import (
 	"log/slog"
 	"os"
 
+	"github.com/harrydayexe/GoBlog/v2/internal/cliflags"
 	"github.com/harrydayexe/GoBlog/v2/internal/generator"
 	loggermod "github.com/harrydayexe/GoBlog/v2/internal/logger"
 	"github.com/harrydayexe/GoBlog/v2/internal/server"
@@ -36,15 +37,16 @@ func main() {
 
 	v := buildVersion()
 	cmd := &cli.Command{
-		Name:                   "GoBlog",
+		Name:                   "goblog",
 		Usage:                  "Create a blog feed from posts written in Markdown!",
 		UseShortOptionHandling: true,
+		EnableShellCompletion:  true,
 		Version:                v,
 		Commands: []*cli.Command{
 			&generator.GeneratorCommand,
 			&server.ServeCommand,
 		},
-		Flags: []cli.Flag{
+		Flags: append([]cli.Flag{
 			&cli.BoolFlag{
 				Name:    "verbose",
 				Aliases: []string{"v"},
@@ -53,7 +55,7 @@ func main() {
 					Count: &verbosity,
 				},
 			},
-		},
+		}, cliflags.Shared()...),
 		Before: func(ctx context.Context, c *cli.Command) (context.Context, error) {
 			var level slog.Level
 			switch verbosity {

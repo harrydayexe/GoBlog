@@ -42,6 +42,43 @@
 //	    log.Fatal(err)
 //	}
 //
+// # Feed Routes
+//
+// When the generator is configured with config.WithBaseURL (and
+// config.WithDisableFeeds is not applied), the server exposes:
+//
+//   - GET {root}rss.xml  — site-wide RSS 2.0 feed
+//   - GET {root}atom.xml — site-wide Atom feed
+//   - GET {root}tags/{tag}.rss.xml  — per-tag RSS 2.0 feed
+//   - GET {root}tags/{tag}.atom.xml — per-tag Atom feed
+//
+// Feed routes always exist in the mux but return 404 when the generator did
+// not produce feed content. This mirrors the static output written by
+// pkg/outputter at rss.xml, atom.xml, tags/{tag}.rss.xml, tags/{tag}.atom.xml.
+//
+// # Image Routes
+//
+// When config.WithAssetsDir supplies a filesystem whose root is a readable
+// directory, the server serves its files at:
+//
+//   - GET {root}images/{path...} — files from the assets directory
+//
+// Only the route under the blog root is registered; with a root of "/blog/",
+// /images/... returns 404. Directory requests return 404 rather than a
+// listing. Content-Type, ETag/Last-Modified, conditional and range requests
+// are handled by http.FileServerFS, and the Cache-Control header applies as it
+// does to every other route. When the option is not supplied, or the directory
+// does not exist, no image route is registered.
+//
+// Files are served live from the filesystem, so adding or replacing an image
+// takes effect immediately without regenerating the blog. Use a filesystem
+// that cannot escape its root, such as os.Root.FS, to prevent symbolic links
+// from exposing files outside the assets directory.
+//
+//	root, err := os.OpenRoot("posts/images")
+//	// handle err, defer root.Close()
+//	cfg.Server = append(cfg.Server, config.WithAssetsDir(root.FS()).AsServerOption())
+//
 // # HTML Extension Handling
 //
 // The server automatically accepts requests with or without .html suffixes.
@@ -132,6 +169,31 @@
 //	go w.Run(ctx, func(ctx context.Context) {
 //	    srv.UpdatePosts(os.DirFS(postsPath), ctx)
 //	})
+//
+// # Health Checks
+//
+// Enable health-check endpoints via config.WithHealthChecks():
+//
+//	cfg := config.ServerConfig{
+//	    Server: []config.BaseServerOption{
+//	        config.WithPort(8080),
+//	        config.WithHealthChecks(),
+//	    },
+//	}
+//	srv, err := server.New(postsFS, cfg)
+//
+// Three unauthenticated GET endpoints are exposed:
+//
+//   - /healthz/live   — always 200 OK ("ok"); confirms the process is alive.
+//   - /healthz/ready  — 200 OK once posts and templates have loaded; 503 while
+//     starting up or if loading failed (body includes the reason).
+//   - /healthz/startup — same semantics as /healthz/ready; used as the
+//     startup probe in Kubernetes deployments.
+//
+// When health checks are enabled the server binds the HTTP listener before
+// loading posts, so probes can observe startup state. The endpoints bypass
+// middleware (including authentication) and are intercepted in ServeHTTP before
+// the content handler. The Docker image enables health checks by default.
 //
 // # Concurrency
 //

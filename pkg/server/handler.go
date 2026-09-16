@@ -6,8 +6,10 @@ package server
 
 import (
 	"fmt"
+	"io/fs"
 	"log/slog"
 	"net/http"
+	"path"
 	"strings"
 
 	"github.com/harrydayexe/GoBlog/v2/pkg/config"
@@ -16,10 +18,12 @@ import (
 )
 
 // HandlerConfig holds configuration options for the blog HTTP handler.
-// It embeds config.BlogRoot to specify the root path where the blog is served.
+// It embeds config.BlogRoot to specify the root path where the blog is served
+// and config.AssetsDir to specify the filesystem images are served from.
 type HandlerConfig struct {
 	config.BlogRoot
 	config.Logger
+	config.AssetsDir
 }
 
 // Handler creates an HTTP handler that serves the generated blog content.
@@ -31,10 +35,25 @@ type HandlerConfig struct {
 //   - GET /posts/{postName} - serves individual blog posts
 //   - GET /tags - serves the tags index page (only if blog.TagsIndex is non-empty)
 //   - GET /tags/{tagName} - serves tag-specific pages (only if blog.Tags is non-empty)
+//   - GET /rss.xml - serves the site-wide RSS 2.0 feed (404 when feeds are disabled)
+//   - GET /atom.xml - serves the site-wide Atom feed (404 when feeds are disabled)
+//   - GET /tags/{tagName}.rss.xml - serves a per-tag RSS 2.0 feed (only if blog.Tags is non-empty)
+//   - GET /tags/{tagName}.atom.xml - serves a per-tag Atom feed (only if blog.Tags is non-empty)
+//   - GET /images/{path...} - serves files from the assets directory (only if
+//     config.WithAssetsDir was supplied and its root is a readable directory)
+//
+// Asset files are served with [http.FileServerFS], so Content-Type, ETag,
+// Last-Modified, conditional and range requests are handled. Requests for a
+// directory, or for a path that does not exist in the assets filesystem,
+// return 404; directory listings are never served.
 //
 // Tag routes are registered only when the blog contains tag content. When the
 // generator is configured with config.WithDisableTags(), blog.Tags and
 // blog.TagsIndex will be empty and the tag routes will not be registered.
+//
+// Feed routes are always registered, but return 404 when the generator did not
+// produce feed content (i.e. when config.WithBaseURL was not set, or
+// config.WithDisableFeeds was applied).
 //
 // The returned handler automatically strips .html suffixes from incoming request
 // paths via middleware.NewStripHTMLExtension, so both /posts/foo and
@@ -58,6 +77,8 @@ func Handler(blog *generator.GeneratedBlog, opts ...config.BaseOption) http.Hand
 			opt.WithBlogRootFunc(&cfg.BlogRoot)
 		} else if opt.WithLoggerFunc != nil {
 			opt.WithLoggerFunc(&cfg.Logger)
+		} else if opt.WithAssetsDirFunc != nil {
+			opt.WithAssetsDirFunc(&cfg.AssetsDir)
 		}
 	}
 
@@ -92,7 +113,31 @@ func generateHandler(cfg HandlerConfig, blog *generator.GeneratedBlog) http.Hand
 		mux.Handle(root+"tags/{tagName}", handleTag(cfg, blog))
 	}
 
+	mux.Handle(root+"rss.xml", handleRSSFeed(cfg, blog))
+	mux.Handle(root+"atom.xml", handleAtomFeed(cfg, blog))
+
+	if cfg.AssetsDir.Enabled() {
+		prefix := string(cfg.BlogRoot) + "/images/"
+		mux.Handle(root+"images/", http.StripPrefix(prefix, handleAssets(cfg)))
+	}
+
 	return mux
+}
+
+// handleAssets serves files from the assets filesystem. Directories return 404
+// so that http.FileServerFS never renders a directory listing.
+func handleAssets(cfg HandlerConfig) http.Handler {
+	fileServer := http.FileServerFS(cfg.AssetsDir.FS)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		name := strings.TrimPrefix(path.Clean("/"+r.URL.Path), "/")
+		fi, err := fs.Stat(cfg.AssetsDir.FS, name)
+		if err != nil || fi.IsDir() {
+			http.NotFound(w, r)
+			return
+		}
+		cfg.Logger.Logger.DebugContext(r.Context(), "serving asset", slog.String("path", name))
+		fileServer.ServeHTTP(w, r)
+	})
 }
 
 func handleIndex(cfg HandlerConfig, blog *generator.GeneratedBlog) http.Handler {
@@ -144,7 +189,41 @@ func handleTag(cfg HandlerConfig, blog *generator.GeneratedBlog) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		cfg.Logger.Logger.DebugContext(r.Context(), "handling tag page")
 
-		tagName := strings.TrimSuffix(r.PathValue("tagName"), ".html")
+		rawName := r.PathValue("tagName")
+
+		// Serve per-tag feeds when the path ends with a feed extension.
+		// Go's net/http wildcard {tagName} captures the entire final path
+		// segment, including any ".rss.xml" / ".atom.xml" suffix, so feed
+		// paths cannot be registered as their own mux patterns and must be
+		// demuxed here by inspecting the captured name.
+		if tag, ok := strings.CutSuffix(rawName, ".rss.xml"); ok {
+			bits := blog.TagRSSFeeds[tag]
+			if len(bits) == 0 {
+				w.WriteHeader(http.StatusNotFound)
+				return
+			}
+			cfg.Logger.Logger.DebugContext(r.Context(), "serving tag RSS feed", slog.String("tag", tag))
+			w.Header().Set("Content-Type", "application/rss+xml; charset=utf-8")
+			if _, err := w.Write(bits); err != nil {
+				cfg.Logger.Logger.ErrorContext(r.Context(), "failed to write tag RSS feed", "error", err, "tag", tag)
+			}
+			return
+		}
+		if tag, ok := strings.CutSuffix(rawName, ".atom.xml"); ok {
+			bits := blog.TagAtomFeeds[tag]
+			if len(bits) == 0 {
+				w.WriteHeader(http.StatusNotFound)
+				return
+			}
+			cfg.Logger.Logger.DebugContext(r.Context(), "serving tag Atom feed", slog.String("tag", tag))
+			w.Header().Set("Content-Type", "application/atom+xml; charset=utf-8")
+			if _, err := w.Write(bits); err != nil {
+				cfg.Logger.Logger.ErrorContext(r.Context(), "failed to write tag Atom feed", "error", err, "tag", tag)
+			}
+			return
+		}
+
+		tagName := strings.TrimSuffix(rawName, ".html")
 		bits, prs := blog.Tags[tagName]
 		if !prs {
 			w.WriteHeader(http.StatusNotFound)
@@ -157,6 +236,38 @@ func handleTag(cfg HandlerConfig, blog *generator.GeneratedBlog) http.Handler {
 		if _, err := w.Write(bits); err != nil {
 			cfg.Logger.Logger.ErrorContext(r.Context(), "failed to write tag page", "error", err, "tag", tagName)
 			return
+		}
+	})
+}
+
+func handleRSSFeed(cfg HandlerConfig, blog *generator.GeneratedBlog) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		cfg.Logger.Logger.DebugContext(r.Context(), "handling site RSS feed")
+
+		if len(blog.RSSFeed) == 0 {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/rss+xml; charset=utf-8")
+		if _, err := w.Write(blog.RSSFeed); err != nil {
+			cfg.Logger.Logger.ErrorContext(r.Context(), "failed to write RSS feed", "error", err)
+		}
+	})
+}
+
+func handleAtomFeed(cfg HandlerConfig, blog *generator.GeneratedBlog) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		cfg.Logger.Logger.DebugContext(r.Context(), "handling site Atom feed")
+
+		if len(blog.AtomFeed) == 0 {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/atom+xml; charset=utf-8")
+		if _, err := w.Write(blog.AtomFeed); err != nil {
+			cfg.Logger.Logger.ErrorContext(r.Context(), "failed to write Atom feed", "error", err)
 		}
 	})
 }

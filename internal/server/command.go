@@ -5,6 +5,8 @@
 package server
 
 import (
+	"time"
+
 	"github.com/urfave/cli/v3"
 )
 
@@ -34,33 +36,21 @@ var ServeCommand cli.Command = cli.Command{
 			Aliases: []string{"H"},
 			Usage:   "host address to bind to",
 		},
-		&cli.StringFlag{
-			Name:    TemplateDirFlagName,
-			Aliases: []string{"t"},
-			Usage:   "directory of templates to use when rendering",
-		},
-		&cli.StringFlag{
-			Name:    BlogRootFlagName,
-			Aliases: []string{"p"},
-			Usage:   "root path of the blog, defaults to '/'",
-			Value:   "/",
-		},
-		&cli.BoolFlag{
-			Name:    DisableTagsFlagName,
-			Aliases: []string{"T"},
-			Usage:   "disable tag tracking and tag page generation",
-			Value:   false,
-		},
-		&cli.BoolFlag{
-			Name:  DisableReadingTimeFlagName,
-			Usage: "disable reading time estimation on posts",
-			Value: false,
-		},
 		&cli.BoolFlag{
 			Name:    WatchFlagName,
 			Aliases: []string{"w"},
 			Usage:   "watch the posts directory and regenerate the blog on changes",
 			Value:   false,
+		},
+		&cli.DurationFlag{
+			Name:  CacheControlFlagName,
+			Usage: "max-age TTL for the Cache-Control header (0 disables the header)",
+			Value: time.Hour,
+		},
+		&cli.BoolFlag{
+			Name:  HealthChecksFlagName,
+			Usage: "expose /healthz/live, /healthz/ready, and /healthz/startup endpoints (no auth required); the server binds before loading content so probes observe startup state",
+			Value: false,
 		},
 	},
 }

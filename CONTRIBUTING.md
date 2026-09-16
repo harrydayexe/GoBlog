@@ -55,13 +55,36 @@ just run-serve                 # serve the example posts at localhost:8080
 Run these before pushing:
 
 ```bash
-just test            # run the test suite
+just test            # run the unit test suite
 just test-race       # run with the race detector
 just test-coverage   # generate a coverage report
 just fmt             # auto-format all Go code
 just lint            # go vet + format check (mirrors CI)
 just test-all        # full local CI simulation
 ```
+
+### Integration tests
+
+The `integration/` directory is a separate Go module containing black-box tests
+that boot the CLI and Docker image against a real environment using
+[testcontainers-go](https://golang.testcontainers.org/). **Docker is required.**
+
+```bash
+just test-integration      # run integration tests with Docker
+```
+
+Or run them directly:
+
+```bash
+cd integration && go test -v -timeout 10m ./...
+```
+
+The unit suite (`just test`) deliberately excludes the integration module —
+`go test ./...` stops at the nested `go.mod` boundary — so unit feedback
+stays fast in CI even when integration tests are slow.
+
+In CI the integration tests run in a dedicated `integration` job so the two
+stages report separately.
 
 ## License Headers
 
