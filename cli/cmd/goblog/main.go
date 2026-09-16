@@ -10,11 +10,11 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/harrydayexe/GoBlog/v2/internal/cliflags"
-	"github.com/harrydayexe/GoBlog/v2/internal/generator"
-	loggermod "github.com/harrydayexe/GoBlog/v2/internal/logger"
-	"github.com/harrydayexe/GoBlog/v2/internal/server"
-	"github.com/harrydayexe/GoBlog/v2/internal/utilities"
+	"github.com/harrydayexe/GoBlog/v2/cli/internal/cliflags"
+	"github.com/harrydayexe/GoBlog/v2/cli/internal/generator"
+	loggermod "github.com/harrydayexe/GoBlog/v2/cli/internal/logger"
+	"github.com/harrydayexe/GoBlog/v2/cli/internal/server"
+	"github.com/harrydayexe/GoBlog/v2/cli/internal/utilities"
 	"github.com/urfave/cli/v3"
 )
 
