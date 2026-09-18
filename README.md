@@ -200,6 +200,25 @@ func main() {
 }
 ```
 
+Serving the same posts over HTTP instead. `server.New` takes functional
+options; options belonging to the generator or the template renderer are
+converted with `AsServerOption`:
+
+```go
+srv, err := server.New(os.DirFS("posts/"),
+    config.WithPort(8080),
+    config.WithSiteTitle("My Blog").AsServerOption(),
+    config.WithBaseURL("https://example.com").AsServerOption(),
+)
+if err != nil {
+    panic(err)
+}
+
+if err := srv.Run(context.Background()); err != nil {
+    panic(err)
+}
+```
+
 ### Logger injection
 
 Every component accepts a structured [`log/slog`](https://pkg.go.dev/log/slog) logger via `config.WithLogger`. When not supplied, each component falls back to `slog.Default()` at construction time.
@@ -216,13 +235,10 @@ writer := outputter.NewDirectoryWriter("output/",
 )
 
 // Server
-cfg := config.ServerConfig{
-    Server: []config.BaseServerOption{
-        config.WithPort(8080),
-        config.WithLogger(logger).AsServerOption(),
-    },
-}
-srv, err := server.New(postsFS, cfg)
+srv, err := server.New(postsFS,
+    config.WithPort(8080),
+    config.WithLogger(logger).AsServerOption(),
+)
 
 // Watcher
 w, err := watcher.New("posts/", config.WithLogger(logger).AsWatcherOption())
@@ -280,7 +296,7 @@ if err != nil {
 defer root.Close()
 
 writer := outputter.NewDirectoryWriter("output/", config.WithAssetsDir(root.FS()).AsGeneratorOption())
-cfg.Server = append(cfg.Server, config.WithAssetsDir(root.FS()).AsServerOption())
+srv, err := server.New(postsFS, config.WithAssetsDir(root.FS()).AsServerOption())
 ```
 
 ## Contributing
