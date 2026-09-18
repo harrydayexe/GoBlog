@@ -391,7 +391,6 @@ func TestServer_StripsHTMLExtension_BlogRoot(t *testing.T) {
 	srv, err := server.New(postsFS,
 		config.WithPort(8080),
 		config.WithBlogRoot("/blog/").AsServerOption(),
-		config.WithBlogRoot("/blog/").AsGeneratorOption().AsServerOption(),
 	)
 	if err != nil {
 		t.Fatalf("failed to create server: %v", err)
