@@ -56,6 +56,24 @@
 // not produce feed content. This mirrors the static output written by
 // pkg/outputter at rss.xml, atom.xml, tags/{tag}.rss.xml, tags/{tag}.atom.xml.
 //
+// # Sitemap and robots.txt Routes
+//
+// The same base URL that enables feeds also enables:
+//
+//   - GET {root}sitemap.xml — the sitemap, as application/xml
+//   - GET /robots.txt       — the robots file, as text/plain
+//
+// Both return 404 when the generator produced no content for them (no base
+// URL, or config.WithDisableSitemap / config.WithDisableRobotsTxt applied).
+//
+// robots.txt is registered at the origin root, not under the blog root. This
+// is a deliberate exception to the blog-root prefixing every other route
+// follows: crawlers only ever fetch /robots.txt at the domain root, and unlike
+// the static output of goblog generate the server owns the whole origin, so it
+// can put the file where crawlers actually look. With a blog root of "/blog/",
+// the sitemap is served at /blog/sitemap.xml while robots.txt stays at
+// /robots.txt.
+//
 // # Image Routes
 //
 // When config.WithAssetsDir supplies a filesystem whose root is a readable
