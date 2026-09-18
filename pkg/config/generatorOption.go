@@ -14,7 +14,8 @@ package config
 // This type should not be constructed directly by users. Instead, use the
 // provided option functions like WithRawOutput(), WithDisableTags(),
 // WithDisableReadingTime(), WithSiteTitle(), WithEnvironment(), WithCustomData(),
-// WithBaseURL(), WithDisableFeeds(), WithFeedPostLimit(),
+// WithBaseURL(), WithDisableFeeds(), WithFeedPostLimit(), WithDisableSitemap(),
+// WithDisableRobotsTxt(), WithRobotsTxt(),
 // or call [BaseOption.AsGeneratorOption] on a [BaseOption] value.
 type GeneratorOption struct {
 	BaseOption
@@ -29,6 +30,9 @@ type GeneratorOption struct {
 	WithBaseURLFunc            func(v *BaseURL)
 	WithDisableFeedsFunc       func(v *DisableFeeds)
 	WithFeedPostLimitFunc      func(v *FeedPostLimit)
+	WithDisableSitemapFunc     func(v *DisableSitemap)
+	WithDisableRobotsTxtFunc   func(v *DisableRobotsTxt)
+	WithRobotsTxtFunc          func(v *RobotsTxt)
 }
 
 // WithBaseOption wraps a BaseOption as a GeneratorOption so it can be passed
@@ -499,4 +503,137 @@ func WithFeedPostLimit(limit int) GeneratorOption {
 // AsOption converts this FeedPostLimit value back into a GeneratorOption.
 func (o FeedPostLimit) AsOption() GeneratorOption {
 	return WithFeedPostLimit(o.Limit)
+}
+
+// DisableSitemap is a configuration type that controls whether a sitemap.xml
+// is generated.
+//
+// When Disable is true:
+//   - The generator skips sitemap generation even if a BaseURL is configured
+//   - GeneratedBlog.Sitemap is left nil, so the outputter writes no sitemap.xml
+//     and the HTTP server answers {BlogRoot}sitemap.xml with 404
+//   - The generated robots.txt omits its "Sitemap:" line
+//
+// This type is typically embedded in generator configuration structs and
+// should be set using the [WithDisableSitemap] option function.
+type DisableSitemap struct{ Disable bool }
+
+// WithDisableSitemap returns a GeneratorOption that disables sitemap.xml
+// generation.
+//
+// By default, GoBlog generates a sitemap.xml when a base URL is configured via
+// [WithBaseURL]. Applying this option suppresses that behaviour entirely,
+// regardless of whether a base URL is set, and additionally drops the
+// "Sitemap:" line from the generated robots.txt.
+//
+// Example usage:
+//
+//	gen := generator.New(fsys, renderer, config.WithDisableSitemap())
+func WithDisableSitemap() GeneratorOption {
+	return GeneratorOption{
+		WithDisableSitemapFunc: func(v *DisableSitemap) {
+			v.Disable = true
+		},
+	}
+}
+
+// AsOption converts this DisableSitemap value back into a GeneratorOption.
+func (o DisableSitemap) AsOption() GeneratorOption {
+	if o.Disable {
+		return WithDisableSitemap()
+	}
+	return GeneratorOption{
+		WithDisableSitemapFunc: func(v *DisableSitemap) {
+			v.Disable = false
+		},
+	}
+}
+
+// DisableRobotsTxt is a configuration type that controls whether a robots.txt
+// is generated.
+//
+// When Disable is true:
+//   - The generator skips robots.txt generation even if a BaseURL is configured
+//   - GeneratedBlog.RobotsTxt is left nil, so the outputter writes no
+//     robots.txt and the HTTP server answers /robots.txt with 404
+//   - Any body supplied via [WithRobotsTxt] is ignored
+//
+// This type is typically embedded in generator configuration structs and
+// should be set using the [WithDisableRobotsTxt] option function.
+type DisableRobotsTxt struct{ Disable bool }
+
+// WithDisableRobotsTxt returns a GeneratorOption that disables robots.txt
+// generation.
+//
+// By default, GoBlog generates a robots.txt when a base URL is configured via
+// [WithBaseURL]. Applying this option suppresses that behaviour entirely,
+// regardless of whether a base URL is set.
+//
+// Example usage:
+//
+//	gen := generator.New(fsys, renderer, config.WithDisableRobotsTxt())
+func WithDisableRobotsTxt() GeneratorOption {
+	return GeneratorOption{
+		WithDisableRobotsTxtFunc: func(v *DisableRobotsTxt) {
+			v.Disable = true
+		},
+	}
+}
+
+// AsOption converts this DisableRobotsTxt value back into a GeneratorOption.
+func (o DisableRobotsTxt) AsOption() GeneratorOption {
+	if o.Disable {
+		return WithDisableRobotsTxt()
+	}
+	return GeneratorOption{
+		WithDisableRobotsTxtFunc: func(v *DisableRobotsTxt) {
+			v.Disable = false
+		},
+	}
+}
+
+// RobotsTxt is a configuration type that holds a custom robots.txt rule block.
+//
+// The body replaces GoBlog's default "User-agent: * / Allow: /" rules
+// wholesale. The "Sitemap:" line is appended automatically after the body and
+// must not be included in it; it is omitted only when [WithDisableSitemap] is
+// applied.
+//
+// An empty Body means the default rules are used.
+//
+// This type is typically embedded in generator configuration structs and
+// should be set using the [WithRobotsTxt] option function.
+type RobotsTxt struct{ Body string }
+
+// WithRobotsTxt returns a GeneratorOption that replaces the default robots.txt
+// rule block with the supplied body.
+//
+// The body is emitted verbatim (with trailing whitespace trimmed), followed by
+// a blank line and the automatically generated "Sitemap:" line pointing at the
+// absolute sitemap URL. Do not include a "Sitemap:" line in the body — it
+// would be duplicated. When [WithDisableSitemap] is applied, no "Sitemap:"
+// line is appended.
+//
+// A body is passed as a plain string rather than a filesystem: the goblog CLI
+// reads the file named by --robots-file and passes its contents through.
+//
+// This option has no effect when [WithDisableRobotsTxt] is also applied.
+//
+// Example usage:
+//
+//	gen := generator.New(fsys, renderer,
+//	    config.WithBaseURL("https://example.com"),
+//	    config.WithRobotsTxt("User-agent: *\nDisallow: /drafts/"),
+//	)
+func WithRobotsTxt(body string) GeneratorOption {
+	return GeneratorOption{
+		WithRobotsTxtFunc: func(v *RobotsTxt) {
+			v.Body = body
+		},
+	}
+}
+
+// AsOption converts this RobotsTxt value back into a GeneratorOption.
+func (o RobotsTxt) AsOption() GeneratorOption {
+	return WithRobotsTxt(o.Body)
 }

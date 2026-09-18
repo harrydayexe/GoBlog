@@ -95,6 +95,24 @@
 // later values overwriting earlier ones for duplicate keys. The field is nil
 // when no WithCustomData option is supplied.
 //
+// WithDisableSitemap() is a GeneratorOption that disables sitemap.xml
+// generation. A sitemap is produced by default whenever a base URL is set via
+// WithBaseURL. When disabled, GeneratedBlog.Sitemap stays nil (so the
+// outputter writes no file and the server answers {BlogRoot}sitemap.xml with
+// 404) and the generated robots.txt omits its "Sitemap:" line.
+//
+// WithDisableRobotsTxt() is a GeneratorOption that disables robots.txt
+// generation. A robots.txt is produced by default whenever a base URL is set
+// via WithBaseURL. When disabled, GeneratedBlog.RobotsTxt stays nil, the
+// outputter writes no file, and the server answers /robots.txt with 404.
+//
+// WithRobotsTxt(body string) is a GeneratorOption that replaces GoBlog's
+// default "User-agent: * / Allow: /" rule block with the supplied body. The
+// "Sitemap:" line is still appended automatically, so the body must not
+// contain one. The option takes a plain string rather than a filesystem; the
+// goblog CLI reads --robots-file from disk and passes the contents through.
+// It has no effect when WithDisableRobotsTxt() is also applied.
+//
 // WithHealthChecks() is a BaseServerOption that enables health-check endpoints
 // on the HTTP server. When enabled, GET /healthz/live always returns 200 OK,
 // while GET /healthz/ready and GET /healthz/startup return 200 OK once posts
