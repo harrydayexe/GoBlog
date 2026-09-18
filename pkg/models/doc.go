@@ -14,11 +14,17 @@
 //
 //	post := &models.Post{
 //	    Title:       "My First Blog Post",
+//	    MetaTitle:   "My First Blog Post: Starting a Blog with GoBlog",
 //	    Date:        time.Now(),
 //	    Description: "An introduction to my blog",
 //	    Tags:        []string{"intro", "meta"},
 //	    Content:     "<p>Hello, world!</p>",
 //	}
+//
+// MetaTitle is optional. It is the title used for the HTML <title> element and
+// title-based meta tags, leaving Title free to read well as the page heading;
+// when it is empty, Title serves both jobs. Post.ResolvedMetaTitle returns
+// whichever applies.
 //
 //	if err := post.Validate(); err != nil {
 //	    log.Fatal(err)
