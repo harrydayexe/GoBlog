@@ -5,7 +5,10 @@
 package server
 
 import (
+	"bytes"
 	"context"
+	"image"
+	"image/png"
 	"io"
 	"log/slog"
 	"net/http"
@@ -17,6 +20,7 @@ import (
 	"testing/fstest"
 	"time"
 
+	"github.com/harrydayexe/GoBlog/v2/internal/utilities"
 	"github.com/harrydayexe/GoBlog/v2/pkg/config"
 	pkgserver "github.com/harrydayexe/GoBlog/v2/pkg/server"
 	"github.com/harrydayexe/GoBlog/v2/pkg/watcher"
@@ -272,6 +276,69 @@ func TestRunServe_FeedsNotAvailableWithoutBaseURL(t *testing.T) {
 
 		if rec.Code != http.StatusNotFound {
 			t.Errorf("GET %s (no base-url) status = %d, want %d", path, rec.Code, http.StatusNotFound)
+		}
+	}
+}
+
+// TestRunServe_ImageDimensions verifies that the assets directory given to the
+// server is used by the parser, so served posts carry image dimensions and
+// loading hints.
+func TestRunServe_ImageDimensions(t *testing.T) {
+	t.Parallel()
+
+	var buf bytes.Buffer
+	if err := png.Encode(&buf, image.NewRGBA(image.Rect(0, 0, 640, 480))); err != nil {
+		t.Fatalf("failed to encode png: %v", err)
+	}
+
+	postsDir := t.TempDir()
+	assetsDir := filepath.Join(postsDir, "images")
+	if err := os.Mkdir(assetsDir, 0755); err != nil {
+		t.Fatalf("failed to create assets dir: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(assetsDir, "diagram.png"), buf.Bytes(), 0644); err != nil {
+		t.Fatalf("failed to write image: %v", err)
+	}
+	post := testPost + "\n\n![A diagram](diagram.png)\n\n![[diagram.png]]\n"
+	if err := os.WriteFile(filepath.Join(postsDir, "test-post.md"), []byte(post), 0644); err != nil {
+		t.Fatalf("failed to write post: %v", err)
+	}
+
+	root, err := utilities.OpenAssetsDir("", postsDir)
+	if err != nil {
+		t.Fatalf("OpenAssetsDir() error = %v", err)
+	}
+	if root == nil {
+		t.Fatal("OpenAssetsDir() returned nil root for an existing directory")
+	}
+	defer func() { _ = root.Close() }()
+
+	cfg := config.ServerConfig{
+		Server: []config.BaseServerOption{
+			config.WithPort(0),
+			config.WithAssetsDir(root.FS()).AsServerOption(),
+		},
+	}
+
+	srv, err := pkgserver.New(discardLogger(), os.DirFS(postsDir), cfg)
+	if err != nil {
+		t.Fatalf("server.New() error = %v", err)
+	}
+
+	rec := httptest.NewRecorder()
+	srv.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/posts/test-post", nil))
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("GET /posts/test-post status = %d, want %d", rec.Code, http.StatusOK)
+	}
+
+	body := rec.Body.String()
+	for _, want := range []string{
+		`<img src="/images/diagram.png" alt="A diagram" width="640" height="480" loading="lazy" decoding="async" />`,
+		`<img src="/images/diagram.png" alt="" width="640" height="480" loading="lazy" decoding="async" />`,
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("expected body to contain %q, got:\n%s", want, body)
 		}
 	}
 }

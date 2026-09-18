@@ -9,6 +9,8 @@ import (
 	"context"
 	"errors"
 	"html/template"
+	"image"
+	"image/png"
 	"io/fs"
 	"log/slog"
 	"os"
@@ -1532,5 +1534,34 @@ func TestGenerate_ImageSrcUsesBlogRoot(t *testing.T) {
 	got := string(blog.Posts["images"])
 	if n := strings.Count(got, `src="/blog/images/pipeline.png"`); n != 2 {
 		t.Errorf("expected 2 image srcs under /blog/images/, got %d in:\n%s", n, got)
+	}
+}
+
+// TestGenerate_ImageDimensionsUseAssetsDir verifies that the generator's
+// AssetsDir is passed to the parser so images are measured and rendered with
+// their intrinsic dimensions.
+func TestGenerate_ImageDimensionsUseAssetsDir(t *testing.T) {
+	t.Parallel()
+
+	var pngBuf bytes.Buffer
+	if err := png.Encode(&pngBuf, image.NewRGBA(image.Rect(0, 0, 320, 240))); err != nil {
+		t.Fatalf("failed to encode png: %v", err)
+	}
+
+	testFS := fstest.MapFS{
+		"post.md": {Data: []byte("---\ntitle: Images\ndate: 2026-01-10T10:00:00Z\ndescription: d\n---\n\n![a](pipeline.png)\n")},
+	}
+	assetsFS := fstest.MapFS{"pipeline.png": {Data: pngBuf.Bytes()}}
+
+	gen := New(testFS, nil, config.WithRawOutput(), config.WithAssetsDir(assetsFS).AsGeneratorOption())
+
+	blog, err := gen.Generate(context.Background())
+	if err != nil {
+		t.Fatalf("Generate() error = %v, want nil", err)
+	}
+
+	got := string(blog.Posts["images"])
+	if want := `width="320" height="240"`; !strings.Contains(got, want) {
+		t.Errorf("expected image to contain %s, got:\n%s", want, got)
 	}
 }

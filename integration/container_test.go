@@ -5,8 +5,11 @@
 package integration_test
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"image"
+	"image/png"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -165,7 +168,8 @@ func TestServe_BlogRootFlag(t *testing.T) {
 
 // TestServe_Images boots the server with a post referencing an image in the
 // default <posts>/images assets directory, and verifies that the rendered post
-// points at the blog-root-prefixed asset URL and that the image is fetchable.
+// points at the blog-root-prefixed asset URL, carries the attributes read from
+// the asset file, and that the image is fetchable.
 func TestServe_Images(t *testing.T) {
 	skipIfNoDocker(t)
 	ctx := context.Background()
@@ -179,13 +183,16 @@ description: "A post with images"
 
 ![A diagram](images/diagram.png)
 
-![[diagram.png|Embedded diagram]]
+![[diagram.png]]
 `)
 	if err := os.Mkdir(filepath.Join(dir, "images"), 0755); err != nil {
 		t.Fatalf("mkdir images: %v", err)
 	}
-	png := "\x89PNG\r\n\x1a\n"
-	if err := os.WriteFile(filepath.Join(dir, "images", "diagram.png"), []byte(png), 0644); err != nil {
+	var encoded bytes.Buffer
+	if err := png.Encode(&encoded, image.NewRGBA(image.Rect(0, 0, 640, 480))); err != nil {
+		t.Fatalf("encode image: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "images", "diagram.png"), encoded.Bytes(), 0644); err != nil {
 		t.Fatalf("write image: %v", err)
 	}
 
@@ -200,6 +207,17 @@ description: "A post with images"
 	})
 	if n := strings.Count(body, `src="/blog/images/diagram.png"`); n != 2 {
 		t.Errorf("expected 2 img tags with src=/blog/images/diagram.png, found %d\nbody:\n%s", n, body)
+	}
+
+	// Both images carry the dimensions read from the asset file, the loading
+	// hints, and an alt attribute — empty for the bare embed.
+	for _, want := range []string{
+		`<img src="/blog/images/diagram.png" alt="A diagram" width="640" height="480" loading="lazy" decoding="async" />`,
+		`<img src="/blog/images/diagram.png" alt="" width="640" height="480" loading="lazy" decoding="async" />`,
+	} {
+		if !strings.Contains(body, want) {
+			t.Errorf("expected body to contain %s\nbody:\n%s", want, body)
+		}
 	}
 
 	status, contentType := httpGetHeader(t, fmt.Sprintf("http://%s/blog/images/diagram.png", addr), "Content-Type")
