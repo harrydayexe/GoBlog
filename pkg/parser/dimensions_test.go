@@ -241,3 +241,31 @@ func TestParseDirectory_MeasurementsAreCached(t *testing.T) {
 		t.Errorf("cat.png was opened %d times, want 1", n)
 	}
 }
+
+// TestParseFile_ConcurrentMeasurement verifies that sharing a parser, and so a
+// measurement cache, across goroutines is safe.
+func TestParseFile_ConcurrentMeasurement(t *testing.T) {
+	t.Parallel()
+
+	posts := fstest.MapFS{
+		"post.md": {Data: []byte(wikilinkFrontmatter + "![A cat](cat.png)\n\n![[dog.png]]\n")},
+	}
+	p := New(WithCodeHighlighting(false), WithAssetsDir(assetsFS(t)))
+
+	var wg sync.WaitGroup
+	for range 8 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			post, err := p.ParseFile(context.Background(), posts, "post.md")
+			if err != nil {
+				t.Errorf("expected no error, got: %v", err)
+				return
+			}
+			if want := `width="1200" height="800"`; !strings.Contains(string(post.Content), want) {
+				t.Errorf("expected output to contain %s, got:\n%s", want, post.Content)
+			}
+		}()
+	}
+	wg.Wait()
+}
