@@ -24,16 +24,10 @@ import (
 func TestServerWithoutMiddleware(t *testing.T) {
 	postsFS := createTestFS(t)
 
-	cfg := config.ServerConfig{
-		Server: []config.BaseServerOption{
-			config.WithPort(8080),
-		},
-		Gen: []config.GeneratorOption{
-			config.WithRawOutput(),
-		},
-	}
-
-	srv, err := server.New(postsFS, cfg)
+	srv, err := server.New(postsFS,
+		config.WithPort(8080),
+		config.WithRawOutput().AsServerOption(),
+	)
 	if err != nil {
 		t.Fatalf("failed to create server: %v", err)
 	}
@@ -62,17 +56,11 @@ func TestServerWithSingleMiddleware(t *testing.T) {
 		})
 	}
 
-	cfg := config.ServerConfig{
-		Server: []config.BaseServerOption{
-			config.WithPort(8080),
-			config.WithMiddleware(testMiddleware),
-		},
-		Gen: []config.GeneratorOption{
-			config.WithRawOutput(),
-		},
-	}
-
-	srv, err := server.New(postsFS, cfg)
+	srv, err := server.New(postsFS,
+		config.WithPort(8080),
+		config.WithMiddleware(testMiddleware),
+		config.WithRawOutput().AsServerOption(),
+	)
 	if err != nil {
 		t.Fatalf("failed to create server: %v", err)
 	}
@@ -116,17 +104,11 @@ func TestServerWithMultipleMiddleware(t *testing.T) {
 		})
 	}
 
-	cfg := config.ServerConfig{
-		Server: []config.BaseServerOption{
-			config.WithPort(8080),
-			config.WithMiddleware(firstMiddleware, secondMiddleware),
-		},
-		Gen: []config.GeneratorOption{
-			config.WithRawOutput(),
-		},
-	}
-
-	srv, err := server.New(postsFS, cfg)
+	srv, err := server.New(postsFS,
+		config.WithPort(8080),
+		config.WithMiddleware(firstMiddleware, secondMiddleware),
+		config.WithRawOutput().AsServerOption(),
+	)
 	if err != nil {
 		t.Fatalf("failed to create server: %v", err)
 	}
@@ -177,17 +159,11 @@ func TestMiddlewarePersistsAcrossUpdates(t *testing.T) {
 		})
 	}
 
-	cfg := config.ServerConfig{
-		Server: []config.BaseServerOption{
-			config.WithPort(8080),
-			config.WithMiddleware(countingMiddleware),
-		},
-		Gen: []config.GeneratorOption{
-			config.WithRawOutput(),
-		},
-	}
-
-	srv, err := server.New(postsFS, cfg)
+	srv, err := server.New(postsFS,
+		config.WithPort(8080),
+		config.WithMiddleware(countingMiddleware),
+		config.WithRawOutput().AsServerOption(),
+	)
 	if err != nil {
 		t.Fatalf("failed to create server: %v", err)
 	}
@@ -236,18 +212,12 @@ func TestMultipleWithMiddlewareCalls(t *testing.T) {
 		})
 	}
 
-	cfg := config.ServerConfig{
-		Server: []config.BaseServerOption{
-			config.WithPort(8080),
-			config.WithMiddleware(firstMiddleware),
-			config.WithMiddleware(secondMiddleware),
-		},
-		Gen: []config.GeneratorOption{
-			config.WithRawOutput(),
-		},
-	}
-
-	srv, err := server.New(postsFS, cfg)
+	srv, err := server.New(postsFS,
+		config.WithPort(8080),
+		config.WithMiddleware(firstMiddleware),
+		config.WithMiddleware(secondMiddleware),
+		config.WithRawOutput().AsServerOption(),
+	)
 	if err != nil {
 		t.Fatalf("failed to create server: %v", err)
 	}
@@ -283,14 +253,10 @@ func ExampleServer_withMiddleware() {
 		})
 	}
 
-	cfg := config.ServerConfig{
-		Server: []config.BaseServerOption{
-			config.WithPort(8080),
-			config.WithMiddleware(customMiddleware),
-		},
-	}
-
-	srv, err := server.New(postsFS, cfg)
+	srv, err := server.New(postsFS,
+		config.WithPort(8080),
+		config.WithMiddleware(customMiddleware),
+	)
 	if err != nil {
 		logger.Error("failed to create server", "error", err)
 		return
@@ -307,16 +273,10 @@ func TestServerDisableTags(t *testing.T) {
 
 	postsFS := createTestFS(t)
 
-	cfg := config.ServerConfig{
-		Server: []config.BaseServerOption{
-			config.WithPort(8080),
-		},
-		Gen: []config.GeneratorOption{
-			config.WithDisableTags(),
-		},
-	}
-
-	srv, err := server.New(postsFS, cfg)
+	srv, err := server.New(postsFS,
+		config.WithPort(8080),
+		config.WithDisableTags().AsServerOption(),
+	)
 	if err != nil {
 		t.Fatalf("failed to create server: %v", err)
 	}
@@ -348,13 +308,7 @@ func TestServerTagsEnabledByDefault(t *testing.T) {
 
 	postsFS := createTestFS(t)
 
-	cfg := config.ServerConfig{
-		Server: []config.BaseServerOption{
-			config.WithPort(8080),
-		},
-	}
-
-	srv, err := server.New(postsFS, cfg)
+	srv, err := server.New(postsFS, config.WithPort(8080))
 	if err != nil {
 		t.Fatalf("failed to create server: %v", err)
 	}
@@ -376,13 +330,7 @@ func TestServer_StripsHTMLExtension(t *testing.T) {
 
 	postsFS := createTestFS(t)
 
-	cfg := config.ServerConfig{
-		Server: []config.BaseServerOption{
-			config.WithPort(8080),
-		},
-	}
-
-	srv, err := server.New(postsFS, cfg)
+	srv, err := server.New(postsFS, config.WithPort(8080))
 	if err != nil {
 		t.Fatalf("failed to create server: %v", err)
 	}
@@ -440,17 +388,10 @@ func TestServer_StripsHTMLExtension_BlogRoot(t *testing.T) {
 
 	postsFS := createTestFS(t)
 
-	cfg := config.ServerConfig{
-		Server: []config.BaseServerOption{
-			config.WithPort(8080),
-			config.WithBlogRoot("/blog/").AsServerOption(),
-		},
-		Gen: []config.GeneratorOption{
-			config.WithBlogRoot("/blog/").AsGeneratorOption(),
-		},
-	}
-
-	srv, err := server.New(postsFS, cfg)
+	srv, err := server.New(postsFS,
+		config.WithPort(8080),
+		config.WithBlogRoot("/blog/").AsServerOption(),
+	)
 	if err != nil {
 		t.Fatalf("failed to create server: %v", err)
 	}
@@ -481,10 +422,7 @@ func TestHandler_StripsHTMLExtension(t *testing.T) {
 	postsFS := createTestFS(t)
 
 	// Build a GeneratedBlog manually via the generator.
-	cfg := config.ServerConfig{
-		Gen: []config.GeneratorOption{config.WithRawOutput()},
-	}
-	srv, err := server.New(postsFS, cfg)
+	srv, err := server.New(postsFS, config.WithRawOutput().AsServerOption())
 	if err != nil {
 		t.Fatalf("failed to create server: %v", err)
 	}

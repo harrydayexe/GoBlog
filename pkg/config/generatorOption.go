@@ -340,7 +340,7 @@ func WithCustomData(data map[string]any) GeneratorOption {
 
 // AsOption converts this CustomData value back into a GeneratorOption so it
 // can be passed to generator and server constructors that accept GeneratorOption
-// values (e.g. when round-tripping through a ServerConfig).
+// values (e.g. when round-tripping through a resolved configuration).
 func (o CustomData) AsOption() GeneratorOption {
 	return WithCustomData(o.Data)
 }

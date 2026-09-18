@@ -25,14 +25,10 @@
 //	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 //	postsFS := os.DirFS("posts/")
 //
-//	cfg := config.ServerConfig{
-//	    Server: []config.BaseServerOption{
-//	        config.WithPort(8080),
-//	        config.WithLogger(logger).AsServerOption(),
-//	    },
-//	}
-//
-//	srv, err := server.New(postsFS, cfg)
+//	srv, err := server.New(postsFS,
+//	    config.WithPort(8080),
+//	    config.WithLogger(logger).AsServerOption(),
+//	)
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
@@ -41,6 +37,28 @@
 //	if err := srv.Run(context.Background()); err != nil {
 //	    log.Fatal(err)
 //	}
+//
+// # Configuration
+//
+// New takes config.ServerOption values and stores the resolved settings in the
+// config.ServerConfig embedded in the Server, so they can be read back from it
+// (srv.Port, srv.Logger.Logger, and so on).
+//
+// Options of other kinds are converted with their AsServerOption method:
+// config.BaseOption values (config.WithLogger, config.WithBlogRoot,
+// config.WithAssetsDir) configure the server itself, config.GeneratorOption
+// values (config.WithSiteTitle, config.WithBaseURL, …) are forwarded to the
+// generator the server builds, and config.RendererOption values
+// (config.WithFuncs) to its template renderer. config.WithTemplateDir replaces
+// the built-in templates.
+//
+//	srv, err := server.New(postsFS,
+//	    config.WithPort(8080),
+//	    config.WithBlogRoot("/blog/").AsServerOption(),
+//	    config.WithSiteTitle("My Blog").AsServerOption(),
+//	    config.WithFuncs(template.FuncMap{"upper": strings.ToUpper}).AsServerOption(),
+//	    config.WithTemplateDir(os.DirFS("templates/")),
+//	)
 //
 // # Feed Routes
 //
@@ -77,7 +95,7 @@
 //
 //	root, err := os.OpenRoot("posts/images")
 //	// handle err, defer root.Close()
-//	cfg.Server = append(cfg.Server, config.WithAssetsDir(root.FS()).AsServerOption())
+//	srv, err := server.New(postsFS, config.WithAssetsDir(root.FS()).AsServerOption())
 //
 // # HTML Extension Handling
 //
@@ -105,15 +123,11 @@
 //	)
 //
 //	// Create server with built-in logging middleware
-//	cfg := config.ServerConfig{
-//	    Server: []config.BaseServerOption{
-//	        config.WithPort(8080),
-//	        config.WithMiddleware(logging.New(logger)),
-//	        config.WithLogger(logger).AsServerOption(),
-//	    },
-//	}
-//
-//	srv, err := server.New(postsFS, cfg)
+//	srv, err := server.New(postsFS,
+//	    config.WithPort(8080),
+//	    config.WithMiddleware(logging.New(logger)),
+//	    config.WithLogger(logger).AsServerOption(),
+//	)
 //
 // Custom middleware can be added following the standard pattern:
 //
@@ -125,14 +139,12 @@
 //	    })
 //	}
 //
-//	cfg := config.ServerConfig{
-//	    Server: []config.BaseServerOption{
-//	        config.WithMiddleware(
-//	            logging.New(logger),     // Built-in
-//	            customMiddleware,        // Custom
-//	        ),
-//	    },
-//	}
+//	srv, err := server.New(postsFS,
+//	    config.WithMiddleware(
+//	        logging.New(logger),     // Built-in
+//	        customMiddleware,        // Custom
+//	    ),
+//	)
 //
 // Middleware are applied in order: the first middleware in the list is
 // executed first (outermost wrapper). The middleware chain is reapplied
@@ -174,13 +186,10 @@
 //
 // Enable health-check endpoints via config.WithHealthChecks():
 //
-//	cfg := config.ServerConfig{
-//	    Server: []config.BaseServerOption{
-//	        config.WithPort(8080),
-//	        config.WithHealthChecks(),
-//	    },
-//	}
-//	srv, err := server.New(postsFS, cfg)
+//	srv, err := server.New(postsFS,
+//	    config.WithPort(8080),
+//	    config.WithHealthChecks(),
+//	)
 //
 // Three unauthenticated GET endpoints are exposed:
 //

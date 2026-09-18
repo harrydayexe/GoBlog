@@ -53,14 +53,14 @@
 // deploying at example.com/blog/. This ensures all generated links in templates
 // use the correct base path. Default is "/" for root deployment.
 //
-// WithCacheControl(ttl time.Duration) returns a BaseServerOption that sets the
+// WithCacheControl(ttl time.Duration) returns a ServerOption that sets the
 // Cache-Control max-age TTL on all HTTP responses. When ttl > 0 the server
 // adds "Cache-Control: public, max-age=<N>" to every response. Setting ttl to
 // 0 or any non-positive value disables the header. The default is one hour.
 //
 // WithAssetsDir(fsys fs.FS) is a BaseOption that sets the filesystem images
 // are served and copied from. The HTTP server serves its files at
-// {BlogRoot}images/ (server.New via BaseServerOption, server.Handler), and
+// {BlogRoot}images/ (server.New via ServerOption, server.Handler), and
 // outputter.NewDirectoryWriter (via GeneratorOption) copies it into
 // <outputDir>/images/. When fsys is nil or its root does not exist, asset
 // support is silently off. Prefer os.Root.FS over os.DirFS so symbolic links
@@ -69,7 +69,7 @@
 // WithLogger(l *slog.Logger) is a BaseOption that sets the structured logger
 // used by the receiving component. It flows into every constructor that
 // accepts BaseOption values (generator.New via GeneratorOption, server.New via
-// BaseServerOption, outputter.NewDirectoryWriter via GeneratorOption) and into
+// ServerOption, outputter.NewDirectoryWriter via GeneratorOption) and into
 // watcher.New via WatcherOption (which embeds BaseOption). When not supplied,
 // each constructor falls back to slog.Default() at construction time. Passing
 // nil has the same effect as omitting the option.
@@ -78,8 +78,8 @@
 // additional template functions for use in all templates. Functions are merged
 // into the built-in FuncMap (formatDate, shortDate, year). A function whose
 // name matches a built-in silently replaces it. Pass RendererOption values to
-// generator.NewTemplateRenderer, or to ServerConfig.RendererOpts for the HTTP
-// server path.
+// generator.NewTemplateRenderer, or (via RendererOption.AsServerOption) to
+// server.New for the HTTP server path.
 //
 // WithHTMLPaths() is a GeneratorOption that switches BaseData.Path values to
 // use .html file extensions instead of clean URLs. When enabled, the index
@@ -95,7 +95,7 @@
 // later values overwriting earlier ones for duplicate keys. The field is nil
 // when no WithCustomData option is supplied.
 //
-// WithHealthChecks() is a BaseServerOption that enables health-check endpoints
+// WithHealthChecks() is a ServerOption that enables health-check endpoints
 // on the HTTP server. When enabled, GET /healthz/live always returns 200 OK,
 // while GET /healthz/ready and GET /healthz/startup return 200 OK once posts
 // and templates have loaded and 503 Service Unavailable while starting up or
@@ -110,14 +110,16 @@
 // including WithRawOutput, WithDisableTags, WithDisableReadingTime, WithSiteTitle,
 // WithEnvironment, WithCustomData, WithHTMLPaths, and (via the embedded BaseOption)
 // WithLogger, WithBlogRoot and WithAssetsDir.
-// BaseServerOption carries options for the HTTP server (port, host, middleware,
-// cache-control TTL, health-check endpoints, and via the embedded BaseOption:
-// WithLogger, WithBlogRoot, WithAssetsDir).
+// ServerOption carries options for the HTTP server (port, host, middleware,
+// cache-control TTL, health-check endpoints, template directory, and via the
+// embedded BaseOption: WithLogger, WithBlogRoot, WithAssetsDir). Generator and
+// renderer options are converted for it with GeneratorOption.AsServerOption and
+// RendererOption.AsServerOption.
 // WatcherOption carries options for watcher.New (debounce, and via the embedded
 // BaseOption: WithLogger, WithBlogRoot).
 // RendererOption carries options for generator.NewTemplateRenderer (custom funcs).
-// ServerConfig groups all three option types plus a TemplateDir filesystem for
-// the server constructor (server.New).
+// ServerConfig holds the configuration server.New resolves from the
+// ServerOption values it is given; the server embeds it.
 //
 // Option functions that return a BaseOption (WithLogger, WithBlogRoot,
 // WithAssetsDir) cannot be passed to a constructor directly. Lift them into the
@@ -158,6 +160,14 @@
 //	    config.WithCustomData(map[string]any{
 //	        "author": "Jane Smith",
 //	    }),
+//	)
+//
+// Configuring an HTTP server, mixing option types:
+//
+//	srv, err := server.New(fsys,
+//	    config.WithPort(8080),
+//	    config.WithSiteTitle("My Blog").AsServerOption(),
+//	    config.WithLogger(logger).AsServerOption(),
 //	)
 //
 // Configuring blog root for subdirectory deployment:
