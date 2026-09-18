@@ -94,7 +94,7 @@ type Logger struct{ Logger *slog.Logger }
 //	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 //
 //	gen := generator.New(fsys, renderer, config.WithLogger(logger).AsGeneratorOption())
-//	w, err := watcher.New("posts/", config.WithLogger(logger))
+//	w, err := watcher.New("posts/", config.WithLogger(logger).AsWatcherOption())
 //	writer := outputter.NewDirectoryWriter("output/", config.WithLogger(logger).AsGeneratorOption())
 func WithLogger(l *slog.Logger) BaseOption {
 	return BaseOption{
@@ -108,13 +108,13 @@ func WithLogger(l *slog.Logger) BaseOption {
 // and should be set using the WithBlogRoot() option function.
 type BlogRoot string
 
-// WithBlogRoot returns an Option that sets the blog's root path.
+// WithBlogRoot returns a BaseOption that sets the blog's root path.
 //
 // The blog root is used in generated HTML pages and templates.
 //
 // Example usage:
 //
-//	gen := generator.New(fsys, renderer, config.WithBlogRoot("/blog/"))
+//	gen := generator.New(fsys, renderer, config.WithBlogRoot("/blog/").AsGeneratorOption())
 func WithBlogRoot(root string) BaseOption {
 	return BaseOption{
 		WithBlogRootFunc: func(v *BlogRoot) {

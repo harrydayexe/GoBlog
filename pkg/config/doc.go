@@ -164,7 +164,7 @@
 //
 //	renderer, _ := generator.NewTemplateRenderer(templates.Default)
 //	gen := generator.New(fsys, renderer,
-//	    config.WithBlogRoot("/blog/"),
+//	    config.WithBlogRoot("/blog/").AsGeneratorOption(),
 //	)
 //
 // # Concurrency
