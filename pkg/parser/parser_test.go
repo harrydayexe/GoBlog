@@ -13,6 +13,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	goblogconfig "github.com/harrydayexe/GoBlog/v2/pkg/config"
 )
 
 // TestNew_WithLogger verifies that a logger injected via parser.WithLogger
@@ -27,6 +29,30 @@ func TestNew_WithLogger(t *testing.T) {
 
 	if p.Logger.Logger != injected {
 		t.Error("WithLogger option was not applied: parser logger does not match injected logger")
+	}
+}
+
+// TestParser_AsOption verifies that Parser still promotes the embedded
+// Logger's AsOption method. Embedding a second config type that also declares
+// AsOption would make the selector ambiguous and silently drop the method from
+// Parser's exported API, so this test guards against that regression.
+func TestParser_AsOption(t *testing.T) {
+	t.Parallel()
+
+	var buf bytes.Buffer
+	injected := slog.New(slog.NewTextHandler(&buf, nil))
+
+	p := New(WithLogger(injected))
+
+	var forwarded goblogconfig.Logger
+	opt := p.AsOption()
+	if opt.WithLoggerFunc == nil {
+		t.Fatal("AsOption did not return a logger option")
+	}
+	opt.WithLoggerFunc(&forwarded)
+
+	if forwarded.Logger != injected {
+		t.Error("AsOption did not forward the parser's logger")
 	}
 }
 

@@ -160,6 +160,11 @@ func New(logger *slog.Logger, posts fs.FS, opts config.ServerConfig) (*Server, e
 	genOpts := make([]config.GeneratorOption, 0, len(opts.Gen)+1)
 	genOpts = append(genOpts, opts.Gen...)
 	genOpts = append(genOpts, srv.Logger.AsOption().AsGeneratorOption())
+	if srv.AssetsDir.FS != nil {
+		// The parser reads image dimensions from the same assets filesystem
+		// the server serves images from.
+		genOpts = append(genOpts, srv.AssetsDir.AsOption().AsGeneratorOption())
+	}
 
 	// Store inputs needed by initialize (both sync and async paths use them).
 	srv.templatesDir = templatesDir

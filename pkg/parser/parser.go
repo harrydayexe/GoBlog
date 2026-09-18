@@ -43,6 +43,9 @@ type Parser struct {
 //   - Wikilink-style heading anchors ([[#Heading]] and [[#Heading|Label]])
 //   - Image paths rewritten to {BlogRoot}images/... for both ![alt](foo.png)
 //     and ![[foo.png]] (see WithBlogRoot)
+//   - Images rendered with loading="lazy", decoding="async" and, when the
+//     asset can be measured, their intrinsic width and height (see
+//     WithAssetsDir)
 //   - HTML sanitization (unsafe HTML disabled by default)
 func New(opts ...Option) *Parser {
 	config := &Config{
@@ -68,7 +71,7 @@ func NewWithConfig(config *Config) *Parser {
 
 	var extensions []goldmark.Extender = []goldmark.Extender{
 		&frontmatter.Extender{},
-		wikilinkExtender{blogRoot: config.BlogRoot},
+		wikilinkExtender{},
 	}
 	if config.EnableFootnote {
 		extensions = append(extensions, extension.Footnote)
@@ -89,7 +92,11 @@ func NewWithConfig(config *Config) *Parser {
 		goldmark.WithParserOptions(
 			parser.WithAutoHeadingID(),
 			parser.WithASTTransformers(util.Prioritized(
-				imageTransformer{blogRoot: config.BlogRoot, logger: p.Logger.Logger}, 999,
+				imageTransformer{
+					blogRoot: config.BlogRoot,
+					logger:   p.Logger.Logger,
+					measurer: &imageMeasurer{fsys: config.AssetsDir, logger: p.Logger.Logger},
+				}, 999,
 			)),
 		),
 		goldmark.WithRendererOptions(
@@ -121,6 +128,11 @@ func NewWithConfig(config *Config) *Parser {
 // URLs, root-relative paths and paths containing ".." are left untouched.
 // Image files are not checked for existence: like links, a missing image
 // renders without error.
+//
+// Every image is rendered with loading="lazy", decoding="async" and an alt
+// attribute, which is empty for a bare ![[path]] embed. Rewritten images also
+// carry their intrinsic width and height when the asset can be measured; see
+// WithAssetsDir.
 //
 // Returns an error if the file cannot be read, frontmatter is invalid,
 // required fields are missing, or markdown rendering fails.

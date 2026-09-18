@@ -4,7 +4,10 @@
 
 package parser
 
-import "log/slog"
+import (
+	"io/fs"
+	"log/slog"
+)
 
 // Option is a function which can update the parser config
 type Option func(*Config)
@@ -59,5 +62,38 @@ func WithFootnote() Option {
 func WithBlogRoot(root string) Option {
 	return func(c *Config) {
 		c.BlogRoot = root
+	}
+}
+
+// WithAssetsDir sets the filesystem the blog's images live in, the same
+// directory served and copied by [github.com/harrydayexe/GoBlog/v2/pkg/config.WithAssetsDir].
+//
+// The parser reads each referenced image's header from it to emit width and
+// height attributes, so browsers can reserve space for the image and avoid
+// layout shift. Nothing is written, and only the header of each file is read.
+// Images are still measured at most once per parser, no matter how many posts
+// reference them.
+//
+// The option is entirely optional: when it is not supplied, or a file is
+// missing, unreadable, or in a format whose header cannot be decoded (SVG,
+// AVIF and WebP), the image simply renders without dimensions rather than
+// failing the parse.
+//
+// Prefer a filesystem that cannot escape its root, such as the one returned by
+// [os.Root.FS]; [os.DirFS] follows symbolic links that point outside the
+// directory.
+//
+// Example usage:
+//
+//	root, err := os.OpenRoot("posts/images")
+//	if err != nil {
+//	    return err
+//	}
+//	defer root.Close()
+//
+//	p := parser.New(parser.WithAssetsDir(root.FS()))
+func WithAssetsDir(fsys fs.FS) Option {
+	return func(c *Config) {
+		c.AssetsDir = fsys
 	}
 }

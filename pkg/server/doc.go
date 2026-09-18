@@ -93,6 +93,12 @@
 // that cannot escape its root, such as os.Root.FS, to prevent symbolic links
 // from exposing files outside the assets directory.
 //
+// The same filesystem is forwarded to the parser, which reads image headers so
+// posts render their images with intrinsic width and height. Dimensions are
+// measured when posts are parsed, so replacing an image with one of a
+// different size needs a reload (--watch, or server.UpdatePosts) for the
+// attributes to catch up.
+//
 //	root, err := os.OpenRoot("posts/images")
 //	// handle err, defer root.Close()
 //	cfg.Server = append(cfg.Server, config.WithAssetsDir(root.FS()).AsServerOption())

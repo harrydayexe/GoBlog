@@ -37,7 +37,7 @@ These flags apply to both `generate` and `serve` and may be passed before or aft
 | `--base-url` | | _(none)_ | Scheme + host of the site (e.g. `https://example.com`); required to generate RSS/Atom feeds and canonical/Open Graph URLs. Must not include a path — use `--root-path` for subdirectory deployments |
 | `--disable-feeds` | | `false` | Disable RSS and Atom feed generation |
 | `--feed-limit` | | `10` | Maximum number of posts to include in each feed (`0` = unlimited) |
-| `--assets-dir` | | `<posts>/images` | Directory of images, served at `{root-path}images/` and copied to `<output>/images/`. Ignored if it does not exist |
+| `--assets-dir` | | `<posts>/images` | Directory of images, served at `{root-path}images/`, copied to `<output>/images/`, and read when parsing to measure each image. Ignored if it does not exist |
 | `--disable-sitemap` | | `false` | Disable `sitemap.xml` generation |
 | `--disable-robots` | | `false` | Disable `robots.txt` generation |
 | `--robots-file` | | _(none)_ | Path to a custom `robots.txt` whose contents replace the default rules. The `Sitemap:` line is still appended when a sitemap is generated. Cannot be combined with `--disable-robots` |
@@ -272,9 +272,15 @@ Put images in an `images/` directory inside your posts directory and reference t
 ![[pipeline.png|A diagram of the pipeline]]
 ```
 
-All three render as `<img src="{root-path}images/pipeline.png">`. Subdirectories are preserved (`images/screenshots/a.png`). A bare `![[pipeline.png]]` has no alt text, so prefer the `|label` form. Absolute URLs and paths starting with `/` are left as written. As with heading links, missing image files are not reported.
+All three render as:
 
-Use `--assets-dir` to keep images elsewhere; if the directory does not exist, image support is simply off. `serve` reads images straight from disk, so adding or replacing one needs no reload (the directory must exist when the server starts). `generate` copies the directory into `<output>/images/`.
+```html
+<img src="{root-path}images/pipeline.png" alt="A diagram of the pipeline" width="1200" height="800" loading="lazy" decoding="async" />
+```
+
+The `width` and `height` are the image's intrinsic pixel size, read from the asset file while the post is parsed, so the browser can reserve space for the image and the page does not jump as it loads. Files that cannot be measured — missing ones, and formats whose header cannot be decoded such as SVG, AVIF and WebP — simply render without the two attributes. Subdirectories are preserved (`images/screenshots/a.png`). A bare `![[pipeline.png]]` renders with `alt=""`, which tells a screen reader there is nothing to announce; add a `|label` when the image carries meaning. Absolute URLs and paths starting with `/` are left as written and get no dimensions, since there is no local file to measure. As with heading links, missing image files are not reported.
+
+Use `--assets-dir` to keep images elsewhere; if the directory does not exist, image support is simply off. `serve` reads images straight from disk, so adding or replacing one needs no reload (the directory must exist when the server starts); dimensions are measured at parse time, so swapping in a differently sized image needs a reload for `width` and `height` to catch up. `generate` copies the directory into `<output>/images/`.
 
 Library users pass the directory with `config.WithAssetsDir`, ideally via `os.Root` so symlinks cannot escape it:
 
@@ -285,9 +291,12 @@ if err != nil {
 }
 defer root.Close()
 
+gen := generator.New(postsFS, renderer, config.WithAssetsDir(root.FS()).AsGeneratorOption())
 writer := outputter.NewDirectoryWriter("output/", config.WithAssetsDir(root.FS()).AsGeneratorOption())
 cfg.Server = append(cfg.Server, config.WithAssetsDir(root.FS()).AsServerOption())
 ```
+
+The generator forwards the directory to the parser, which is what measures the images. Using the parser on its own, pass it directly with `parser.WithAssetsDir(root.FS())`.
 
 ## Contributing
 

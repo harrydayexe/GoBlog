@@ -28,16 +28,18 @@ type BaseOption struct {
 // blog's static assets (images).
 //
 // Assets are served by the HTTP server at {BlogRoot}images/<path> and copied
-// by the outputter into <outputDir>/images/. When FS is nil, or its root
+// by the outputter into <outputDir>/images/. The generator also forwards the
+// filesystem to the parser, which reads each referenced image's header to
+// render it with its intrinsic width and height. When FS is nil, or its root
 // cannot be stat'd as a directory, asset support is off: no route is
-// registered and nothing is copied.
+// registered, nothing is copied, and images render without dimensions.
 //
 // This type is typically embedded in server and outputter configuration
 // structs and should be set using the [WithAssetsDir] option function.
 type AssetsDir struct{ FS fs.FS }
 
 // WithAssetsDir returns a BaseOption that sets the filesystem images are
-// served and copied from.
+// served, copied and measured from.
 //
 // Prefer a filesystem that cannot escape its root, such as the one returned
 // by [os.Root.FS]; [os.DirFS] follows symbolic links that point outside the

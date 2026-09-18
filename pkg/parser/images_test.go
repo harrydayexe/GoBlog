@@ -13,31 +13,37 @@ import (
 
 func parseBodyWithRoot(t *testing.T, blogRoot, body string) string {
 	t.Helper()
+	return parseBodyWithOptions(t, body, WithBlogRoot(blogRoot))
+}
+
+func parseBodyWithOptions(t *testing.T, body string, opts ...Option) string {
+	t.Helper()
 	fsys := fstest.MapFS{
 		"post.md": {Data: []byte(wikilinkFrontmatter + body)},
 	}
-	post, err := New(WithCodeHighlighting(false), WithBlogRoot(blogRoot)).ParseFile(context.Background(), fsys, "post.md")
+	post, err := New(append([]Option{WithCodeHighlighting(false)}, opts...)...).ParseFile(context.Background(), fsys, "post.md")
 	if err != nil {
 		t.Fatalf("expected no error, got: %v", err)
 	}
 	return string(post.Content)
 }
 
-func TestAssetURL(t *testing.T) {
+func TestResolveAsset(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name   string
-		dest   string
-		want   string
-		wantOK bool
+		name     string
+		dest     string
+		want     string
+		wantPath string
+		wantOK   bool
 	}{
-		{name: "images prefix", dest: "images/foo.png", want: "/images/foo.png", wantOK: true},
-		{name: "bare filename", dest: "foo.png", want: "/images/foo.png", wantOK: true},
-		{name: "subdirectory", dest: "images/screenshots/a.png", want: "/images/screenshots/a.png", wantOK: true},
-		{name: "subdirectory without prefix", dest: "screenshots/a.png", want: "/images/screenshots/a.png", wantOK: true},
-		{name: "dot slash", dest: "./images/foo.png", want: "/images/foo.png", wantOK: true},
-		{name: "query and fragment kept", dest: "foo.png?v=2#x", want: "/images/foo.png?v=2#x", wantOK: true},
+		{name: "images prefix", dest: "images/foo.png", want: "/images/foo.png", wantPath: "foo.png", wantOK: true},
+		{name: "bare filename", dest: "foo.png", want: "/images/foo.png", wantPath: "foo.png", wantOK: true},
+		{name: "subdirectory", dest: "images/screenshots/a.png", want: "/images/screenshots/a.png", wantPath: "screenshots/a.png", wantOK: true},
+		{name: "subdirectory without prefix", dest: "screenshots/a.png", want: "/images/screenshots/a.png", wantPath: "screenshots/a.png", wantOK: true},
+		{name: "dot slash", dest: "./images/foo.png", want: "/images/foo.png", wantPath: "foo.png", wantOK: true},
+		{name: "query and fragment kept", dest: "foo.png?v=2#x", want: "/images/foo.png?v=2#x", wantPath: "foo.png", wantOK: true},
 		{name: "root relative", dest: "/static/foo.png"},
 		{name: "protocol relative", dest: "//cdn.example.com/foo.png"},
 		{name: "https", dest: "https://example.com/foo.png"},
@@ -51,9 +57,10 @@ func TestAssetURL(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			got, ok := assetURL("/", tt.dest)
-			if ok != tt.wantOK || got != tt.want {
-				t.Errorf("assetURL(%q) = (%q, %v), want (%q, %v)", tt.dest, got, ok, tt.want, tt.wantOK)
+			got, ok := resolveAsset("/", tt.dest)
+			if ok != tt.wantOK || got.URL != tt.want || got.Path != tt.wantPath {
+				t.Errorf("resolveAsset(%q) = (%q, %q, %v), want (%q, %q, %v)",
+					tt.dest, got.URL, got.Path, ok, tt.want, tt.wantPath, tt.wantOK)
 			}
 		})
 	}
@@ -127,32 +134,32 @@ func TestParseFile_ImageRewriting(t *testing.T) {
 			name: "wikilink embed",
 			body: "![[pipeline.png]]\n",
 			want: map[string]string{
-				"/":      `<img src="/images/pipeline.png">`,
-				"/blog/": `<img src="/blog/images/pipeline.png">`,
+				"/":      `<img src="/images/pipeline.png" alt="" loading="lazy" decoding="async" />`,
+				"/blog/": `<img src="/blog/images/pipeline.png" alt="" loading="lazy" decoding="async" />`,
 			},
 		},
 		{
 			name: "wikilink embed with alt text",
 			body: "![[pipeline.png|A diagram]]\n",
 			want: map[string]string{
-				"/":      `<img src="/images/pipeline.png" alt="A diagram">`,
-				"/blog/": `<img src="/blog/images/pipeline.png" alt="A diagram">`,
+				"/":      `<img src="/images/pipeline.png" alt="A diagram" loading="lazy" decoding="async" />`,
+				"/blog/": `<img src="/blog/images/pipeline.png" alt="A diagram" loading="lazy" decoding="async" />`,
 			},
 		},
 		{
 			name: "wikilink embed subdirectory",
 			body: "![[images/screenshots/a.png]]\n",
 			want: map[string]string{
-				"/":      `<img src="/images/screenshots/a.png">`,
-				"/blog/": `<img src="/blog/images/screenshots/a.png">`,
+				"/":      `<img src="/images/screenshots/a.png" alt=""`,
+				"/blog/": `<img src="/blog/images/screenshots/a.png" alt=""`,
 			},
 		},
 		{
 			name: "wikilink embed dot dot untouched",
 			body: "![[../x.png]]\n",
 			want: map[string]string{
-				"/":      `<img src="../x.png">`,
-				"/blog/": `<img src="../x.png">`,
+				"/":      `<img src="../x.png" alt="" loading="lazy" decoding="async" />`,
+				"/blog/": `<img src="../x.png" alt="" loading="lazy" decoding="async" />`,
 			},
 		},
 		{

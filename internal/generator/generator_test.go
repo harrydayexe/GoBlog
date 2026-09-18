@@ -5,11 +5,15 @@
 package generator
 
 import (
+	"bytes"
 	"context"
+	"image"
+	"image/png"
 	"os"
 	"strings"
 	"testing"
 
+	"github.com/harrydayexe/GoBlog/v2/internal/utilities"
 	"github.com/harrydayexe/GoBlog/v2/pkg/config"
 	"github.com/harrydayexe/GoBlog/v2/pkg/generator"
 	"github.com/harrydayexe/GoBlog/v2/pkg/outputter"
@@ -447,4 +451,85 @@ tags: [test, go]
 // containsString checks if a string contains a substring (helper function).
 func containsString(s, substr string) bool {
 	return strings.Contains(s, substr)
+}
+
+// TestRunGenerate_ImageDimensions verifies that the assets directory is wired
+// through to the parser, so generated posts carry image dimensions and loading
+// hints, and that the image is copied into the output.
+func TestRunGenerate_ImageDimensions(t *testing.T) {
+	t.Parallel()
+
+	tempDir := t.TempDir()
+
+	testPost := `---
+title: Image Post
+date: 2024-01-15
+description: Testing images
+---
+
+![A diagram](diagram.png)
+
+![[diagram.png]]
+`
+	postsDir := tempDir + "/posts"
+	assetsDir := postsDir + "/images"
+	if err := os.MkdirAll(assetsDir, 0755); err != nil {
+		t.Fatalf("Failed to create assets dir: %v", err)
+	}
+	if err := os.WriteFile(postsDir+"/image-post.md", []byte(testPost), 0644); err != nil {
+		t.Fatalf("Failed to write test post: %v", err)
+	}
+
+	var buf bytes.Buffer
+	if err := png.Encode(&buf, image.NewRGBA(image.Rect(0, 0, 640, 480))); err != nil {
+		t.Fatalf("Failed to encode png: %v", err)
+	}
+	if err := os.WriteFile(assetsDir+"/diagram.png", buf.Bytes(), 0644); err != nil {
+		t.Fatalf("Failed to write image: %v", err)
+	}
+
+	outputDir := tempDir + "/output"
+	if err := os.MkdirAll(outputDir, 0755); err != nil {
+		t.Fatalf("Failed to create output dir: %v", err)
+	}
+
+	renderer, err := generator.NewTemplateRenderer(os.DirFS("../../pkg/templates/default"))
+	if err != nil {
+		t.Fatalf("Failed to create renderer: %v", err)
+	}
+
+	root, err := utilities.OpenAssetsDir("", postsDir)
+	if err != nil {
+		t.Fatalf("OpenAssetsDir() error = %v", err)
+	}
+	if root == nil {
+		t.Fatal("OpenAssetsDir() returned nil root for an existing directory")
+	}
+	defer func() { _ = root.Close() }()
+
+	opts := []config.GeneratorOption{config.WithAssetsDir(root.FS()).AsGeneratorOption()}
+	handler := outputter.NewDirectoryWriter(outputDir, opts...)
+
+	if err := runGenerate(context.Background(), os.DirFS(postsDir), renderer, opts, handler); err != nil {
+		t.Fatalf("runGenerate() error = %v, want nil", err)
+	}
+
+	postContent, err := os.ReadFile(outputDir + "/posts/image-post.html")
+	if err != nil {
+		t.Fatalf("Failed to read generated post: %v", err)
+	}
+
+	postHTML := string(postContent)
+	for _, want := range []string{
+		`<img src="/images/diagram.png" alt="A diagram" width="640" height="480" loading="lazy" decoding="async" />`,
+		`<img src="/images/diagram.png" alt="" width="640" height="480" loading="lazy" decoding="async" />`,
+	} {
+		if !strings.Contains(postHTML, want) {
+			t.Errorf("generated post does not contain %q, got:\n%s", want, postHTML)
+		}
+	}
+
+	if _, err := os.Stat(outputDir + "/images/diagram.png"); err != nil {
+		t.Errorf("image was not copied into the output directory: %v", err)
+	}
 }

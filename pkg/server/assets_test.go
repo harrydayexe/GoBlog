@@ -5,12 +5,16 @@
 package server_test
 
 import (
+	"bytes"
+	"image"
+	"image/png"
 	"io"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"testing/fstest"
 
@@ -170,5 +174,49 @@ func TestAssets_NoRouteWhenDisabled(t *testing.T) {
 				t.Errorf("status %d, want 404", w.Code)
 			}
 		})
+	}
+}
+
+// TestAssets_DimensionsReachParser verifies that the assets filesystem given
+// to the server is also used by the parser to measure images, so served posts
+// carry width and height attributes.
+func TestAssets_DimensionsReachParser(t *testing.T) {
+	t.Parallel()
+
+	var buf bytes.Buffer
+	if err := png.Encode(&buf, image.NewRGBA(image.Rect(0, 0, 800, 600))); err != nil {
+		t.Fatalf("failed to encode png: %v", err)
+	}
+
+	posts := fstest.MapFS{
+		"image-post.md": {Data: []byte(strings.TrimSpace(`
+---
+title: Image Post
+description: A post with an image
+date: 2024-01-01
+---
+
+![A diagram](pipeline.png)
+		`))},
+	}
+	cfg := config.ServerConfig{
+		Server: []config.BaseServerOption{
+			config.WithAssetsDir(fstest.MapFS{"pipeline.png": {Data: buf.Bytes()}}).AsServerOption(),
+		},
+	}
+
+	srv, err := server.New(slog.New(slog.DiscardHandler), posts, cfg)
+	if err != nil {
+		t.Fatalf("failed to create server: %v", err)
+	}
+
+	w := get(srv, "/posts/image-post")
+	if w.Code != http.StatusOK {
+		t.Fatalf("GET /posts/image-post status = %d, want %d", w.Code, http.StatusOK)
+	}
+
+	want := `<img src="/images/pipeline.png" alt="A diagram" width="800" height="600" loading="lazy" decoding="async" />`
+	if body := w.Body.String(); !strings.Contains(body, want) {
+		t.Errorf("expected body to contain %q, got:\n%s", want, body)
 	}
 }

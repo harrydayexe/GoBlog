@@ -21,42 +21,34 @@ import (
 //     [[#Heading Text|Custom Label]]
 //   - image embeds written as ![[foo.png]] or ![[foo.png|Alt text]]
 //
-// Parsing and rendering are provided by go.abhg.dev/goldmark/wikilink. Links
-// are not validated against the document's headings or the assets directory:
-// like a standard [text](#anchor) link, a link to a missing heading or image
-// renders without error.
-type wikilinkExtender struct {
-	blogRoot string
-}
+// Parsing is provided by go.abhg.dev/goldmark/wikilink, as is rendering of
+// everything but image embeds, which are rendered as markdown images instead
+// (see replaceImageEmbeds). Links are not validated against the document's
+// headings or the assets directory: like a standard [text](#anchor) link, a
+// link to a missing heading or image renders without error.
+type wikilinkExtender struct{}
 
-// Extend registers the wikilink extension with a resolver for heading anchors
-// and image embeds, and a transformer that drops the leading '#' from default
-// link labels.
+// Extend registers the wikilink extension with a resolver for heading anchors,
+// and a transformer that drops the leading '#' from default link labels. Image
+// embeds are handled by imageTransformer rather than the resolver.
 func (e wikilinkExtender) Extend(m goldmark.Markdown) {
-	(&wikilink.Extender{Resolver: wikilinkResolver(e)}).Extend(m)
+	(&wikilink.Extender{Resolver: wikilinkResolver{}}).Extend(m)
 	m.Parser().AddOptions(parser.WithASTTransformers(
 		util.Prioritized(headingLabelTransformer{}, 999),
 	))
 }
 
-// wikilinkResolver resolves [[#Heading Text]] to "#heading-text", and
-// ![[foo.png]] to "{blogRoot}images/foo.png" using the same rules as standard
-// markdown images (see assetURL).
+// wikilinkResolver resolves [[#Heading Text]] to "#heading-text".
+//
+// Image embeds, ![[foo.png]], never reach the resolver: imageTransformer has
+// already replaced them with markdown image nodes (see replaceImageEmbeds).
 //
 // Wikilinks to other pages, such as [[other-post]] or [[other-post#heading]],
 // and embeds of non-image files, such as ![[notes.txt]], are not supported and
 // resolve to nil, which renders only their label text.
-type wikilinkResolver struct {
-	blogRoot string
-}
+type wikilinkResolver struct{}
 
 func (r wikilinkResolver) ResolveWikilink(n *wikilink.Node) ([]byte, error) {
-	if n.Embed && isImageTarget(n.Target) {
-		if dest, ok := assetURL(r.blogRoot, string(n.Target)); ok {
-			return []byte(dest), nil
-		}
-		return n.Target, nil
-	}
 	heading, ok := linkedHeading(n)
 	if !ok {
 		return nil, nil
@@ -66,7 +58,8 @@ func (r wikilinkResolver) ResolveWikilink(n *wikilink.Node) ([]byte, error) {
 
 // isImageTarget reports whether target has an extension that the wikilink
 // renderer emits as an <img> tag when embedded. The list must match the
-// renderer's, otherwise a resolved non-image embed would render as a link.
+// renderer's, otherwise an embed we do not take over would still be rendered
+// by the extension, without alt text or dimensions.
 func isImageTarget(target []byte) bool {
 	switch filepath.Ext(string(target)) {
 	case ".apng", ".avif", ".gif", ".jpg", ".jpeg", ".jfif", ".pjpeg", ".pjp", ".png", ".svg", ".webp":
