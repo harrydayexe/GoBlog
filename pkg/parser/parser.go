@@ -32,7 +32,6 @@ type Parser struct {
 	md     goldmark.Markdown
 	config *Config
 	goblogconfig.Logger
-	goblogconfig.AssetsDir
 }
 
 // New creates a new Parser with the specified options.
@@ -70,8 +69,6 @@ func NewWithConfig(config *Config) *Parser {
 		p.Logger.Logger = slog.Default()
 	}
 
-	p.AssetsDir.FS = config.AssetsDir
-
 	var extensions []goldmark.Extender = []goldmark.Extender{
 		&frontmatter.Extender{},
 		wikilinkExtender{},
@@ -98,7 +95,7 @@ func NewWithConfig(config *Config) *Parser {
 				imageTransformer{
 					blogRoot: config.BlogRoot,
 					logger:   p.Logger.Logger,
-					measurer: &imageMeasurer{fsys: p.AssetsDir.FS, logger: p.Logger.Logger},
+					measurer: &imageMeasurer{fsys: config.AssetsDir, logger: p.Logger.Logger},
 				}, 999,
 			)),
 		),
