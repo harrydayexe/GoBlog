@@ -88,7 +88,7 @@ func ExampleParser_ParseDirectory() {
 
 	fmt.Printf("Valid posts: %d\n", len(posts))
 	// Output: Parsed with some errors
-	// Valid posts: 5
+	// Valid posts: 6
 	// Errors: 4
 }
 

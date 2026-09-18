@@ -224,6 +224,34 @@ Custom templates can read the same values from the page data: `{{.CanonicalURL}}
 
 Full API documentation, including all config options and template data types, is at [pkg.go.dev/github.com/harrydayexe/GoBlog/v2](https://pkg.go.dev/github.com/harrydayexe/GoBlog/v2).
 
+## Front matter
+
+Each post starts with a YAML front matter block:
+
+```yaml
+---
+title: "Getting Started"
+metaTitle: "Getting Started with GoBlog: A Static Blog Generator in Go"
+date: 2026-09-17T10:00:00Z
+description: "How to turn a directory of Markdown files into a blog."
+tags: [go, tutorial]
+author: "Jane Doe"
+lastEdited: 2026-09-18T09:00:00Z
+---
+```
+
+| Field | Required | Purpose |
+|---|---|---|
+| `title` | yes | Display title: the post heading and the text on post cards |
+| `date` | yes | Publication date, used for ordering and article metadata |
+| `description` | yes | Meta description, also shown on post cards |
+| `metaTitle` | no | Title for the `<title>` element and title-based meta tags; falls back to `title` |
+| `tags` | no | Tags the post is listed under |
+| `author` | no | Post author |
+| `lastEdited` | no | Date the post was revised after publication; must not be before `date` |
+
+`metaTitle` exists because the two jobs `title` does have different constraints: a heading can be short and rely on page context, while the `<title>` wants its keyword near the front and has to fit alongside the ` | {{.SiteTitle}}` suffix. Setting it changes the `<title>`, `og:title`, and JSON-LD headline only — the heading, post cards, and feed items keep `title`.
+
 ## Heading anchor links
 
 Headings get auto-generated ids (`## Future Work` → `id="future-work"`). Besides standard `[text](#future-work)` links, posts can link to a heading in the same post with wikilink syntax:

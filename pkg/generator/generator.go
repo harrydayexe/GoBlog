@@ -341,7 +341,7 @@ func (g *Generator) assembleBlogWithTemplates(ctx context.Context, posts models.
 		data := models.PostPageData{
 			BaseData: models.BaseData{
 				SiteTitle:    g.SiteTitle.SiteTitle,
-				PageTitle:    post.Title,
+				PageTitle:    post.ResolvedMetaTitle(),
 				Description:  post.Description,
 				Year:         time.Now().Year(),
 				BlogRoot:     string(g.BlogRoot),

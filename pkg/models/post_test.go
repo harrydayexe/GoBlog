@@ -333,6 +333,27 @@ func TestPost_HasLastEdited(t *testing.T) {
 	})
 }
 
+// TestPost_ResolvedMetaTitle tests the meta title fallback to the display title
+func TestPost_ResolvedMetaTitle(t *testing.T) {
+	t.Parallel()
+
+	t.Run("MetaTitle set is preferred", func(t *testing.T) {
+		t.Parallel()
+		post := Post{Title: "Getting Started", MetaTitle: "Getting Started with GoBlog"}
+		if got := post.ResolvedMetaTitle(); got != "Getting Started with GoBlog" {
+			t.Errorf("ResolvedMetaTitle() = %q, want %q", got, "Getting Started with GoBlog")
+		}
+	})
+
+	t.Run("empty MetaTitle falls back to Title", func(t *testing.T) {
+		t.Parallel()
+		post := Post{Title: "Getting Started"}
+		if got := post.ResolvedMetaTitle(); got != "Getting Started" {
+			t.Errorf("ResolvedMetaTitle() = %q, want %q", got, "Getting Started")
+		}
+	})
+}
+
 // TestPost_FormattedLastEdited tests last-edited date formatting
 func TestPost_FormattedLastEdited(t *testing.T) {
 	t.Parallel()

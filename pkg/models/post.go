@@ -16,7 +16,14 @@ import (
 // Post represents a blog post with metadata and content
 type Post struct {
 	// Frontmatter fields
-	Title       string    `yaml:"title"`
+
+	// Title is the post's display title, rendered as the page heading and in
+	// listings.
+	Title string `yaml:"title"`
+	// MetaTitle is an optional alternative title used for the HTML <title>
+	// element and title-based meta tags. It is optional; when not declared in
+	// the front matter Title is used instead.
+	MetaTitle   string    `yaml:"metaTitle"`
 	Date        time.Time `yaml:"date"`
 	Description string    `yaml:"description"`
 	Tags        []string  `yaml:"tags"`
@@ -124,6 +131,15 @@ func slugify(s string) string {
 	slug = strings.Trim(slug, "-")
 
 	return slug
+}
+
+// ResolvedMetaTitle returns the title to use for the HTML <title> element
+// and title-based meta tags: MetaTitle when set, otherwise Title.
+func (p *Post) ResolvedMetaTitle() string {
+	if p.MetaTitle != "" {
+		return p.MetaTitle
+	}
+	return p.Title
 }
 
 // HasTag checks if the post has a specific tag.

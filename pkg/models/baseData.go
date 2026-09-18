@@ -10,6 +10,10 @@ type BaseData struct {
 	// PageTitle is the title for this specific page.
 	// Used in <title> tag and may be shown in header.
 	// Example: "How to Use Go Templates"
+	//
+	// On post pages the Generator sets it from Post.ResolvedMetaTitle, so a
+	// post declaring metaTitle in its front matter gets that title here while
+	// Post.Title still drives the page heading and post cards.
 	PageTitle string
 
 	// Description is the meta description for SEO.

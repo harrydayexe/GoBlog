@@ -1,5 +1,6 @@
 ---
 title: Getting Started with Go
+metaTitle: "Getting Started with Go: A Beginner Tutorial"
 date: 2026-01-15T10:00:00Z
 description: A beginner's guide to getting started with the Go programming language
 tags:
