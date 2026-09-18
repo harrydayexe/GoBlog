@@ -197,15 +197,33 @@ func TestBuildSitemap_URLSet(t *testing.T) {
 			},
 		},
 		{
+			// The index and tags index are directory indexes, so their .html
+			// URLs name the files that are actually written rather than
+			// "/index" and "/tags" with the extension tacked on.
 			name: "html paths",
 			opts: []config.GeneratorOption{config.WithHTMLPaths()},
 			want: []string{
 				"https://example.com/index.html",
 				"https://example.com/posts/newer.html",
 				"https://example.com/posts/older.html",
-				"https://example.com/tags.html",
+				"https://example.com/tags/index.html",
 				"https://example.com/tags/go.html",
 				"https://example.com/tags/testing.html",
+			},
+		},
+		{
+			name: "html paths under a blog root",
+			opts: []config.GeneratorOption{
+				config.WithHTMLPaths(),
+				config.WithBlogRoot("/blog/").AsGeneratorOption(),
+			},
+			want: []string{
+				"https://example.com/blog/index.html",
+				"https://example.com/blog/posts/newer.html",
+				"https://example.com/blog/posts/older.html",
+				"https://example.com/blog/tags/index.html",
+				"https://example.com/blog/tags/go.html",
+				"https://example.com/blog/tags/testing.html",
 			},
 		},
 		{
@@ -451,6 +469,9 @@ func TestGenerate_SitemapDisabled(t *testing.T) {
 	// robots.txt is still produced, just without a Sitemap: line.
 	if len(blog.RobotsTxt) == 0 {
 		t.Error("expected robots.txt to survive WithDisableSitemap")
+	}
+	if strings.Contains(string(blog.RobotsTxt), "Sitemap:") {
+		t.Errorf("robots.txt advertises a sitemap that was not generated:\n%s", blog.RobotsTxt)
 	}
 }
 

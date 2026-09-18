@@ -266,8 +266,17 @@ func TestGenerate_CanonicalURLInTemplateData(t *testing.T) {
 			blogRoot:      "/",
 			htmlPaths:     true,
 			wantIndex:     "https://example.com/index.html",
-			wantTagsIndex: "https://example.com/tags.html",
+			wantTagsIndex: "https://example.com/tags/index.html",
 			wantPostFmt:   func(slug string) string { return "https://example.com/posts/" + slug + ".html" },
+		},
+		{
+			name:          "html paths under a sub-path blog root",
+			baseURL:       "https://example.com",
+			blogRoot:      "/blog/",
+			htmlPaths:     true,
+			wantIndex:     "https://example.com/blog/index.html",
+			wantTagsIndex: "https://example.com/blog/tags/index.html",
+			wantPostFmt:   func(slug string) string { return "https://example.com/blog/posts/" + slug + ".html" },
 		},
 	}
 

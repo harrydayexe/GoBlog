@@ -82,9 +82,10 @@
 // server path.
 //
 // WithHTMLPaths() is a GeneratorOption that switches BaseData.Path values to
-// use .html file extensions instead of clean URLs. When enabled, the index
-// path becomes /index.html (or /<root>.html for a non-root BlogRoot), and all
-// other pages get .html appended. This is automatically applied by the goblog
+// use .html file extensions instead of clean URLs. When enabled, every path
+// names the file written to disk relative to the BlogRoot: the index becomes
+// {BlogRoot}index.html, the tags index {BlogRoot}tags/index.html, and post and
+// tag pages get .html appended. This is automatically applied by the goblog
 // generate CLI so canonical URLs in static output match the actual files on
 // disk. Library users serving via pkg/server should leave this off; the server
 // accepts both clean URLs and .html URLs automatically.
@@ -108,8 +109,8 @@
 //
 // WithRobotsTxt(body string) is a GeneratorOption that replaces GoBlog's
 // default "User-agent: * / Allow: /" rule block with the supplied body. The
-// "Sitemap:" line is still appended automatically, so the body must not
-// contain one. The option takes a plain string rather than a filesystem; the
+// "Sitemap:" line is still appended automatically whenever a sitemap was
+// produced, so the body must not contain one. The option takes a plain string rather than a filesystem; the
 // goblog CLI reads --robots-file from disk and passes the contents through.
 // It has no effect when WithDisableRobotsTxt() is also applied.
 //

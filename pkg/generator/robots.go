@@ -18,10 +18,13 @@ const defaultRobotsRules = "User-agent: *\nAllow: /"
 // supplied via config.WithRobotsTxt when set — a custom body replaces the
 // rules wholesale rather than being appended to them.
 //
-// A "Sitemap:" line naming the absolute sitemap URL is always appended after
-// the rules, so the file stays valid wherever it is deployed. It is omitted
-// only when config.WithDisableSitemap() was applied.
-func (g *Generator) buildRobotsTxt() []byte {
+// A "Sitemap:" line naming the absolute sitemap URL is appended after the
+// rules, so the file stays valid wherever it is deployed. It is emitted only
+// when a sitemap was actually produced, which hasSitemap reports: advertising
+// a sitemap that is neither written nor served — because
+// config.WithDisableSitemap() was applied, or because the blog has no posts —
+// would point crawlers at a 404.
+func (g *Generator) buildRobotsTxt(hasSitemap bool) []byte {
 	rules := defaultRobotsRules
 	if g.RobotsTxt.Body != "" {
 		rules = g.RobotsTxt.Body
@@ -31,7 +34,7 @@ func (g *Generator) buildRobotsTxt() []byte {
 	b.WriteString(strings.TrimRight(rules, "\n"))
 	b.WriteString("\n")
 
-	if !g.DisableSitemap.Disable {
+	if hasSitemap {
 		b.WriteString("\nSitemap: ")
 		b.WriteString(g.canonicalURL(g.sitemapPath()))
 		b.WriteString("\n")

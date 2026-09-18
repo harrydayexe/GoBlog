@@ -240,9 +240,11 @@ func (o Environment) AsOption() GeneratorOption {
 // HTMLPaths is a configuration type that controls whether BaseData.Path values
 // are emitted with a .html file extension.
 //
-// When Enable is true:
-//   - Index page path becomes /index.html (BlogRoot "/") or /<root>.html (other roots)
-//   - Post, tag, and tags-index paths have .html appended
+// When Enable is true every path names the file that is written to disk,
+// relative to the BlogRoot:
+//   - Index page path becomes {BlogRoot}index.html
+//   - Tags index page path becomes {BlogRoot}tags/index.html
+//   - Post and tag paths have .html appended
 //
 // This type is typically embedded in generator configuration structs and should
 // be set using the WithHTMLPaths() option function.
@@ -260,10 +262,10 @@ type HTMLPaths struct{ Enable bool }
 // Path values with this option enabled:
 //
 //	BlogRoot = "/"            BlogRoot = "/blog/"
-//	Index:   /index.html      /blog.html
+//	Index:   /index.html      /blog/index.html
 //	Post:    /posts/slug.html  /blog/posts/slug.html
 //	Tag:     /tags/go.html    /blog/tags/go.html
-//	TagsIdx: /tags.html       /blog/tags.html
+//	TagsIdx: /tags/index.html /blog/tags/index.html
 //
 // Example usage:
 //
@@ -596,8 +598,8 @@ func (o DisableRobotsTxt) AsOption() GeneratorOption {
 //
 // The body replaces GoBlog's default "User-agent: * / Allow: /" rules
 // wholesale. The "Sitemap:" line is appended automatically after the body and
-// must not be included in it; it is omitted only when [WithDisableSitemap] is
-// applied.
+// must not be included in it; it is omitted whenever no sitemap was produced,
+// i.e. when [WithDisableSitemap] is applied or the blog has no posts.
 //
 // An empty Body means the default rules are used.
 //
@@ -611,8 +613,8 @@ type RobotsTxt struct{ Body string }
 // The body is emitted verbatim (with trailing whitespace trimmed), followed by
 // a blank line and the automatically generated "Sitemap:" line pointing at the
 // absolute sitemap URL. Do not include a "Sitemap:" line in the body — it
-// would be duplicated. When [WithDisableSitemap] is applied, no "Sitemap:"
-// line is appended.
+// would be duplicated. No "Sitemap:" line is appended when no sitemap was
+// produced, i.e. when [WithDisableSitemap] is applied or the blog has no posts.
 //
 // A body is passed as a plain string rather than a filesystem: the goblog CLI
 // reads the file named by --robots-file and passes its contents through.

@@ -40,7 +40,7 @@ These flags apply to both `generate` and `serve` and may be passed before or aft
 | `--assets-dir` | | `<posts>/images` | Directory of images, served at `{root-path}images/` and copied to `<output>/images/`. Ignored if it does not exist |
 | `--disable-sitemap` | | `false` | Disable `sitemap.xml` generation |
 | `--disable-robots` | | `false` | Disable `robots.txt` generation |
-| `--robots-file` | | _(none)_ | Path to a custom `robots.txt` whose contents replace the default rules. The `Sitemap:` line is still appended. Cannot be combined with `--disable-robots` |
+| `--robots-file` | | _(none)_ | Path to a custom `robots.txt` whose contents replace the default rules. The `Sitemap:` line is still appended when a sitemap is generated. Cannot be combined with `--disable-robots` |
 
 `--base-url` also enables `sitemap.xml` and `robots.txt`. With `generate`, both are written to the top of the output directory; when `--root-path` is not `/`, move `robots.txt` to your domain root on deploy, since crawlers only read `/robots.txt`.
 

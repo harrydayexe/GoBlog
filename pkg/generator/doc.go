@@ -113,12 +113,11 @@
 //   - Tags index page: /tags
 //
 // When [config.WithHTMLPaths] is applied (automatically set by the goblog
-// generate CLI), paths include the .html extension to match the files written
-// to disk:
-//   - Index page:      /index.html  (or /blog.html when BlogRoot = "/blog/")
+// generate CLI), each path names the file written to disk:
+//   - Index page:      /index.html  (or /blog/index.html when BlogRoot = "/blog/")
 //   - Post page:       /posts/<slug>.html
 //   - Tag page:        /tags/<tag>.html
-//   - Tags index page: /tags.html
+//   - Tags index page: /tags/index.html
 //
 // The pkg/server package accepts both clean URLs and .html URLs via its
 // built-in StripHTMLExtension middleware, so the server always uses clean-URL
@@ -186,7 +185,7 @@
 // applied, under [config.WithRawOutput], or when the blog has no posts.
 // RobotsTxt is nil when no base URL is set, when [config.WithDisableRobotsTxt]
 // is applied, or under [config.WithRawOutput]; its "Sitemap:" line is dropped
-// when the sitemap is disabled.
+// whenever no sitemap was produced, so it never points at a missing file.
 //
 // # Output
 //

@@ -7,14 +7,18 @@ package outputter
 import (
 	"bytes"
 	"context"
+	"encoding/xml"
 	"log/slog"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"testing/fstest"
 
 	"github.com/harrydayexe/GoBlog/v2/pkg/config"
 	"github.com/harrydayexe/GoBlog/v2/pkg/generator"
+	"github.com/harrydayexe/GoBlog/v2/pkg/templates"
 )
 
 var (
@@ -124,6 +128,82 @@ func TestDirectoryWriter_RobotsSubdirectoryWarning(t *testing.T) {
 				t.Errorf("robots.txt relocation warning logged = %v, want %v\nlogs:\n%s", gotWarn, tt.wantWarn, buf.String())
 			}
 		})
+	}
+}
+
+// sitemapTestPost is a tagged post used to generate a real blog end to end.
+const sitemapTestPost = `---
+title: "Hello World"
+date: 2024-06-01T09:30:00Z
+description: "A simple post"
+tags: ["go", "testing"]
+---
+# Hello
+
+This is content.
+`
+
+// TestDirectoryWriter_SitemapURLsResolveToWrittenFiles is the end-to-end guard
+// that the sitemap never advertises a URL with no file behind it: it generates
+// a blog the way `goblog generate` does (HTML paths on, here under a sub-path
+// blog root), writes it out, and resolves every <loc> back to a file on disk.
+func TestDirectoryWriter_SitemapURLsResolveToWrittenFiles(t *testing.T) {
+	t.Parallel()
+
+	renderer, err := generator.NewTemplateRenderer(templates.Default)
+	if err != nil {
+		t.Fatalf("NewTemplateRenderer: %v", err)
+	}
+
+	const blogRoot = "/blog/"
+	postsFS := fstest.MapFS{"hello.md": &fstest.MapFile{Data: []byte(sitemapTestPost)}}
+	opts := []config.GeneratorOption{
+		config.WithBaseURL("https://example.com"),
+		config.WithHTMLPaths(),
+		config.WithBlogRoot(blogRoot).AsGeneratorOption(),
+	}
+
+	blog, err := generator.New(postsFS, renderer, opts...).Generate(context.Background())
+	if err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+	if len(blog.Sitemap) == 0 {
+		t.Fatal("expected a sitemap")
+	}
+
+	outputDir := t.TempDir()
+	if err := NewDirectoryWriter(outputDir, opts...).HandleGeneratedBlog(context.Background(), blog); err != nil {
+		t.Fatalf("HandleGeneratedBlog failed: %v", err)
+	}
+
+	var doc struct {
+		URLs []struct {
+			Loc string `xml:"loc"`
+		} `xml:"url"`
+	}
+	if err := xml.Unmarshal(blog.Sitemap, &doc); err != nil {
+		t.Fatalf("sitemap is not valid XML: %v\n%s", err, blog.Sitemap)
+	}
+	if len(doc.URLs) == 0 {
+		t.Fatal("sitemap contains no URLs")
+	}
+
+	// The output tree is flat: the output directory is the deployed blog root,
+	// so a URL's path below the blog root is its path below outputDir.
+	for _, u := range doc.URLs {
+		parsed, err := url.Parse(u.Loc)
+		if err != nil {
+			t.Errorf("sitemap URL %q is not a valid URL: %v", u.Loc, err)
+			continue
+		}
+		rel, ok := strings.CutPrefix(parsed.Path, blogRoot)
+		if !ok {
+			t.Errorf("sitemap URL %q is outside the blog root %q", u.Loc, blogRoot)
+			continue
+		}
+		if _, err := os.Stat(filepath.Join(outputDir, filepath.FromSlash(rel))); err != nil {
+			t.Errorf("sitemap URL %q has no file in the output tree: %v", u.Loc, err)
+		}
 	}
 }
 

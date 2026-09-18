@@ -225,32 +225,38 @@ func (g *Generator) DebugConfig(ctx context.Context) {
 func (g *Generator) pagePath(kind, name string) string {
 	root := string(g.BlogRoot)
 
-	var base string
+	if g.HTMLPaths.Enable {
+		// Every path names the file the outputter actually writes, relative to
+		// the blog root: index.html, posts/<slug>.html, tags/<tag>.html and
+		// tags/index.html. The index and tags index are directory indexes, so
+		// they must not be spelled "<root>.html" or "<root>tags.html" — no such
+		// file is ever emitted and both would 404 for anything following the
+		// canonical URL or the sitemap.
+		switch kind {
+		case "index":
+			return root + "index.html"
+		case "post":
+			return root + "posts/" + name + ".html"
+		case "tag":
+			return root + "tags/" + name + ".html"
+		case "tagsIndex":
+			return root + "tags/index.html"
+		}
+		return root
+	}
+
+	// Clean-URL default: the paths pkg/server routes.
 	switch kind {
 	case "index":
-		if root == "/" {
-			base = "/index"
-		} else {
-			// "/blog/" → "/blog"
-			base = strings.TrimSuffix(root, "/")
-		}
-	case "post":
-		base = root + "posts/" + name
-	case "tag":
-		base = root + "tags/" + name
-	case "tagsIndex":
-		base = root + "tags"
-	}
-
-	if g.HTMLPaths.Enable {
-		return base + ".html"
-	}
-
-	// Clean-URL default: return the base as-is except for the index.
-	if kind == "index" {
 		return root // "/" or "/blog/"
+	case "post":
+		return root + "posts/" + name
+	case "tag":
+		return root + "tags/" + name
+	case "tagsIndex":
+		return root + "tags"
 	}
-	return base
+	return root
 }
 
 // canonicalURL returns the fully-qualified URL for a site-relative page path.
@@ -510,8 +516,11 @@ func (g *Generator) assembleBlogWithTemplates(ctx context.Context, posts models.
 		blog.Sitemap = sitemap
 	}
 
+	// robots.txt is built after the sitemap so it can advertise one only when
+	// a sitemap was actually produced: buildSitemap returns nothing for an
+	// empty post list, and nothing is written or served in that case.
 	if robotsEnabled {
-		blog.RobotsTxt = g.buildRobotsTxt()
+		blog.RobotsTxt = g.buildRobotsTxt(len(blog.Sitemap) > 0)
 	}
 
 	return blog, nil

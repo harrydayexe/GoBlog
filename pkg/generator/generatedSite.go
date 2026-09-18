@@ -69,7 +69,8 @@ package generator
 //     index, and every tag page. Tag URLs are omitted under
 //     config.WithDisableTags().
 //   - RobotsTxt: robots.txt bytes, holding GoBlog's default rule block (or the
-//     body from config.WithRobotsTxt) followed by an absolute "Sitemap:" line.
+//     body from config.WithRobotsTxt) followed by an absolute "Sitemap:" line
+//     whenever a sitemap was produced.
 //
 // Sitemap is nil when:
 //   - No base URL is configured (the sitemap is silently skipped)
@@ -82,8 +83,9 @@ package generator
 //   - config.WithDisableRobotsTxt() was applied
 //   - config.WithRawOutput() was applied
 //
-// The "Sitemap:" line is dropped from RobotsTxt when
-// config.WithDisableSitemap() was applied.
+// The "Sitemap:" line is dropped from RobotsTxt whenever Sitemap is nil — by
+// config.WithDisableSitemap(), or because the blog has no posts — so robots.txt
+// never advertises a sitemap that is neither written nor served.
 type GeneratedBlog struct {
 	Posts     map[string][]byte // Posts maps a slug to raw HTML bytes for each post
 	Index     []byte            // Index contains the raw HTML for the blog index page
