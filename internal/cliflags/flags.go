@@ -38,6 +38,16 @@ const FeedLimitFlagName = "feed-limit"
 // served and copied from.
 const AssetsDirFlagName = "assets-dir"
 
+// DisableSitemapFlagName is the CLI flag name for disabling sitemap.xml generation.
+const DisableSitemapFlagName = "disable-sitemap"
+
+// DisableRobotsFlagName is the CLI flag name for disabling robots.txt generation.
+const DisableRobotsFlagName = "disable-robots"
+
+// RobotsFileFlagName is the CLI flag name for supplying a custom robots.txt
+// whose contents replace GoBlog's default rules.
+const RobotsFileFlagName = "robots-file"
+
 // Shared returns the CLI flag definitions that apply to both the generate and
 // serve subcommands. They are registered on the top-level goblog command so that
 // urfave/cli v3's default persistence makes them available in both subcommand
@@ -83,6 +93,20 @@ func Shared() []cli.Flag {
 		&cli.StringFlag{
 			Name:  AssetsDirFlagName,
 			Usage: "directory of images served at {root-path}images/ and copied to <output>/images/; defaults to '<posts>/images', ignored if missing",
+		},
+		&cli.BoolFlag{
+			Name:  DisableSitemapFlagName,
+			Usage: "disable sitemap.xml generation",
+			Value: false,
+		},
+		&cli.BoolFlag{
+			Name:  DisableRobotsFlagName,
+			Usage: "disable robots.txt generation",
+			Value: false,
+		},
+		&cli.StringFlag{
+			Name:  RobotsFileFlagName,
+			Usage: "path to a custom robots.txt whose contents replace the default rules; cannot be combined with --" + DisableRobotsFlagName,
 		},
 	}
 }

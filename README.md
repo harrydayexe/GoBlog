@@ -38,6 +38,11 @@ These flags apply to both `generate` and `serve` and may be passed before or aft
 | `--disable-feeds` | | `false` | Disable RSS and Atom feed generation |
 | `--feed-limit` | | `10` | Maximum number of posts to include in each feed (`0` = unlimited) |
 | `--assets-dir` | | `<posts>/images` | Directory of images, served at `{root-path}images/` and copied to `<output>/images/`. Ignored if it does not exist |
+| `--disable-sitemap` | | `false` | Disable `sitemap.xml` generation |
+| `--disable-robots` | | `false` | Disable `robots.txt` generation |
+| `--robots-file` | | _(none)_ | Path to a custom `robots.txt` whose contents replace the default rules. The `Sitemap:` line is still appended when a sitemap is generated. Cannot be combined with `--disable-robots` |
+
+`--base-url` also enables `sitemap.xml` and `robots.txt`. With `generate`, both are written to the top of the output directory; when `--root-path` is not `/`, move `robots.txt` to your domain root on deploy, since crawlers only read `/robots.txt`.
 
 ### `generate` flags
 
@@ -47,7 +52,7 @@ These flags apply to both `generate` and `serve` and may be passed before or aft
 
 ### `serve` flags
 
-When `--base-url` is set, the server also exposes the generated feeds at `{root-path}rss.xml`, `{root-path}atom.xml`, and per-tag feeds at `{root-path}tags/{tag}.rss.xml` / `{root-path}tags/{tag}.atom.xml`.
+When `--base-url` is set, the server also exposes the generated feeds at `{root-path}rss.xml`, `{root-path}atom.xml`, and per-tag feeds at `{root-path}tags/{tag}.rss.xml` / `{root-path}tags/{tag}.atom.xml`. The sitemap is served at `{root-path}sitemap.xml`, and `robots.txt` at `/robots.txt` — the origin root, where crawlers look for it, regardless of `--root-path`.
 
 | Flag | Short | Default | Description |
 |---|---|---|---|
@@ -212,6 +217,8 @@ The default templates emit social and search metadata with no template work requ
 - **X/Twitter** — `twitter:card`, which reads its content from the Open Graph tags above.
 
 Canonical URLs need to know the site's domain, so set `--base-url` (or `config.WithBaseURL`). Without it, every URL-bearing tag is omitted rather than emitted empty; the rest of the metadata is unaffected.
+
+Setting a base URL also populates `GeneratedBlog.Sitemap` and `GeneratedBlog.RobotsTxt`, which `pkg/outputter` writes as `sitemap.xml` / `robots.txt` and `pkg/server` serves. Opt out with `config.WithDisableSitemap()` / `config.WithDisableRobotsTxt()`, or replace the default robots rules with `config.WithRobotsTxt(body)`.
 
 Custom templates can read the same values from the page data: `{{.CanonicalURL}}`, `{{.OGType}}`, and `{{with .Article}}` for the post's publish date, author, and tags. `og:image` is not emitted — posts have no image field.
 

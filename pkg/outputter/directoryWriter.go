@@ -31,6 +31,7 @@ type DirectoryWriter struct {
 	config.DisableTags
 	config.Logger
 	config.AssetsDir
+	config.BlogRoot
 	outputDir string
 }
 
@@ -52,6 +53,13 @@ type DirectoryWriter struct {
 //	writer := NewDirectoryWriter("/var/www/blog",
 //	    config.WithAssetsDir(assetsFS).AsGeneratorOption(),
 //	)
+//	writer := NewDirectoryWriter("/var/www/blog",
+//	    config.WithBlogRoot("/blog/").AsGeneratorOption(),
+//	)
+//
+// The blog root does not change where files are written — the output tree is
+// always flat. It is used only to warn that robots.txt will need relocating
+// to the domain root on deploy; see HandleGeneratedBlog.
 //
 // This is the recommended constructor for most use cases.
 func NewDirectoryWriter(outputDir string, opts ...config.GeneratorOption) DirectoryWriter {
@@ -68,6 +76,8 @@ func NewDirectoryWriter(outputDir string, opts ...config.GeneratorOption) Direct
 			opt.WithLoggerFunc(&dw.Logger)
 		} else if opt.WithAssetsDirFunc != nil {
 			opt.WithAssetsDirFunc(&dw.AssetsDir)
+		} else if opt.WithBlogRootFunc != nil {
+			opt.WithBlogRootFunc(&dw.BlogRoot)
 		}
 	}
 
@@ -92,6 +102,8 @@ func NewDirectoryWriter(outputDir string, opts ...config.GeneratorOption) Direct
 //   - atom.xml: site-wide Atom feed (only when the generator produced one)
 //   - tags/{tag}.rss.xml: per-tag RSS 2.0 feed (only when the generator produced them)
 //   - tags/{tag}.atom.xml: per-tag Atom feed (only when the generator produced them)
+//   - sitemap.xml: the sitemap (only when the generator produced one)
+//   - robots.txt: the robots file (only when the generator produced one)
 //   - images/...: a recursive copy of the assets directory (only when
 //     config.WithAssetsDir was supplied and its root is a readable directory)
 //
@@ -114,7 +126,19 @@ func NewDirectoryWriter(outputDir string, opts ...config.GeneratorOption) Direct
 // Feed files are written only when the generator has populated them (i.e. when
 // config.WithBaseURL was set and config.WithDisableFeeds was not applied). The
 // outputter does not need to know about feed configuration — it simply writes
-// whatever the generator produced.
+// whatever the generator produced. sitemap.xml and robots.txt follow the same
+// rule.
+//
+// # robots.txt Placement
+//
+// The output tree is flat and the blog root affects only link URLs, so with a
+// blog root of "/blog/" the output directory *is* the deployed /blog/
+// directory and the domain root is its parent — outside this writer's reach.
+// robots.txt is therefore always written to <outputDir>/robots.txt, and a
+// warning is logged when the blog root is not "/": crawlers only ever fetch
+// /robots.txt at the domain root, so the file must be relocated there on
+// deploy. sitemap.xml has no such problem — a sitemap at a sub-path
+// legitimately covers URLs at or below that sub-path.
 //
 // All necessary directories are created automatically with permissions 0755.
 // Files are written with permissions 0644.
@@ -176,6 +200,27 @@ func (dw DirectoryWriter) HandleGeneratedBlog(ctx context.Context, blog *generat
 		}
 		if err := writeMapToFilesExt(blog.TagAtomFeeds, filepath.Join(dw.outputDir, "tags"), ".atom.xml"); err != nil {
 			return err
+		}
+	}
+
+	// Write the sitemap and robots file when the generator produced them.
+	if len(blog.Sitemap) > 0 {
+		if err := os.WriteFile(filepath.Join(dw.outputDir, "sitemap.xml"), blog.Sitemap, 0644); err != nil {
+			return err
+		}
+	}
+	if len(blog.RobotsTxt) > 0 {
+		if err := os.WriteFile(filepath.Join(dw.outputDir, "robots.txt"), blog.RobotsTxt, 0644); err != nil {
+			return err
+		}
+		// The output tree is flat, so robots.txt lands inside the deployed
+		// blog root rather than at the domain root where crawlers look for it.
+		if root := string(dw.BlogRoot); root != "" && root != "/" {
+			dw.Logger.Logger.WarnContext(ctx,
+				"robots.txt written inside the blog root; crawlers only read /robots.txt at the domain root, so move it there on deploy",
+				slog.String("written", filepath.Join(dw.outputDir, "robots.txt")),
+				slog.String("blogRoot", root),
+			)
 		}
 	}
 
