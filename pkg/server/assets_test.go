@@ -30,13 +30,10 @@ func testAssetsFS() fstest.MapFS {
 	}
 }
 
-func newAssetsServer(t *testing.T, opts ...config.BaseServerOption) *server.Server {
+func newAssetsServer(t *testing.T, opts ...config.ServerOption) *server.Server {
 	t.Helper()
-	cfg := config.ServerConfig{
-		Server: opts,
-		Gen:    []config.GeneratorOption{config.WithRawOutput()},
-	}
-	srv, err := server.New(createTestFS(t), cfg)
+	opts = append(opts, config.WithRawOutput().AsServerOption())
+	srv, err := server.New(createTestFS(t), opts...)
 	if err != nil {
 		t.Fatalf("failed to create server: %v", err)
 	}

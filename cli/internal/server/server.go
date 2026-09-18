@@ -41,46 +41,46 @@ func NewServeCommand(ctx context.Context, c *cli.Command) error {
 		return err
 	}
 
-	cfg := config.ServerConfig{}
-
-	cfg.Gen = append(cfg.Gen, config.WithEnvironment(string(envCfg.Environment)))
+	opts := []config.ServerOption{
+		config.WithEnvironment(string(envCfg.Environment)).AsServerOption(),
+	}
 
 	if c.Bool(cliflags.DisableTagsFlagName) {
-		cfg.Gen = append(cfg.Gen, config.WithDisableTags())
+		opts = append(opts, config.WithDisableTags().AsServerOption())
 	}
 
 	if c.Bool(cliflags.DisableReadingTimeFlagName) {
-		cfg.Gen = append(cfg.Gen, config.WithDisableReadingTime())
+		opts = append(opts, config.WithDisableReadingTime().AsServerOption())
 	}
 
 	if baseURL := c.String(cliflags.BaseURLFlagName); baseURL != "" {
-		cfg.Gen = append(cfg.Gen, config.WithBaseURL(baseURL))
+		opts = append(opts, config.WithBaseURL(baseURL).AsServerOption())
 	}
 
 	if c.Bool(cliflags.DisableFeedsFlagName) {
-		cfg.Gen = append(cfg.Gen, config.WithDisableFeeds())
+		opts = append(opts, config.WithDisableFeeds().AsServerOption())
 	}
 
-	cfg.Gen = append(cfg.Gen, config.WithFeedPostLimit(c.Int(cliflags.FeedLimitFlagName)))
+	opts = append(opts, config.WithFeedPostLimit(c.Int(cliflags.FeedLimitFlagName)).AsServerOption())
 
-	cfg.Server = append(cfg.Server, config.WithPort(c.Int(PortFlagName)))
-	cfg.Server = append(cfg.Server, config.WithCacheControl(c.Duration(CacheControlFlagName)))
+	opts = append(opts, config.WithPort(c.Int(PortFlagName)))
+	opts = append(opts, config.WithCacheControl(c.Duration(CacheControlFlagName)))
 
 	if host := c.String(HostFlagName); host != "" {
-		cfg.Server = append(cfg.Server, config.WithHost(host))
+		opts = append(opts, config.WithHost(host))
 	}
 
 	templateDirPath := c.String(cliflags.TemplateDirFlagName)
 	if templateDirPath == "" {
 		slog.Default().DebugContext(ctx, "Using default templates")
-		cfg.TemplateDir = templates.Default
+		opts = append(opts, config.WithTemplateDir(templates.Default))
 	} else {
 		slog.Default().DebugContext(ctx, "Using custom templates")
 		templateDirPath, err = utilities.GetDirectoryFromInput(templateDirPath, false)
 		if err != nil {
 			return err
 		}
-		cfg.TemplateDir = os.DirFS(templateDirPath)
+		opts = append(opts, config.WithTemplateDir(os.DirFS(templateDirPath)))
 	}
 
 	blogRootString := c.String(cliflags.BlogRootFlagName)
@@ -93,11 +93,12 @@ func NewServeCommand(ctx context.Context, c *cli.Command) error {
 		if !strings.HasSuffix(blogRoot, "/") {
 			blogRoot += "/"
 		}
-		cfg.Server = append(cfg.Server, config.WithBlogRoot(blogRoot).AsServerOption())
-		cfg.Gen = append(cfg.Gen, config.WithBlogRoot(blogRoot).AsGeneratorOption())
+		// The server forwards its resolved blog root to the generator, so the
+		// option only needs applying once.
+		opts = append(opts, config.WithBlogRoot(blogRoot).AsServerOption())
 	}
 
-	cfg.Server = append(cfg.Server, config.WithLogger(slog.Default()).AsServerOption())
+	opts = append(opts, config.WithLogger(slog.Default()).AsServerOption())
 
 	assetsRoot, err := utilities.OpenAssetsDir(c.String(cliflags.AssetsDirFlagName), inputPostsDir)
 	if err != nil {
@@ -105,18 +106,18 @@ func NewServeCommand(ctx context.Context, c *cli.Command) error {
 	}
 	if assetsRoot != nil {
 		defer assetsRoot.Close()
-		cfg.Server = append(cfg.Server, config.WithAssetsDir(assetsRoot.FS()).AsServerOption())
+		opts = append(opts, config.WithAssetsDir(assetsRoot.FS()).AsServerOption())
 	}
 
 	if healthChecksEnabled {
-		cfg.Server = append(cfg.Server, config.WithHealthChecks())
+		opts = append(opts, config.WithHealthChecks())
 	}
 
-	return runServe(ctx, inputPostsDir, postsFsys, cfg, c.Bool(WatchFlagName))
+	return runServe(ctx, inputPostsDir, postsFsys, c.Bool(WatchFlagName), opts...)
 }
 
-func runServe(ctx context.Context, postsPath string, posts fs.FS, cfg config.ServerConfig, watch bool) error {
-	srv, err := server.New(posts, cfg)
+func runServe(ctx context.Context, postsPath string, posts fs.FS, watch bool, opts ...config.ServerOption) error {
+	srv, err := server.New(posts, opts...)
 	if err != nil {
 		return err
 	}

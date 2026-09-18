@@ -32,13 +32,10 @@ func TestRun_BindError(t *testing.T) {
 	dir := t.TempDir()
 	writePost(t, dir, "post.md", minimalPost("Hello World"))
 
-	cfg := config.ServerConfig{
-		Server: []config.BaseServerOption{
-			config.WithPort(port),
-			config.WithHost("127.0.0.1"),
-		},
-	}
-	srv, err := server.New(os.DirFS(dir), cfg)
+	srv, err := server.New(os.DirFS(dir),
+		config.WithPort(port),
+		config.WithHost("127.0.0.1"),
+	)
 	if err != nil {
 		t.Fatalf("server.New: %v", err)
 	}
@@ -71,13 +68,10 @@ func TestRun_GracefulShutdown(t *testing.T) {
 	port := listener.Addr().(*net.TCPAddr).Port
 	listener.Close()
 
-	cfg := config.ServerConfig{
-		Server: []config.BaseServerOption{
-			config.WithPort(port),
-			config.WithHost("127.0.0.1"),
-		},
-	}
-	srv, err := server.New(os.DirFS(dir), cfg)
+	srv, err := server.New(os.DirFS(dir),
+		config.WithPort(port),
+		config.WithHost("127.0.0.1"),
+	)
 	if err != nil {
 		t.Fatalf("server.New: %v", err)
 	}

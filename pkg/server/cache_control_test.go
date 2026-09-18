@@ -22,11 +22,7 @@ func TestCacheControl_Default(t *testing.T) {
 
 	postsFS := createTestFS(t)
 
-	cfg := config.ServerConfig{
-		Gen: []config.GeneratorOption{config.WithRawOutput()},
-	}
-
-	srv, err := server.New(postsFS, cfg)
+	srv, err := server.New(postsFS, config.WithRawOutput().AsServerOption())
 	if err != nil {
 		t.Fatalf("failed to create server: %v", err)
 	}
@@ -53,14 +49,10 @@ func TestCacheControl_CustomTTL(t *testing.T) {
 
 	postsFS := createTestFS(t)
 
-	cfg := config.ServerConfig{
-		Server: []config.BaseServerOption{
-			config.WithCacheControl(30 * time.Minute),
-		},
-		Gen: []config.GeneratorOption{config.WithRawOutput()},
-	}
-
-	srv, err := server.New(postsFS, cfg)
+	srv, err := server.New(postsFS,
+		config.WithCacheControl(30*time.Minute),
+		config.WithRawOutput().AsServerOption(),
+	)
 	if err != nil {
 		t.Fatalf("failed to create server: %v", err)
 	}
@@ -83,14 +75,10 @@ func TestCacheControl_ZeroDisablesHeader(t *testing.T) {
 
 	postsFS := createTestFS(t)
 
-	cfg := config.ServerConfig{
-		Server: []config.BaseServerOption{
-			config.WithCacheControl(0),
-		},
-		Gen: []config.GeneratorOption{config.WithRawOutput()},
-	}
-
-	srv, err := server.New(postsFS, cfg)
+	srv, err := server.New(postsFS,
+		config.WithCacheControl(0),
+		config.WithRawOutput().AsServerOption(),
+	)
 	if err != nil {
 		t.Fatalf("failed to create server: %v", err)
 	}
@@ -111,14 +99,10 @@ func TestCacheControl_PersistsAcrossUpdates(t *testing.T) {
 
 	postsFS := createTestFS(t)
 
-	cfg := config.ServerConfig{
-		Server: []config.BaseServerOption{
-			config.WithCacheControl(2 * time.Hour),
-		},
-		Gen: []config.GeneratorOption{config.WithRawOutput()},
-	}
-
-	srv, err := server.New(postsFS, cfg)
+	srv, err := server.New(postsFS,
+		config.WithCacheControl(2*time.Hour),
+		config.WithRawOutput().AsServerOption(),
+	)
 	if err != nil {
 		t.Fatalf("failed to create server: %v", err)
 	}
