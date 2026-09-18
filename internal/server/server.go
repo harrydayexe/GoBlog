@@ -24,13 +24,20 @@ import (
 
 // NewServeCommand handles the serve command by starting an HTTP server from a directory of markdown posts.
 func NewServeCommand(ctx context.Context, c *cli.Command) error {
+	// Validate the sitemap/robots flags first so contradictory or unreadable
+	// values fail before any directories are touched or posts are parsed.
+	robotsOpts, err := utilities.RobotsOptions(c)
+	if err != nil {
+		return err
+	}
+
 	healthChecksEnabled := c.Bool(HealthChecksFlagName)
 
 	inputPostsDir := c.StringArg(InputPostsDirArgName)
 	// When health checks are enabled the posts directory may not exist yet
 	// (e.g. the volume is not mounted). Allow a non-existent path so the server
 	// can start and surface the failure via /healthz/ready rather than exiting.
-	inputPostsDir, err := utilities.GetDirectoryFromInput(inputPostsDir, healthChecksEnabled)
+	inputPostsDir, err = utilities.GetDirectoryFromInput(inputPostsDir, healthChecksEnabled)
 	if err != nil {
 		return err
 	}
@@ -62,6 +69,8 @@ func NewServeCommand(ctx context.Context, c *cli.Command) error {
 	}
 
 	cfg.Gen = append(cfg.Gen, config.WithFeedPostLimit(c.Int(cliflags.FeedLimitFlagName)))
+
+	cfg.Gen = append(cfg.Gen, robotsOpts...)
 
 	cfg.Server = append(cfg.Server, config.WithPort(c.Int(PortFlagName)))
 	cfg.Server = append(cfg.Server, config.WithCacheControl(c.Duration(CacheControlFlagName)))
