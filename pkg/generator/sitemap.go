@@ -100,9 +100,7 @@ func (g *Generator) buildSitemap(posts models.PostList, tags map[string]models.P
 		return nil, fmt.Errorf("marshalling sitemap: %w", err)
 	}
 
-	out := make([]byte, 0, len(xml.Header)+len(doc)+1)
-	out = append(out, xml.Header...)
-	out = append(out, doc...)
+	out := append([]byte(xml.Header), doc...)
 	out = append(out, '\n')
 	return out, nil
 }
