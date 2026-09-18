@@ -11,6 +11,7 @@
 //   - Footnotes
 //   - Auto-generated heading IDs
 //   - Wikilink-style heading anchors
+//   - Images with alt text, intrinsic dimensions and lazy loading
 //   - HTML sanitization
 //
 // # Heading Anchor Links
@@ -34,20 +35,31 @@
 // root-absolute URLs under the blog root (see WithBlogRoot), so they work from
 // a post served at {BlogRoot}posts/{slug}:
 //
-//	![A diagram](images/pipeline.png)  -> <img src="/images/pipeline.png" alt="A diagram" />
-//	![A diagram](pipeline.png)         -> <img src="/images/pipeline.png" alt="A diagram" />
-//	![[pipeline.png|A diagram]]        -> <img src="/images/pipeline.png" alt="A diagram">
-//	![[pipeline.png]]                  -> <img src="/images/pipeline.png">
+//	![A diagram](images/pipeline.png)
+//	![A diagram](pipeline.png)
+//	![[pipeline.png|A diagram]]
 //
-// A bare ![[pipeline.png]] embed has no alt attribute; give it a label with
-// "|" for accessible alt text. Subdirectories are preserved
-// ("screenshots/a.png" becomes "/images/screenshots/a.png"). Absolute URLs,
-// root-relative paths ("/static/x.png") and paths containing ".." are left
-// untouched. Embeds of non-image files, such as ![[notes.txt]], render as
-// their label text.
+// All three render as:
+//
+//	<img src="/images/pipeline.png" alt="A diagram" width="1200" height="800" loading="lazy" decoding="async" />
+//
+// A bare ![[pipeline.png]] renders the same tag with alt="", the correct
+// signal for "no description available"; give it a "|label" when the image
+// carries meaning. Subdirectories are preserved ("screenshots/a.png" becomes
+// "/images/screenshots/a.png"). Absolute URLs, root-relative paths
+// ("/static/x.png") and paths containing ".." are left untouched; they still
+// get loading and decoding, but no dimensions, as there is no local file to
+// measure. Embeds of non-image files, such as ![[notes.txt]], render as their
+// label text.
+//
+// Width and height are the image's intrinsic pixel size, read from the asset
+// file supplied with WithAssetsDir. Both are emitted, or neither: when no
+// assets filesystem is configured, or the file is missing, unreadable, or in a
+// format whose header cannot be decoded (SVG, AVIF and WebP), the image simply
+// renders without them.
 //
 // As with heading links, image paths are not validated: an image missing from
-// the assets directory still renders, without error or warning.
+// the assets directory still renders, without error.
 //
 // Basic usage:
 //
@@ -85,6 +97,9 @@
 //
 //	// Resolve image URLs under a subdirectory deployment
 //	p := parser.New(parser.WithBlogRoot("/blog/"))
+//
+//	// Measure images so they render with width and height
+//	p := parser.New(parser.WithAssetsDir(os.DirFS("posts/images")))
 //
 //	// Combine multiple options
 //	p := parser.New(

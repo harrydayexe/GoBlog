@@ -59,12 +59,15 @@
 // 0 or any non-positive value disables the header. The default is one hour.
 //
 // WithAssetsDir(fsys fs.FS) is a BaseOption that sets the filesystem images
-// are served and copied from. The HTTP server serves its files at
+// are served, copied and measured from. The HTTP server serves its files at
 // {BlogRoot}images/ (server.New via BaseServerOption, server.Handler), and
 // outputter.NewDirectoryWriter (via GeneratorOption) copies it into
-// <outputDir>/images/. When fsys is nil or its root does not exist, asset
-// support is silently off. Prefer os.Root.FS over os.DirFS so symbolic links
-// cannot escape the directory.
+// <outputDir>/images/. The generator (via GeneratorOption) forwards it to the
+// parser, which reads image headers so rendered <img> tags carry their
+// intrinsic width and height; images that cannot be measured simply render
+// without them. When fsys is nil or its root does not exist, asset support is
+// silently off. Prefer os.Root.FS over os.DirFS so symbolic links cannot
+// escape the directory.
 //
 // WithLogger(l *slog.Logger) is a BaseOption that sets the structured logger
 // used by the receiving component. It flows into every constructor that
