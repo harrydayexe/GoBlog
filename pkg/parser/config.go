@@ -4,7 +4,10 @@
 
 package parser
 
-import "log/slog"
+import (
+	"io/fs"
+	"log/slog"
+)
 
 // Config contains all the options for the Parser to use when reading and
 // parsing markdown files.
@@ -25,4 +28,9 @@ type Config struct {
 	// "/blog/". Relative image paths are rewritten to "{BlogRoot}images/...".
 	// An empty BlogRoot is treated as "/".
 	BlogRoot string
+
+	// AssetsDir is the filesystem holding the blog's images. It is read, and
+	// never written, to measure the intrinsic width and height of every image
+	// a post references. When nil, images are rendered without dimensions.
+	AssetsDir fs.FS
 }

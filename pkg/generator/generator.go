@@ -47,6 +47,7 @@ type Generator struct {
 	config.BaseURL
 	config.DisableFeeds
 	config.FeedPostLimit
+	config.AssetsDir
 	ParserConfig parser.Config // The config to use when parsing
 
 	renderer *TemplateRenderer
@@ -86,7 +87,8 @@ func (c Generator) String() string {
 // Optional config.GeneratorOption values control behavior: config.WithRawOutput,
 // config.WithDisableTags, config.WithDisableReadingTime, config.WithSiteTitle,
 // config.WithBlogRoot, config.WithEnvironment, config.WithCustomData,
-// config.WithBaseURL, config.WithDisableFeeds, config.WithFeedPostLimit.
+// config.WithBaseURL, config.WithDisableFeeds, config.WithFeedPostLimit,
+// config.WithAssetsDir.
 // The template renderer is supplied as a positional argument, not an option.
 func New(posts fs.FS, renderer *TemplateRenderer, opts ...config.GeneratorOption) *Generator {
 	gen := Generator{
@@ -121,6 +123,8 @@ func New(posts fs.FS, renderer *TemplateRenderer, opts ...config.GeneratorOption
 			opt.WithFeedPostLimitFunc(&gen.FeedPostLimit)
 		} else if opt.WithLoggerFunc != nil {
 			opt.WithLoggerFunc(&gen.Logger)
+		} else if opt.WithAssetsDirFunc != nil {
+			opt.WithAssetsDirFunc(&gen.AssetsDir)
 		}
 	}
 
@@ -173,6 +177,7 @@ func (g *Generator) Generate(ctx context.Context) (*GeneratedBlog, error) {
 	parserCfg := g.ParserConfig
 	parserCfg.Logger = g.Logger.Logger
 	parserCfg.BlogRoot = string(g.BlogRoot)
+	parserCfg.AssetsDir = g.AssetsDir.FS
 	p := parser.NewWithConfig(&parserCfg)
 
 	posts, err := p.ParseDirectory(ctx, g.PostsDir)
