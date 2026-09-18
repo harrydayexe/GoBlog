@@ -31,16 +31,6 @@ type GeneratorOption struct {
 	WithFeedPostLimitFunc      func(v *FeedPostLimit)
 }
 
-// WithBaseOption wraps a BaseOption as a GeneratorOption so it can be passed
-// to generator constructors that accept GeneratorOption values.
-//
-// Deprecated: call [BaseOption.AsGeneratorOption] directly instead.
-func WithBaseOption(baseOption BaseOption) GeneratorOption {
-	return GeneratorOption{
-		BaseOption: baseOption,
-	}
-}
-
 // AsGeneratorOption returns a GeneratorOption that applies this BaseOption to a
 // generator or outputter instance, enabling a BaseOption (e.g. from [WithLogger]
 // or [WithBlogRoot]) to be passed to generator constructors alongside other
