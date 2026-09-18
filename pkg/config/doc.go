@@ -119,6 +119,17 @@
 // ServerConfig groups all three option types plus a TemplateDir filesystem for
 // the server constructor (server.New).
 //
+// Option functions that return a BaseOption (WithLogger, WithBlogRoot,
+// WithAssetsDir) cannot be passed to a constructor directly. Lift them into the
+// option type the constructor accepts with BaseOption.AsGeneratorOption,
+// BaseOption.AsWatcherOption or BaseOption.AsServerOption:
+//
+//	gen := generator.New(fsys, renderer, config.WithLogger(logger).AsGeneratorOption())
+//	w, _ := watcher.New(dir, config.WithLogger(logger).AsWatcherOption())
+//	cfg := config.ServerConfig{
+//	    Server: []config.BaseServerOption{config.WithLogger(logger).AsServerOption()},
+//	}
+//
 // # Usage Examples
 //
 // Basic usage with a single option:
