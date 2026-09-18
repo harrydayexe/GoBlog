@@ -60,6 +60,30 @@ package generator
 //   - config.WithDisableFeeds() was applied
 //   - config.WithRawOutput() was applied (raw mode skips all template rendering)
 //   - config.WithDisableTags() was applied (tag feeds are additionally empty in this mode)
+//
+// # Sitemap and robots.txt
+//
+// When the generator is configured with config.WithBaseURL(), a sitemaps.org
+// sitemap and a robots.txt are populated alongside the feeds:
+//   - Sitemap: sitemap.xml bytes covering the index, every post, the tags
+//     index, and every tag page. Tag URLs are omitted under
+//     config.WithDisableTags().
+//   - RobotsTxt: robots.txt bytes, holding GoBlog's default rule block (or the
+//     body from config.WithRobotsTxt) followed by an absolute "Sitemap:" line.
+//
+// Sitemap is nil when:
+//   - No base URL is configured (the sitemap is silently skipped)
+//   - config.WithDisableSitemap() was applied
+//   - config.WithRawOutput() was applied (raw mode skips all template rendering)
+//   - The blog contains no posts (an empty <urlset> is not a valid sitemap)
+//
+// RobotsTxt is nil when:
+//   - No base URL is configured (robots.txt is silently skipped)
+//   - config.WithDisableRobotsTxt() was applied
+//   - config.WithRawOutput() was applied
+//
+// The "Sitemap:" line is dropped from RobotsTxt when
+// config.WithDisableSitemap() was applied.
 type GeneratedBlog struct {
 	Posts     map[string][]byte // Posts maps a slug to raw HTML bytes for each post
 	Index     []byte            // Index contains the raw HTML for the blog index page
@@ -70,6 +94,9 @@ type GeneratedBlog struct {
 	AtomFeed     []byte            // AtomFeed contains the site-wide Atom feed XML, or nil if feeds are disabled/skipped
 	TagRSSFeeds  map[string][]byte // TagRSSFeeds maps each tag name to its RSS 2.0 feed XML
 	TagAtomFeeds map[string][]byte // TagAtomFeeds maps each tag name to its Atom feed XML
+
+	Sitemap   []byte // Sitemap contains the sitemap.xml bytes, or nil if the sitemap is disabled/skipped
+	RobotsTxt []byte // RobotsTxt contains the robots.txt bytes, or nil if robots.txt is disabled/skipped
 }
 
 func NewEmptyGeneratedBlog() *GeneratedBlog {

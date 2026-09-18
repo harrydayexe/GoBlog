@@ -47,6 +47,9 @@ type Generator struct {
 	config.BaseURL
 	config.DisableFeeds
 	config.FeedPostLimit
+	config.DisableSitemap
+	config.DisableRobotsTxt
+	config.RobotsTxt
 	ParserConfig parser.Config // The config to use when parsing
 
 	renderer *TemplateRenderer
@@ -64,7 +67,10 @@ func (c Generator) String() string {
 - HTMLPaths           %t,
 - BaseURL             %s,
 - DisableFeeds        %t,
-- FeedPostLimit       %d`,
+- FeedPostLimit       %d,
+- DisableSitemap      %t,
+- DisableRobotsTxt    %t,
+- Custom robots.txt   %t`,
 		c.RawOutput,
 		c.DisableTags.Disable,
 		c.DisableReadingTime.Disable,
@@ -76,6 +82,9 @@ func (c Generator) String() string {
 		c.BaseURL,
 		c.DisableFeeds.Disable,
 		c.FeedPostLimit.Limit,
+		c.DisableSitemap.Disable,
+		c.DisableRobotsTxt.Disable,
+		c.RobotsTxt.Body != "",
 	)
 }
 
@@ -86,7 +95,8 @@ func (c Generator) String() string {
 // Optional config.GeneratorOption values control behavior: config.WithRawOutput,
 // config.WithDisableTags, config.WithDisableReadingTime, config.WithSiteTitle,
 // config.WithBlogRoot, config.WithEnvironment, config.WithCustomData,
-// config.WithBaseURL, config.WithDisableFeeds, config.WithFeedPostLimit.
+// config.WithBaseURL, config.WithDisableFeeds, config.WithFeedPostLimit,
+// config.WithDisableSitemap, config.WithDisableRobotsTxt, config.WithRobotsTxt.
 // The template renderer is supplied as a positional argument, not an option.
 func New(posts fs.FS, renderer *TemplateRenderer, opts ...config.GeneratorOption) *Generator {
 	gen := Generator{
@@ -119,6 +129,12 @@ func New(posts fs.FS, renderer *TemplateRenderer, opts ...config.GeneratorOption
 			opt.WithDisableFeedsFunc(&gen.DisableFeeds)
 		} else if opt.WithFeedPostLimitFunc != nil {
 			opt.WithFeedPostLimitFunc(&gen.FeedPostLimit)
+		} else if opt.WithDisableSitemapFunc != nil {
+			opt.WithDisableSitemapFunc(&gen.DisableSitemap)
+		} else if opt.WithDisableRobotsTxtFunc != nil {
+			opt.WithDisableRobotsTxtFunc(&gen.DisableRobotsTxt)
+		} else if opt.WithRobotsTxtFunc != nil {
+			opt.WithRobotsTxtFunc(&gen.RobotsTxt)
 		} else if opt.WithLoggerFunc != nil {
 			opt.WithLoggerFunc(&gen.Logger)
 		}
@@ -275,6 +291,17 @@ func (g *Generator) assembleBlogWithTemplates(ctx context.Context, posts models.
 		g.Logger.Logger.InfoContext(ctx, "feeds enabled but no base URL configured; skipping feed generation (use WithBaseURL to enable feeds)")
 	}
 
+	// The sitemap and robots.txt are gated the same way as feeds: both need
+	// fully-qualified URLs, so both require a base URL.
+	sitemapEnabled := !g.DisableSitemap.Disable && g.BaseURL != ""
+	if !g.DisableSitemap.Disable && g.BaseURL == "" {
+		g.Logger.Logger.InfoContext(ctx, "sitemap enabled but no base URL configured; skipping sitemap generation (use WithBaseURL to enable the sitemap)")
+	}
+	robotsEnabled := !g.DisableRobotsTxt.Disable && g.BaseURL != ""
+	if !g.DisableRobotsTxt.Disable && g.BaseURL == "" {
+		g.Logger.Logger.InfoContext(ctx, "robots.txt enabled but no base URL configured; skipping robots.txt generation (use WithBaseURL to enable robots.txt)")
+	}
+
 	// When tags are disabled, clear Post.Tags so template tag pills do not render.
 	if !tagsEnabled {
 		for _, post := range posts {
@@ -372,11 +399,17 @@ func (g *Generator) assembleBlogWithTemplates(ctx context.Context, posts models.
 	}
 	blog.Index = index
 
+	// Post lists per tag, retained for the sitemap's per-tag lastmod values.
+	// Left nil when tags are disabled, so no tag URLs are emitted.
+	var tagPostLists map[string]models.PostList
+
 	if tagsEnabled {
 		// Render tag pages
 		allTags := posts.GetAllTags()
+		tagPostLists = make(map[string]models.PostList, len(allTags))
 		for _, tag := range allTags {
 			tagPosts := posts.FilterByTag(tag)
+			tagPostLists[tag] = tagPosts
 
 			// Enrich tag posts with BlogRoot
 			for _, post := range tagPosts {
@@ -466,6 +499,19 @@ func (g *Generator) assembleBlogWithTemplates(ctx context.Context, posts models.
 			return nil, fmt.Errorf("failed to render tags index: %w", err)
 		}
 		blog.TagsIndex = tagsIndex
+	}
+
+	// Build the sitemap last: it needs the per-tag post lists gathered above.
+	if sitemapEnabled {
+		sitemap, err := g.buildSitemap(posts, tagPostLists)
+		if err != nil {
+			return nil, fmt.Errorf("building sitemap: %w", err)
+		}
+		blog.Sitemap = sitemap
+	}
+
+	if robotsEnabled {
+		blog.RobotsTxt = g.buildRobotsTxt()
 	}
 
 	return blog, nil

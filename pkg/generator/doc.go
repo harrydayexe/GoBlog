@@ -162,6 +162,32 @@
 // and the reading time when disabled — are empty rather than absent, so
 // templates gate each tag on its own value.
 //
+// # Sitemap and robots.txt
+//
+// Setting [config.WithBaseURL] also populates GeneratedBlog.Sitemap and
+// GeneratedBlog.RobotsTxt, on the same terms as the RSS and Atom feeds.
+//
+// The sitemap follows the sitemaps.org 0.9 schema and lists the blog index,
+// every post, the tags index, and every tag page, each with a <lastmod> taken
+// from the post's lastEdited date (falling back to its publication date). Tag
+// URLs are omitted under [config.WithDisableTags]. Only <loc> and <lastmod>
+// are emitted — Google ignores <changefreq> and <priority>.
+//
+// The robots.txt holds an allow-everything rule block followed by an absolute
+// "Sitemap:" line. Supply [config.WithRobotsTxt] to replace the rule block
+// with your own; the "Sitemap:" line is still appended.
+//
+//	gen := generator.New(fsys, renderer,
+//	    config.WithBaseURL("https://example.com"),
+//	    config.WithRobotsTxt("User-agent: *\nDisallow: /drafts/"),
+//	)
+//
+// Sitemap is nil when no base URL is set, when [config.WithDisableSitemap] is
+// applied, under [config.WithRawOutput], or when the blog has no posts.
+// RobotsTxt is nil when no base URL is set, when [config.WithDisableRobotsTxt]
+// is applied, or under [config.WithRawOutput]; its "Sitemap:" line is dropped
+// when the sitemap is disabled.
+//
 // # Output
 //
 // The Generator returns all generated content in memory via GeneratedBlog.
