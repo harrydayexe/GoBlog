@@ -39,6 +39,12 @@ type HandlerConfig struct {
 //   - GET /atom.xml - serves the site-wide Atom feed (404 when feeds are disabled)
 //   - GET /tags/{tagName}.rss.xml - serves a per-tag RSS 2.0 feed (only if blog.Tags is non-empty)
 //   - GET /tags/{tagName}.atom.xml - serves a per-tag Atom feed (only if blog.Tags is non-empty)
+//   - GET /sitemap.xml - serves the sitemap (404 when the sitemap is disabled)
+//   - GET /robots.txt - serves the robots file (404 when robots.txt is disabled).
+//     This route is registered at the origin root, not under the blog root: a
+//     crawler only ever fetches /robots.txt, and unlike static generate output
+//     the server owns the whole origin, so it can put the file where crawlers
+//     actually look. With a root of "/blog/" the route is still /robots.txt.
 //   - GET /images/{path...} - serves files from the assets directory (only if
 //     config.WithAssetsDir was supplied and its root is a readable directory)
 //
@@ -53,7 +59,8 @@ type HandlerConfig struct {
 //
 // Feed routes are always registered, but return 404 when the generator did not
 // produce feed content (i.e. when config.WithBaseURL was not set, or
-// config.WithDisableFeeds was applied).
+// config.WithDisableFeeds was applied). The sitemap.xml and robots.txt routes
+// behave the same way.
 //
 // The returned handler automatically strips .html suffixes from incoming request
 // paths via middleware.NewStripHTMLExtension, so both /posts/foo and
@@ -124,6 +131,13 @@ func generateHandler(cfg HandlerConfig, blog *generator.GeneratedBlog) http.Hand
 
 	mux.Handle(root+"rss.xml", handleRSSFeed(cfg, blog))
 	mux.Handle(root+"atom.xml", handleAtomFeed(cfg, blog))
+	mux.Handle(root+"sitemap.xml", handleSitemap(cfg, blog))
+
+	// robots.txt is deliberately registered at the origin root rather than
+	// under the blog root: crawlers only ever fetch /robots.txt, and the
+	// server owns the whole origin. When the blog root is "/" this is the
+	// same pattern the root+ form would produce, so it is registered once.
+	mux.Handle("GET /robots.txt", handleRobotsTxt(cfg, blog))
 
 	if cfg.AssetsDir.Enabled() {
 		prefix := string(cfg.BlogRoot) + "/images/"
@@ -277,6 +291,38 @@ func handleAtomFeed(cfg HandlerConfig, blog *generator.GeneratedBlog) http.Handl
 		w.Header().Set("Content-Type", "application/atom+xml; charset=utf-8")
 		if _, err := w.Write(blog.AtomFeed); err != nil {
 			cfg.Logger.Logger.ErrorContext(r.Context(), "failed to write Atom feed", "error", err)
+		}
+	})
+}
+
+func handleSitemap(cfg HandlerConfig, blog *generator.GeneratedBlog) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		cfg.Logger.Logger.DebugContext(r.Context(), "handling sitemap")
+
+		if len(blog.Sitemap) == 0 {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/xml; charset=utf-8")
+		if _, err := w.Write(blog.Sitemap); err != nil {
+			cfg.Logger.Logger.ErrorContext(r.Context(), "failed to write sitemap", "error", err)
+		}
+	})
+}
+
+func handleRobotsTxt(cfg HandlerConfig, blog *generator.GeneratedBlog) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		cfg.Logger.Logger.DebugContext(r.Context(), "handling robots.txt")
+
+		if len(blog.RobotsTxt) == 0 {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		if _, err := w.Write(blog.RobotsTxt); err != nil {
+			cfg.Logger.Logger.ErrorContext(r.Context(), "failed to write robots.txt", "error", err)
 		}
 	})
 }

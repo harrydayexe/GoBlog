@@ -1149,14 +1149,18 @@ func TestGenerate_PathInTemplateData(t *testing.T) {
 			blogRoot:      "/",
 			htmlPaths:     true,
 			wantIndex:     "/index.html",
-			wantTagsIndex: "/tags.html",
+			wantTagsIndex: "/tags/index.html",
 		},
 		{
+			// The index and tags index are directory indexes: their .html paths
+			// must name the files the outputter writes (index.html and
+			// tags/index.html under the blog root), not "/blog.html" or
+			// "/blog/tags.html", which are never emitted.
 			name:          "custom BlogRoot html paths",
 			blogRoot:      "/blog/",
 			htmlPaths:     true,
-			wantIndex:     "/blog.html",
-			wantTagsIndex: "/blog/tags.html",
+			wantIndex:     "/blog/index.html",
+			wantTagsIndex: "/blog/tags/index.html",
 		},
 	}
 

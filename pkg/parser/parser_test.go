@@ -503,6 +503,43 @@ func TestNew_CombinedOptions(t *testing.T) {
 	}
 }
 
+func TestParseFile_WithMetaTitle(t *testing.T) {
+	t.Parallel()
+	p := New()
+	fsys := os.DirFS("testdata")
+
+	post, err := p.ParseFile(context.Background(), fsys, "with-meta-title.md")
+	if err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+
+	expected := "A Post With a Meta Title: The Complete Guide"
+	if post.MetaTitle != expected {
+		t.Errorf("expected MetaTitle %q, got %q", expected, post.MetaTitle)
+	}
+	if post.Title != "A Post With a Meta Title" {
+		t.Errorf("expected Title %q, got %q", "A Post With a Meta Title", post.Title)
+	}
+}
+
+func TestParseFile_NoMetaTitle(t *testing.T) {
+	t.Parallel()
+	p := New()
+	fsys := os.DirFS("testdata")
+
+	post, err := p.ParseFile(context.Background(), fsys, "no-author.md")
+	if err != nil {
+		t.Fatalf("expected no error for post without metaTitle, got: %v", err)
+	}
+
+	if post.MetaTitle != "" {
+		t.Errorf("expected MetaTitle to be empty, got %q", post.MetaTitle)
+	}
+	if post.ResolvedMetaTitle() != post.Title {
+		t.Errorf("expected ResolvedMetaTitle() to fall back to %q, got %q", post.Title, post.ResolvedMetaTitle())
+	}
+}
+
 func TestParseFile_WithLastEdited(t *testing.T) {
 	t.Parallel()
 	p := New()

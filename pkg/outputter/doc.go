@@ -40,6 +40,8 @@
 //
 //	output/
 //	├── index.html           # Blog index page
+//	├── sitemap.xml          # Sitemap (when the generator produced one)
+//	├── robots.txt           # Robots file (when the generator produced one)
 //	├── posts/               # Individual post pages
 //	│   ├── slug-1.html
 //	│   └── slug-2.html
@@ -49,6 +51,11 @@
 //	    ├── tag-1.html
 //	    ├── tag-2.html
 //	    └── index.html       # Tags index page
+//
+// robots.txt is always written at the top of the output tree. When a blog root
+// other than "/" is configured, that location is inside the deployed blog root
+// rather than at the domain root where crawlers look, so DirectoryWriter logs
+// a warning telling you to relocate the file on deploy.
 //
 // # Configuration
 //

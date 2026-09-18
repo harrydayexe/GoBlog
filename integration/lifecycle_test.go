@@ -9,12 +9,18 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/http/httptest"
 	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/harrydayexe/GoBlog/v2/pkg/config"
+	"github.com/harrydayexe/GoBlog/v2/pkg/generator"
+	"github.com/harrydayexe/GoBlog/v2/pkg/outputter"
 	"github.com/harrydayexe/GoBlog/v2/pkg/server"
+	"github.com/harrydayexe/GoBlog/v2/pkg/templates"
 )
 
 // TestRun_BindError verifies that Server.Run surfaces a bind error when the
@@ -114,5 +120,112 @@ func TestRun_GracefulShutdown(t *testing.T) {
 		}
 	case <-time.After(15 * time.Second):
 		t.Fatal("server did not shut down within 15 s")
+	}
+}
+
+// TestGenerate_SitemapAndRobots exercises the generate path end-to-end: the
+// generator, the directory writer, and the base-URL gating that produces
+// sitemap.xml and robots.txt.
+func TestGenerate_SitemapAndRobots(t *testing.T) {
+	postsDir := t.TempDir()
+	outputDir := t.TempDir()
+	writePost(t, postsDir, "post.md", minimalPost("Hello World"))
+
+	renderer, err := generator.NewTemplateRenderer(templates.Default)
+	if err != nil {
+		t.Fatalf("NewTemplateRenderer: %v", err)
+	}
+
+	opts := []config.GeneratorOption{
+		config.WithBaseURL("https://example.com"),
+		config.WithHTMLPaths(),
+	}
+	gen := generator.New(os.DirFS(postsDir), renderer, opts...)
+	blog, err := gen.Generate(context.Background())
+	if err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+
+	writer := outputter.NewDirectoryWriter(outputDir, opts...)
+	if err := writer.HandleGeneratedBlog(context.Background(), blog); err != nil {
+		t.Fatalf("HandleGeneratedBlog: %v", err)
+	}
+
+	sitemap, err := os.ReadFile(filepath.Join(outputDir, "sitemap.xml"))
+	if err != nil {
+		t.Fatalf("read sitemap.xml: %v", err)
+	}
+	for _, want := range []string{
+		"http://www.sitemaps.org/schemas/sitemap/0.9",
+		"<loc>https://example.com/index.html</loc>",
+		"<loc>https://example.com/posts/hello-world.html</loc>",
+	} {
+		if !strings.Contains(string(sitemap), want) {
+			t.Errorf("sitemap.xml does not contain %q:\n%s", want, sitemap)
+		}
+	}
+
+	robots, err := os.ReadFile(filepath.Join(outputDir, "robots.txt"))
+	if err != nil {
+		t.Fatalf("read robots.txt: %v", err)
+	}
+	if want := "User-agent: *\nAllow: /\n\nSitemap: https://example.com/sitemap.xml\n"; string(robots) != want {
+		t.Errorf("robots.txt =\n%q\nwant\n%q", robots, want)
+	}
+}
+
+// TestServe_SitemapAndRobots verifies that both artefacts are reachable over
+// HTTP from a running server, with robots.txt at the origin root even though a
+// blog root is configured.
+func TestServe_SitemapAndRobots(t *testing.T) {
+	dir := t.TempDir()
+	writePost(t, dir, "post.md", minimalPost("Hello World"))
+
+	cfg := config.ServerConfig{
+		Server: []config.BaseServerOption{
+			config.WithPort(0),
+			config.WithBlogRoot("/blog/").AsServerOption(),
+		},
+		Gen: []config.GeneratorOption{
+			config.WithBaseURL("https://example.com"),
+			config.WithBlogRoot("/blog/").AsGeneratorOption(),
+		},
+	}
+	srv, err := server.New(nil, os.DirFS(dir), cfg)
+	if err != nil {
+		t.Fatalf("server.New: %v", err)
+	}
+
+	tests := []struct {
+		path        string
+		contentType string
+		contains    string
+	}{
+		{"/blog/sitemap.xml", "application/xml; charset=utf-8", "<loc>https://example.com/blog/posts/hello-world</loc>"},
+		// robots.txt is served at the origin root, not under /blog/.
+		{"/robots.txt", "text/plain; charset=utf-8", "Sitemap: https://example.com/blog/sitemap.xml"},
+	}
+
+	for _, tt := range tests {
+		rec := httptest.NewRecorder()
+		srv.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, tt.path, nil))
+
+		if rec.Code != http.StatusOK {
+			t.Errorf("GET %s status = %d, want %d", tt.path, rec.Code, http.StatusOK)
+			continue
+		}
+		if ct := rec.Header().Get("Content-Type"); ct != tt.contentType {
+			t.Errorf("GET %s Content-Type = %q, want %q", tt.path, ct, tt.contentType)
+		}
+		if !strings.Contains(rec.Body.String(), tt.contains) {
+			t.Errorf("GET %s body does not contain %q:\n%s", tt.path, tt.contains, rec.Body.String())
+		}
+	}
+
+	// The sitemap must not also be reachable outside the blog root.
+	rec := httptest.NewRecorder()
+	srv.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/sitemap.xml", nil))
+	if rec.Code != http.StatusNotFound {
+		t.Errorf("GET /sitemap.xml status = %d, want %d", rec.Code, http.StatusNotFound)
 	}
 }

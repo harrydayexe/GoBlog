@@ -266,8 +266,17 @@ func TestGenerate_CanonicalURLInTemplateData(t *testing.T) {
 			blogRoot:      "/",
 			htmlPaths:     true,
 			wantIndex:     "https://example.com/index.html",
-			wantTagsIndex: "https://example.com/tags.html",
+			wantTagsIndex: "https://example.com/tags/index.html",
 			wantPostFmt:   func(slug string) string { return "https://example.com/posts/" + slug + ".html" },
+		},
+		{
+			name:          "html paths under a sub-path blog root",
+			baseURL:       "https://example.com",
+			blogRoot:      "/blog/",
+			htmlPaths:     true,
+			wantIndex:     "https://example.com/blog/index.html",
+			wantTagsIndex: "https://example.com/blog/tags/index.html",
+			wantPostFmt:   func(slug string) string { return "https://example.com/blog/posts/" + slug + ".html" },
 		},
 	}
 
@@ -614,5 +623,156 @@ Content.
 		if obj["@type"] != "BlogPosting" {
 			t.Errorf("post %q: @type = %v, want BlogPosting", slug, obj["@type"])
 		}
+	}
+}
+
+// metaTitledPost declares a metaTitle distinct from its display title, so the
+// two can be told apart wherever a title is rendered.
+const metaTitledPost = `---
+title: "Meta Titled Post"
+metaTitle: "Meta Titled Post: The Complete Guide"
+date: 2024-06-01T09:30:00Z
+description: "A simple post"
+author: "Alice"
+tags: ["go", "testing"]
+---
+This is content.
+`
+
+// TestGenerate_PageTitleUsesMetaTitle verifies that a post's metaTitle front
+// matter feeds BaseData.PageTitle, and that a post without one still gets its
+// display title there.
+func TestGenerate_PageTitleUsesMetaTitle(t *testing.T) {
+	t.Parallel()
+
+	renderer, err := NewTemplateRenderer(seoTemplateFS(`{{.PageTitle}}`))
+	if err != nil {
+		t.Fatalf("NewTemplateRenderer() error = %v", err)
+	}
+
+	gen := New(newTestPostsFS(t, map[string]string{
+		"meta.md":  metaTitledPost,
+		"hello.md": taggedPost,
+	}), renderer)
+
+	blog, err := gen.Generate(context.Background())
+	if err != nil {
+		t.Fatalf("Generate() error = %v", err)
+	}
+
+	want := map[string]string{
+		"meta-titled-post": "Meta Titled Post: The Complete Guide",
+		"hello-world":      "Hello World",
+	}
+	for slug, wantTitle := range want {
+		if got := string(blog.Posts[slug]); got != wantTitle {
+			t.Errorf("Post %q PageTitle = %q, want %q", slug, got, wantTitle)
+		}
+	}
+}
+
+var h1Block = regexp.MustCompile(`(?s)<h1[^>]*>(.*?)</h1>`)
+
+// TestDefaultTemplates_MetaTitle verifies that a post's metaTitle drives the
+// title-based meta tags while its display title keeps driving the page
+// heading, the post cards, and the feed items.
+func TestDefaultTemplates_MetaTitle(t *testing.T) {
+	t.Parallel()
+
+	const (
+		displayTitle = "Meta Titled Post"
+		metaTitle    = "Meta Titled Post: The Complete Guide"
+	)
+
+	postsFS := newTestPostsFS(t, map[string]string{"meta.md": metaTitledPost})
+	gen := New(postsFS, newTestRenderer(t), config.WithBaseURL("https://example.com"), config.WithSiteTitle("My Blog"))
+	blog, err := gen.Generate(context.Background())
+	if err != nil {
+		t.Fatalf("Generate() error = %v", err)
+	}
+
+	post := string(blog.Posts["meta-titled-post"])
+
+	wantTags(t, "post", post, []string{
+		`<title>` + metaTitle + ` | My Blog</title>`,
+		`<meta property="og:title" content="` + metaTitle + `">`,
+	}, nil)
+
+	if got := extractJSONLD(t, post)["headline"]; got != metaTitle {
+		t.Errorf("post JSON-LD headline = %v, want %q", got, metaTitle)
+	}
+
+	// The page heading is the display title, not the meta title.
+	h1s := h1Block.FindAllStringSubmatch(post, -1)
+	if len(h1s) != 1 {
+		t.Fatalf("expected exactly one <h1> on the post page, got %d", len(h1s))
+	}
+	if got := strings.TrimSpace(h1s[0][1]); got != displayTitle {
+		t.Errorf("post <h1> = %q, want %q", got, displayTitle)
+	}
+
+	// Post cards on the index and tag pages show the display title.
+	for name, page := range map[string][]byte{
+		"index": blog.Index,
+		"tag":   blog.Tags["go"],
+	} {
+		wantTags(t, name, string(page), []string{displayTitle}, []string{metaTitle})
+	}
+
+	// Feeds are read by feed readers rather than crawlers, so items keep the
+	// display title.
+	for name, feed := range map[string][]byte{
+		"rss":  blog.RSSFeed,
+		"atom": blog.AtomFeed,
+	} {
+		wantTags(t, name, string(feed), []string{`<title>` + displayTitle + `</title>`}, []string{metaTitle})
+	}
+}
+
+// TestDefaultTemplates_NoMetaTitleUnchanged verifies that omitting metaTitle
+// leaves a post's rendered page exactly as it was before the field existed:
+// the display title fills the title-based meta tags, and an empty metaTitle is
+// byte-for-byte equivalent to no metaTitle at all.
+func TestDefaultTemplates_NoMetaTitleUnchanged(t *testing.T) {
+	t.Parallel()
+
+	// taggedPost with an explicitly empty metaTitle.
+	const emptyMetaTitlePost = `---
+title: "Hello World"
+metaTitle: ""
+date: 2024-06-01T09:30:00Z
+description: "A simple post"
+author: "Alice"
+tags: ["go", "testing"]
+---
+# Hello
+
+This is content.
+`
+
+	render := func(t *testing.T, source string) string {
+		t.Helper()
+		gen := New(newTestPostsFS(t, map[string]string{"hello.md": source}), newTestRenderer(t),
+			config.WithBaseURL("https://example.com"), config.WithSiteTitle("My Blog"))
+		blog, err := gen.Generate(context.Background())
+		if err != nil {
+			t.Fatalf("Generate() error = %v", err)
+		}
+		return string(blog.Posts["hello-world"])
+	}
+
+	absent := render(t, taggedPost)
+
+	wantTags(t, "post", absent, []string{
+		`<title>Hello World | My Blog</title>`,
+		`<meta property="og:title" content="Hello World">`,
+	}, nil)
+
+	if got := extractJSONLD(t, absent)["headline"]; got != "Hello World" {
+		t.Errorf("post JSON-LD headline = %v, want %q", got, "Hello World")
+	}
+
+	if empty := render(t, emptyMetaTitlePost); empty != absent {
+		t.Error("post with an empty metaTitle rendered differently to one with no metaTitle")
 	}
 }

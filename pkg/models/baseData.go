@@ -10,6 +10,10 @@ type BaseData struct {
 	// PageTitle is the title for this specific page.
 	// Used in <title> tag and may be shown in header.
 	// Example: "How to Use Go Templates"
+	//
+	// On post pages the Generator sets it from Post.ResolvedMetaTitle, so a
+	// post declaring metaTitle in its front matter gets that title here while
+	// Post.Title still drives the page heading and post cards.
 	PageTitle string
 
 	// Description is the meta description for SEO.
@@ -90,20 +94,21 @@ type BaseData struct {
 	//     Tags index:       /tags
 	//
 	// When config.WithHTMLPaths() is applied (used automatically by goblog
-	// generate so paths match the .html files written to disk) the extension is
-	// included:
+	// generate) the path names the file written to disk. The index and tags
+	// index are directory indexes, so they name index.html rather than taking
+	// an extension on the directory itself:
 	//
 	//   Examples (BlogRoot = "/blog/"):
-	//     Index page:       /blog.html
+	//     Index page:       /blog/index.html
 	//     Post page:        /blog/posts/my-first-post.html
 	//     Tag page:         /blog/tags/golang.html
-	//     Tags index:       /blog/tags.html
+	//     Tags index:       /blog/tags/index.html
 	//
 	//   Examples (default BlogRoot = "/"):
 	//     Index page:       /index.html
 	//     Post page:        /posts/my-first-post.html
 	//     Tag page:         /tags/golang.html
-	//     Tags index:       /tags.html
+	//     Tags index:       /tags/index.html
 	//
 	// Typical usage for an Open Graph URL tag:
 	//   <meta property="og:url" content="https://example.com{{.Path}}">
