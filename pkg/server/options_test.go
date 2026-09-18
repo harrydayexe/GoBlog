@@ -91,6 +91,11 @@ func TestNew_OptionsResolveIntoServerConfig(t *testing.T) {
 	if srv.BlogRoot != "/blog/" {
 		t.Errorf("BlogRoot = %q, want \"/blog/\"", srv.BlogRoot)
 	}
+	// The generator has no blog root of its own: the server forwards its
+	// resolved value, which is what callers such as the CLI rely on.
+	if srv.generator.BlogRoot != "/blog/" {
+		t.Errorf("generator BlogRoot = %q, want \"/blog/\"", srv.generator.BlogRoot)
+	}
 	if !srv.AssetsDir.Enabled() {
 		t.Error("AssetsDir is not enabled, want the supplied filesystem")
 	}
@@ -135,6 +140,65 @@ func TestNew_GeneratorOptionForwarded(t *testing.T) {
 	}
 	if !srv.generator.RawOutput.RawOutput {
 		t.Error("generator RawOutput = false, want the forwarded option to apply")
+	}
+}
+
+// TestNew_BlogRootForwardedToGenerator verifies that the blog root resolved
+// from the server options reaches the generator, so that the in-page links and
+// image paths it emits are prefixed with the blog root rather than "/".
+//
+// The CLI relies on this forwarding: `goblog serve --root-path` passes the
+// blog root as a server option only. Without it the routes would still be
+// mounted under the blog root while every generated link pointed at "/".
+func TestNew_BlogRootForwardedToGenerator(t *testing.T) {
+	t.Parallel()
+
+	posts := fstest.MapFS{
+		"test-post.md": {Data: []byte(strings.TrimSpace(`
+---
+title: Test Post
+description: A test post
+date: 2024-01-01
+---
+
+![diagram](diagram.png)
+`))},
+	}
+
+	// Emit both the blog root passed to the template and the rendered post
+	// body, which is where the parser rewrites relative image paths.
+	templateFS := fstest.MapFS{
+		"pages/index.tmpl":      {Data: []byte(`index`)},
+		"pages/post.tmpl":       {Data: []byte(`{{ .BlogRoot }}|{{ .Post.HTMLContent }}`)},
+		"pages/tag.tmpl":        {Data: []byte(`tag`)},
+		"pages/tags-index.tmpl": {Data: []byte(`tags`)},
+	}
+
+	srv, err := New(posts,
+		config.WithBlogRoot("/blog/").AsServerOption(),
+		config.WithTemplateDir(templateFS),
+	)
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	if srv.generator.BlogRoot != "/blog/" {
+		t.Errorf("generator BlogRoot = %q, want \"/blog/\"", srv.generator.BlogRoot)
+	}
+
+	w := httptest.NewRecorder()
+	srv.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/blog/posts/test-post", nil))
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("GET /blog/posts/test-post status = %d, want 200", w.Code)
+	}
+
+	body := w.Body.String()
+	if !strings.HasPrefix(body, "/blog/|") {
+		t.Errorf("rendered BlogRoot = %q, want the page data to carry \"/blog/\"", body)
+	}
+	if !strings.Contains(body, `src="/blog/images/diagram.png"`) {
+		t.Errorf("rendered body = %q, want the image rewritten under \"/blog/images/\"", body)
 	}
 }
 
