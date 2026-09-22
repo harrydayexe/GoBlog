@@ -32,12 +32,15 @@ COPY --from=builder /build/goblog .
 # Create directory for posts
 RUN mkdir -p /posts
 
-# Expose default port
+# Expose the blog port and the admin port serving /metrics
 EXPOSE 8080
+EXPOSE 9090
 
 # Healthchecks
 HEALTHCHECK CMD wget --spider -q http://localhost:8080/healthz/startup || exit 1
 
-# Use ENTRYPOINT for the binary, CMD for default args
-ENTRYPOINT ["./goblog", "serve", "--health-checks"]
+# Use ENTRYPOINT for the binary, CMD for default args.
+# The image opts into metrics because scraping is the usual reason to run it;
+# port 9090 is only reachable if the operator publishes it.
+ENTRYPOINT ["./goblog", "serve", "--health-checks", "--metrics"]
 CMD ["/posts"]

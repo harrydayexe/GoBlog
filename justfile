@@ -197,4 +197,4 @@ docker tag="goblog:latest":
 [group("run")]
 run-image tag="goblog:latest": docker
     @echo "Running Docker image..."
-    docker run -v ./docs/example-posts/:/posts -p 8080:8080 {{tag}}
+    docker run -v ./docs/example-posts/:/posts -p 8080:8080 -p 9090:9090 {{tag}}
