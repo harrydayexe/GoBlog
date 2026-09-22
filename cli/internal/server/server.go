@@ -139,11 +139,6 @@ func NewServeCommand(ctx context.Context, c *cli.Command) error {
 }
 
 func runServe(ctx context.Context, postsPath string, posts fs.FS, watch bool, metrics *metricsServer, opts ...config.ServerOption) error {
-	srv, err := server.New(posts, opts...)
-	if err != nil {
-		return err
-	}
-
 	if metrics != nil {
 		go func() {
 			slog.Default().InfoContext(ctx, "metrics listening", slog.String("address", metrics.Addr()))
@@ -161,6 +156,11 @@ func runServe(ctx context.Context, postsPath string, posts fs.FS, watch bool, me
 				slog.Default().WarnContext(ctx, "metrics: shutdown failed", slog.Any("error", err))
 			}
 		}()
+	}
+
+	srv, err := server.New(posts, opts...)
+	if err != nil {
+		return err
 	}
 
 	if watch {

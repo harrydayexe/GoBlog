@@ -100,6 +100,12 @@ func (m *metricsServer) Serve() error {
 // a scrape in flight.
 func (m *metricsServer) Shutdown(ctx context.Context) error {
 	serverErr := m.server.Shutdown(ctx)
+	// Shutdown only closes the listeners Serve has already registered, so a
+	// server stopped before Serve ran would leave the port held until the
+	// goroutine caught up. Closing it here makes the release deterministic; the
+	// second close Serve performs is a no-op error we do not care about.
+	_ = m.listener.Close()
+
 	providerErr := m.provider.Shutdown(ctx)
 
 	if serverErr != nil {

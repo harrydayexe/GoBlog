@@ -14,6 +14,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"testing/fstest"
 	"time"
 
 	"github.com/harrydayexe/GoBlog/v2/cli/internal/cliflags"
@@ -308,6 +309,34 @@ func TestMetrics_GracefulShutdownWithBothListeners(t *testing.T) {
 		}
 		_ = l.Close()
 	}
+}
+
+// TestMetrics_ListenerReleasedWhenServerFails verifies that a failure to build
+// the blog server does not leave the admin listener bound behind it.
+func TestMetrics_ListenerReleasedWhenServerFails(t *testing.T) {
+	t.Parallel()
+
+	metrics, err := newMetricsServer("127.0.0.1", 0)
+	if err != nil {
+		t.Fatalf("newMetricsServer() error = %v", err)
+	}
+	addr := metrics.Addr()
+
+	// An empty template filesystem fails the renderer, so server.New errors.
+	err = runServe(context.Background(), t.TempDir(), testFS(), false, metrics,
+		config.WithPort(0),
+		config.WithTemplateDir(fstest.MapFS{}),
+		config.WithMeterProvider(metrics.MeterProvider()),
+	)
+	if err == nil {
+		t.Fatal("runServe() with an empty template dir returned nil, want an error")
+	}
+
+	l, listenErr := net.Listen("tcp", addr)
+	if listenErr != nil {
+		t.Fatalf("admin port %s still bound after runServe failed: %v", addr, listenErr)
+	}
+	_ = l.Close()
 }
 
 // freePort returns a port that was free a moment ago, for cases where the
