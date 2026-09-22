@@ -21,3 +21,14 @@ const CacheControlFlagName = "cache-control"
 
 // HealthChecksFlagName is the CLI flag name for enabling health-check endpoints.
 const HealthChecksFlagName = "health-checks"
+
+// MetricsFlagName is the CLI flag name for enabling Prometheus metrics and the
+// admin listener that serves them.
+const MetricsFlagName = "metrics"
+
+// MetricsPortFlagName is the CLI flag name for setting the admin listener port.
+const MetricsPortFlagName = "metrics-port"
+
+// MetricsHostFlagName is the CLI flag name for setting the admin listener bind
+// address.
+const MetricsHostFlagName = "metrics-host"

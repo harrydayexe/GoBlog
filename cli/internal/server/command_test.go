@@ -51,7 +51,7 @@ func TestRunServe_CanceledContext(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	err := runServe(ctx, t.TempDir(), testFS(), false, config.WithPort(0))
+	err := runServe(ctx, t.TempDir(), testFS(), false, nil, config.WithPort(0))
 	if err != nil {
 		t.Errorf("runServe() with canceled context error = %v, want nil", err)
 	}
@@ -129,7 +129,7 @@ func TestRunServe_WatchBadPath(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	err := runServe(ctx, "/nonexistent/goblog/watch/test", testFS(), true, config.WithPort(0))
+	err := runServe(ctx, "/nonexistent/goblog/watch/test", testFS(), true, nil, config.WithPort(0))
 	if err == nil {
 		t.Error("runServe() with watch=true and bad path returned nil, want error")
 	}

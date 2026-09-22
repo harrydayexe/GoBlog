@@ -124,13 +124,43 @@ func NewServeCommand(ctx context.Context, c *cli.Command) error {
 		opts = append(opts, config.WithHealthChecks())
 	}
 
-	return runServe(ctx, inputPostsDir, postsFsys, c.Bool(WatchFlagName), opts...)
+	// Metrics are opt-in. When --metrics is absent no exporter is built and no
+	// admin port is bound, so the server records nothing at all.
+	var metrics *metricsServer
+	if c.Bool(MetricsFlagName) {
+		metrics, err = newMetricsServer(c.String(MetricsHostFlagName), c.Int(MetricsPortFlagName))
+		if err != nil {
+			return err
+		}
+		opts = append(opts, config.WithMeterProvider(metrics.MeterProvider()))
+	}
+
+	return runServe(ctx, inputPostsDir, postsFsys, c.Bool(WatchFlagName), metrics, opts...)
 }
 
-func runServe(ctx context.Context, postsPath string, posts fs.FS, watch bool, opts ...config.ServerOption) error {
+func runServe(ctx context.Context, postsPath string, posts fs.FS, watch bool, metrics *metricsServer, opts ...config.ServerOption) error {
 	srv, err := server.New(posts, opts...)
 	if err != nil {
 		return err
+	}
+
+	if metrics != nil {
+		go func() {
+			slog.Default().InfoContext(ctx, "metrics listening", slog.String("address", metrics.Addr()))
+			if err := metrics.Serve(); err != nil {
+				slog.Default().ErrorContext(ctx, "metrics server stopped", slog.Any("error", err))
+			}
+		}()
+		// srv.Run blocks until its own graceful shutdown has completed, so the
+		// admin listener is drained on the same signal with the same 10s
+		// budget, after the traffic it measures has stopped.
+		defer func() {
+			shutdownCtx, cancel := context.WithTimeout(context.Background(), metricsShutdownTimeout)
+			defer cancel()
+			if err := metrics.Shutdown(shutdownCtx); err != nil {
+				slog.Default().WarnContext(ctx, "metrics: shutdown failed", slog.Any("error", err))
+			}
+		}()
 	}
 
 	if watch {
