@@ -76,15 +76,7 @@ func occupyPort(t *testing.T) int {
 	}
 	t.Cleanup(func() { _ = l.Close() })
 
-	_, port, err := net.SplitHostPort(l.Addr().String())
-	if err != nil {
-		t.Fatalf("net.SplitHostPort(%q) error = %v", l.Addr(), err)
-	}
-	n, err := strconv.Atoi(port)
-	if err != nil {
-		t.Fatalf("strconv.Atoi(%q) error = %v", port, err)
-	}
-	return n
+	return mustPort(t, l.Addr().String())
 }
 
 // runServeCLIContext runs the serve subcommand through a root command shaped
@@ -264,4 +256,106 @@ func TestMetrics_ShutdownReleasesListener(t *testing.T) {
 		t.Fatalf("admin port %s still bound after shutdown: %v", addr, err)
 	}
 	_ = l.Close()
+}
+
+// TestMetrics_GracefulShutdownWithBothListeners verifies that cancelling the
+// context while both listeners are live stops them both: the blog port and the
+// admin port are free to bind again once runServe returns.
+func TestMetrics_GracefulShutdownWithBothListeners(t *testing.T) {
+	t.Parallel()
+
+	blogAddr := net.JoinHostPort("127.0.0.1", strconv.Itoa(freePort(t)))
+
+	metrics, err := newMetricsServer("127.0.0.1", 0)
+	if err != nil {
+		t.Fatalf("newMetricsServer() error = %v", err)
+	}
+	metricsAddr := metrics.Addr()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	done := make(chan error, 1)
+	go func() {
+		done <- runServe(ctx, t.TempDir(), testFS(), false, metrics,
+			config.WithHost("127.0.0.1"),
+			config.WithPort(mustPort(t, blogAddr)),
+			config.WithMeterProvider(metrics.MeterProvider()),
+		)
+	}()
+
+	// Both listeners must be answering before the shutdown is meaningful.
+	for _, url := range []string{"http://" + blogAddr + "/", "http://" + metricsAddr + metricsPath} {
+		waitForStatus(t, url, http.StatusOK)
+	}
+
+	cancel()
+
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatalf("runServe() error = %v", err)
+		}
+	case <-time.After(15 * time.Second):
+		t.Fatal("runServe() did not return within 15s of cancellation")
+	}
+
+	for _, addr := range []string{blogAddr, metricsAddr} {
+		l, err := net.Listen("tcp", addr)
+		if err != nil {
+			t.Errorf("port %s still bound after shutdown: %v", addr, err)
+			continue
+		}
+		_ = l.Close()
+	}
+}
+
+// freePort returns a port that was free a moment ago, for cases where the
+// listener has to be created by the code under test rather than the test.
+func freePort(t *testing.T) int {
+	t.Helper()
+
+	l, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("net.Listen() error = %v", err)
+	}
+	port := mustPort(t, l.Addr().String())
+	if err := l.Close(); err != nil {
+		t.Fatalf("closing probe listener error = %v", err)
+	}
+	return port
+}
+
+// mustPort extracts the port number from a "host:port" address.
+func mustPort(t *testing.T, addr string) int {
+	t.Helper()
+
+	_, port, err := net.SplitHostPort(addr)
+	if err != nil {
+		t.Fatalf("net.SplitHostPort(%q) error = %v", addr, err)
+	}
+	n, err := strconv.Atoi(port)
+	if err != nil {
+		t.Fatalf("strconv.Atoi(%q) error = %v", port, err)
+	}
+	return n
+}
+
+// waitForStatus polls url until it answers with want, failing the test if it
+// does not do so within 10 seconds.
+func waitForStatus(t *testing.T, url string, want int) {
+	t.Helper()
+
+	deadline := time.Now().Add(10 * time.Second)
+	for time.Now().Before(deadline) {
+		resp, err := http.Get(url) //nolint:gosec // address is test-controlled
+		if err == nil {
+			_ = resp.Body.Close()
+			if resp.StatusCode == want {
+				return
+			}
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+	t.Fatalf("GET %s did not return %d within 10s", url, want)
 }
