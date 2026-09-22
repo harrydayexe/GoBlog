@@ -180,9 +180,9 @@ func (w *metricsResponseWriter) ReadFrom(r io.Reader) (int64, error) {
 	rf, ok := w.ResponseWriter.(io.ReaderFrom)
 	if !ok {
 		// writeOnly hides this type's ReadFrom from io.Copy, which would
-		// otherwise call back into it and recurse forever.
-		n, err := io.Copy(writeOnly{w}, r)
-		return n, err
+		// otherwise call back into it and recurse forever. The copy goes
+		// through Write, so it counts its own bytes.
+		return io.Copy(writeOnly{w}, r)
 	}
 
 	n, err := rf.ReadFrom(r)

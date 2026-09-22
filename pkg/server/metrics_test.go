@@ -307,6 +307,31 @@ func TestMetrics_ResponseBodySize(t *testing.T) {
 	}
 }
 
+// TestMetrics_AssetBodySize verifies that bytes copied through the wrapper's
+// ReadFrom path — which is how net/http writes static file bodies — are counted
+// exactly once.
+func TestMetrics_AssetBodySize(t *testing.T) {
+	t.Parallel()
+
+	srv, collected := newMetricsServer(t, config.WithAssetsDir(testAssetsFS()).AsServerOption())
+
+	if w := get(srv, "/images/pipeline.png"); w.Code != http.StatusOK {
+		t.Fatalf("GET /images/pipeline.png: status %d, want 200", w.Code)
+	}
+
+	m := findMetric(t, collected(t), responseSizeMetric)
+	hist, ok := m.Data.(metricdata.Histogram[int64])
+	if !ok {
+		t.Fatalf("%s: data is %T, want Histogram[int64]", responseSizeMetric, m.Data)
+	}
+	if len(hist.DataPoints) != 1 {
+		t.Fatalf("%s: got %d data points, want 1", responseSizeMetric, len(hist.DataPoints))
+	}
+	if got, want := hist.DataPoints[0].Sum, int64(len(pngBytes)); got != want {
+		t.Errorf("%s: recorded %d bytes, want %d", responseSizeMetric, got, want)
+	}
+}
+
 // TestMetrics_ActiveRequestsBalance verifies the up/down counter returns to
 // zero once requests have completed.
 func TestMetrics_ActiveRequestsBalance(t *testing.T) {
