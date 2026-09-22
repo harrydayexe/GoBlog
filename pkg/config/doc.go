@@ -53,14 +53,14 @@
 // deploying at example.com/blog/. This ensures all generated links in templates
 // use the correct base path. Default is "/" for root deployment.
 //
-// WithCacheControl(ttl time.Duration) returns a BaseServerOption that sets the
+// WithCacheControl(ttl time.Duration) returns a ServerOption that sets the
 // Cache-Control max-age TTL on all HTTP responses. When ttl > 0 the server
 // adds "Cache-Control: public, max-age=<N>" to every response. Setting ttl to
 // 0 or any non-positive value disables the header. The default is one hour.
 //
 // WithAssetsDir(fsys fs.FS) is a BaseOption that sets the filesystem images
 // are served, copied and measured from. The HTTP server serves its files at
-// {BlogRoot}images/ (server.New via BaseServerOption, server.Handler), and
+// {BlogRoot}images/ (server.New via ServerOption, server.Handler), and
 // outputter.NewDirectoryWriter (via GeneratorOption) copies it into
 // <outputDir>/images/. The generator (via GeneratorOption) forwards it to the
 // parser, which reads image headers so rendered <img> tags carry their
@@ -72,7 +72,7 @@
 // WithLogger(l *slog.Logger) is a BaseOption that sets the structured logger
 // used by the receiving component. It flows into every constructor that
 // accepts BaseOption values (generator.New via GeneratorOption, server.New via
-// BaseServerOption, outputter.NewDirectoryWriter via GeneratorOption) and into
+// ServerOption, outputter.NewDirectoryWriter via GeneratorOption) and into
 // watcher.New via WatcherOption (which embeds BaseOption). When not supplied,
 // each constructor falls back to slog.Default() at construction time. Passing
 // nil has the same effect as omitting the option.
@@ -81,8 +81,8 @@
 // additional template functions for use in all templates. Functions are merged
 // into the built-in FuncMap (formatDate, shortDate, year). A function whose
 // name matches a built-in silently replaces it. Pass RendererOption values to
-// generator.NewTemplateRenderer, or to ServerConfig.RendererOpts for the HTTP
-// server path.
+// generator.NewTemplateRenderer, or (via RendererOption.AsServerOption) to
+// server.New for the HTTP server path.
 //
 // WithHTMLPaths() is a GeneratorOption that switches BaseData.Path values to
 // use .html file extensions instead of clean URLs. When enabled, every path
@@ -117,7 +117,7 @@
 // goblog CLI reads --robots-file from disk and passes the contents through.
 // It has no effect when WithDisableRobotsTxt() is also applied.
 //
-// WithHealthChecks() is a BaseServerOption that enables health-check endpoints
+// WithHealthChecks() is a ServerOption that enables health-check endpoints
 // on the HTTP server. When enabled, GET /healthz/live always returns 200 OK,
 // while GET /healthz/ready and GET /healthz/startup return 200 OK once posts
 // and templates have loaded and 503 Service Unavailable while starting up or
@@ -126,20 +126,47 @@
 // initialising content so probes can observe the startup state. Health checks
 // are disabled by default; the Docker image enables them via --health-checks.
 //
+// WithMeterProvider(mp metric.MeterProvider) is a ServerOption that sets
+// the OpenTelemetry meter provider the HTTP server records its request metrics
+// against. GoBlog depends on the OpenTelemetry metrics API only, so the SDK and
+// any exporter are the caller's dependency. Three instruments are recorded
+// following the stable HTTP server semantic conventions:
+// http.server.request.duration, http.server.active_requests and
+// http.server.response.body.size, labelled with http.request.method,
+// url.scheme, http.response.status_code, the matched route as http.route, and
+// error.type on server errors. Metrics are off by default: with no option (or a
+// nil provider) the no-op provider is used, no instruments are created and no
+// measurements are taken. The server never falls back to
+// otel.GetMeterProvider(); pass it explicitly to use the global provider.
+// Requests to /healthz/* are answered before the instrumented handler and are
+// not recorded. The goblog CLI supplies an SDK provider backed by the
+// Prometheus exporter behind its --metrics flag; library users wire their own.
+//
 // # Option types
 //
 // GeneratorOption carries options for generator.New and outputter.NewDirectoryWriter,
 // including WithRawOutput, WithDisableTags, WithDisableReadingTime, WithSiteTitle,
 // WithEnvironment, WithCustomData, WithHTMLPaths, and (via the embedded BaseOption)
 // WithLogger, WithBlogRoot and WithAssetsDir.
-// BaseServerOption carries options for the HTTP server (port, host, middleware,
-// cache-control TTL, health-check endpoints, and via the embedded BaseOption:
-// WithLogger, WithBlogRoot, WithAssetsDir).
+// ServerOption carries options for the HTTP server (port, host, middleware,
+// cache-control TTL, health-check endpoints, meter provider, template
+// directory, and via the embedded BaseOption: WithLogger, WithBlogRoot,
+// WithAssetsDir). Generator and renderer options are converted for it with
+// GeneratorOption.AsServerOption and RendererOption.AsServerOption.
 // WatcherOption carries options for watcher.New (debounce, and via the embedded
 // BaseOption: WithLogger, WithBlogRoot).
 // RendererOption carries options for generator.NewTemplateRenderer (custom funcs).
-// ServerConfig groups all three option types plus a TemplateDir filesystem for
-// the server constructor (server.New).
+// ServerConfig holds the configuration server.New resolves from the
+// ServerOption values it is given; the server embeds it.
+//
+// Option functions that return a BaseOption (WithLogger, WithBlogRoot,
+// WithAssetsDir) cannot be passed to a constructor directly. Lift them into the
+// option type the constructor accepts with BaseOption.AsGeneratorOption,
+// BaseOption.AsWatcherOption or BaseOption.AsServerOption:
+//
+//	gen := generator.New(fsys, renderer, config.WithLogger(logger).AsGeneratorOption())
+//	w, _ := watcher.New(dir, config.WithLogger(logger).AsWatcherOption())
+//	srv, _ := server.New(fsys, config.WithLogger(logger).AsServerOption())
 //
 // # Usage Examples
 //
@@ -171,11 +198,19 @@
 //	    }),
 //	)
 //
+// Configuring an HTTP server, mixing option types:
+//
+//	srv, err := server.New(fsys,
+//	    config.WithPort(8080),
+//	    config.WithSiteTitle("My Blog").AsServerOption(),
+//	    config.WithLogger(logger).AsServerOption(),
+//	)
+//
 // Configuring blog root for subdirectory deployment:
 //
 //	renderer, _ := generator.NewTemplateRenderer(templates.Default)
 //	gen := generator.New(fsys, renderer,
-//	    config.WithBlogRoot("/blog/"),
+//	    config.WithBlogRoot("/blog/").AsGeneratorOption(),
 //	)
 //
 // # Concurrency

@@ -4,21 +4,33 @@
 
 package config
 
-import "io/fs"
+import "github.com/harrydayexe/GoWebUtilities/middleware"
 
-// ServerConfig is the top-level configuration for the HTTP server.
+// ServerConfig holds the resolved configuration of the HTTP server.
 //
-// Server holds server-level options (port, host, middleware).
-// Gen holds generator-level options (site title, environment, custom data, etc.).
-// TemplateDir overrides the template filesystem; when nil the built-in
-// templates are used.
-// RendererOpts holds renderer-level options (custom template functions) and
-// is forwarded to the internal [github.com/harrydayexe/GoBlog/v2/pkg/generator.NewTemplateRenderer]
-// call so users of the server API can register custom FuncMap entries without
-// constructing a renderer manually.
+// Each field is populated by applying [ServerOption] values in
+// [github.com/harrydayexe/GoBlog/v2/pkg/server.New]; the struct is embedded in
+// the server so the resolved values are readable through it (for example
+// srv.Port or srv.Logger.Logger).
+//
+// GeneratorOpts and RendererOpts collect the options forwarded to the internal
+// generator and template renderer. They are populated by passing
+// [GeneratorOption.AsServerOption] and [RendererOption.AsServerOption] values
+// to the server constructor, and stay in option form because the server does
+// not resolve them itself.
+//
+// Values should not be modified after the server has been constructed.
 type ServerConfig struct {
-	Server       []BaseServerOption
-	Gen          []GeneratorOption
-	TemplateDir  fs.FS
-	RendererOpts []RendererOption
+	BlogRoot        BlogRoot
+	Port            Port
+	Host            Host
+	Logger          Logger
+	CacheControlTTL CacheControlTTL
+	HealthChecks    HealthChecks
+	MeterProvider   MeterProvider
+	AssetsDir       AssetsDir
+	TemplateDir     TemplateDir
+	Middleware      []middleware.Middleware
+	GeneratorOpts   []GeneratorOption
+	RendererOpts    []RendererOption
 }

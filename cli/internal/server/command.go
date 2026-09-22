@@ -52,5 +52,19 @@ var ServeCommand cli.Command = cli.Command{
 			Usage: "expose /healthz/live, /healthz/ready, and /healthz/startup endpoints (no auth required); the server binds before loading content so probes observe startup state",
 			Value: false,
 		},
+		&cli.BoolFlag{
+			Name:  MetricsFlagName,
+			Usage: "record Prometheus metrics and serve them at /metrics on a separate admin listener (never on the blog port)",
+			Value: false,
+		},
+		&cli.IntFlag{
+			Name:  MetricsPortFlagName,
+			Usage: "port the admin listener serving /metrics binds to",
+			Value: defaultMetricsPort,
+		},
+		&cli.StringFlag{
+			Name:  MetricsHostFlagName,
+			Usage: "host address the admin listener serving /metrics binds to (defaults to all interfaces; set 127.0.0.1 to keep metrics off the network)",
+		},
 	},
 }

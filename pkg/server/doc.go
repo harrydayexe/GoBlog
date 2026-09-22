@@ -25,14 +25,10 @@
 //	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 //	postsFS := os.DirFS("posts/")
 //
-//	cfg := config.ServerConfig{
-//	    Server: []config.BaseServerOption{
-//	        config.WithPort(8080),
-//	        config.WithLogger(logger).AsServerOption(),
-//	    },
-//	}
-//
-//	srv, err := server.New(nil, postsFS, cfg)
+//	srv, err := server.New(postsFS,
+//	    config.WithPort(8080),
+//	    config.WithLogger(logger).AsServerOption(),
+//	)
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
@@ -41,6 +37,28 @@
 //	if err := srv.Run(context.Background()); err != nil {
 //	    log.Fatal(err)
 //	}
+//
+// # Configuration
+//
+// New takes config.ServerOption values and stores the resolved settings in the
+// config.ServerConfig embedded in the Server, so they can be read back from it
+// (srv.Port, srv.Logger.Logger, and so on).
+//
+// Options of other kinds are converted with their AsServerOption method:
+// config.BaseOption values (config.WithLogger, config.WithBlogRoot,
+// config.WithAssetsDir) configure the server itself, config.GeneratorOption
+// values (config.WithSiteTitle, config.WithBaseURL, …) are forwarded to the
+// generator the server builds, and config.RendererOption values
+// (config.WithFuncs) to its template renderer. config.WithTemplateDir replaces
+// the built-in templates.
+//
+//	srv, err := server.New(postsFS,
+//	    config.WithPort(8080),
+//	    config.WithBlogRoot("/blog/").AsServerOption(),
+//	    config.WithSiteTitle("My Blog").AsServerOption(),
+//	    config.WithFuncs(template.FuncMap{"upper": strings.ToUpper}).AsServerOption(),
+//	    config.WithTemplateDir(os.DirFS("templates/")),
+//	)
 //
 // # Feed Routes
 //
@@ -101,7 +119,7 @@
 //
 //	root, err := os.OpenRoot("posts/images")
 //	// handle err, defer root.Close()
-//	cfg.Server = append(cfg.Server, config.WithAssetsDir(root.FS()).AsServerOption())
+//	srv, err := server.New(postsFS, config.WithAssetsDir(root.FS()).AsServerOption())
 //
 // # HTML Extension Handling
 //
@@ -116,8 +134,9 @@
 // # Middleware
 //
 // The server supports pluggable HTTP middleware for cross-cutting concerns
-// like logging, metrics, authentication, or rate limiting. Middleware uses
-// the standard pattern from github.com/harrydayexe/GoWebUtilities/middleware.
+// like logging, authentication, or rate limiting. Middleware uses the standard
+// pattern from github.com/harrydayexe/GoWebUtilities/middleware. Request
+// metrics do not need middleware; see Metrics below.
 //
 // Adding middleware to a server:
 //
@@ -129,15 +148,11 @@
 //	)
 //
 //	// Create server with built-in logging middleware
-//	cfg := config.ServerConfig{
-//	    Server: []config.BaseServerOption{
-//	        config.WithPort(8080),
-//	        config.WithMiddleware(logging.New(logger)),
-//	        config.WithLogger(logger).AsServerOption(),
-//	    },
-//	}
-//
-//	srv, err := server.New(nil, postsFS, cfg)
+//	srv, err := server.New(postsFS,
+//	    config.WithPort(8080),
+//	    config.WithMiddleware(logging.New(logger)),
+//	    config.WithLogger(logger).AsServerOption(),
+//	)
 //
 // Custom middleware can be added following the standard pattern:
 //
@@ -149,14 +164,12 @@
 //	    })
 //	}
 //
-//	cfg := config.ServerConfig{
-//	    Server: []config.BaseServerOption{
-//	        config.WithMiddleware(
-//	            logging.New(logger),     // Built-in
-//	            customMiddleware,        // Custom
-//	        ),
-//	    },
-//	}
+//	srv, err := server.New(postsFS,
+//	    config.WithMiddleware(
+//	        logging.New(logger),     // Built-in
+//	        customMiddleware,        // Custom
+//	    ),
+//	)
 //
 // Middleware are applied in order: the first middleware in the list is
 // executed first (outermost wrapper). The middleware chain is reapplied
@@ -198,13 +211,10 @@
 //
 // Enable health-check endpoints via config.WithHealthChecks():
 //
-//	cfg := config.ServerConfig{
-//	    Server: []config.BaseServerOption{
-//	        config.WithPort(8080),
-//	        config.WithHealthChecks(),
-//	    },
-//	}
-//	srv, err := server.New(nil, postsFS, cfg)
+//	srv, err := server.New(postsFS,
+//	    config.WithPort(8080),
+//	    config.WithHealthChecks(),
+//	)
 //
 // Three unauthenticated GET endpoints are exposed:
 //
@@ -218,6 +228,72 @@
 // loading posts, so probes can observe startup state. The endpoints bypass
 // middleware (including authentication) and are intercepted in ServeHTTP before
 // the content handler. The Docker image enables health checks by default.
+//
+// # Metrics
+//
+// Supply an OpenTelemetry meter provider via config.WithMeterProvider to record
+// HTTP server metrics:
+//
+//	import (
+//	    "go.opentelemetry.io/otel/exporters/prometheus"
+//	    sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+//	)
+//
+//	exporter, err := prometheus.New()
+//	if err != nil {
+//	    log.Fatal(err)
+//	}
+//	provider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(exporter))
+//
+//	srv, err := server.New(postsFS,
+//	    config.WithPort(8080),
+//	    config.WithMeterProvider(provider),
+//	)
+//
+// GoBlog depends on the OpenTelemetry metrics API only. The SDK, the exporter
+// and the endpoint that serves the scrape (commonly /metrics on a separate
+// admin port) are the caller's to wire up.
+//
+// Three instruments are recorded, named and united per the stable HTTP server
+// semantic conventions so stock dashboards and recording rules work unchanged:
+//
+//   - http.server.request.duration   — histogram, seconds
+//   - http.server.active_requests    — up/down counter, {request}
+//   - http.server.response.body.size — histogram, bytes
+//
+// Attributes are http.request.method, url.scheme, http.response.status_code,
+// http.route, and error.type on server errors. There is deliberately no
+// separate request counter: the duration histogram's count series
+// (http_server_request_duration_seconds_count under the Prometheus exporter) is
+// the page-hit number, and a parallel counter could only drift from it. Error
+// rate is likewise a query over http.response.status_code.
+//
+// http.route is the path template of the pattern the ServeMux matched, not the
+// requested path, so all posts aggregate under {root}posts/{postName} and
+// requests matching no route share a single series with no http.route
+// attribute. Mux patterns pin a method ("GET /posts/{postName}"), which the
+// attribute does not carry — semconv defines http.route as the path template
+// alone and the method is recorded separately as http.request.method — so the
+// method prefix is stripped before recording. This bounds the number of
+// time series by the routes the blog registers rather than by what clients ask
+// for; labelling by path would let a bot scanning for /wp-admin and friends grow
+// the series count without limit.
+//
+// Metrics are off by default. Without the option the no-op meter provider is
+// used, no instruments are created and the recording middleware is not installed
+// at all, so requests are unaffected. The server does not fall back to
+// otel.GetMeterProvider(); pass it explicitly to use the global provider:
+//
+//	srv, err := server.New(postsFS, config.WithMeterProvider(otel.GetMeterProvider()))
+//
+// Recording happens as the outermost layer of the handler stack, so the observed
+// duration covers user middleware too. Health-check requests are intercepted in
+// ServeHTTP before that stack and are never recorded, which keeps Kubernetes
+// probe traffic from swamping real page hits.
+//
+// The option lives on config.ServerOption, so it applies to Server only.
+// Callers mounting the exported Handler into their own mux instead should
+// instrument it themselves, for example with otelhttp.NewHandler.
 //
 // # Concurrency
 //

@@ -10,11 +10,29 @@ GoBlog is a blog generation and serving system for creating static blog feeds fr
 
 ## CLI
 
-Install the `goblog` binary:
+The `goblog` binary lives in its own Go module (`cli/`) that is not published to
+the module proxy, so it is installed from a package manager or a release archive
+rather than with `go install`.
+
+**Homebrew** (macOS and Linux):
 
 ```bash
-go install github.com/harrydayexe/GoBlog/v2/cmd/goblog@latest
+brew install harrydayexe/tap/goblog
 ```
+
+**Release archive** — grab the archive for your platform from the
+[releases page](https://github.com/harrydayexe/GoBlog/releases) and put the
+binary on your `PATH`:
+
+```bash
+curl -sSL https://github.com/harrydayexe/GoBlog/releases/latest/download/GoBlog_Linux_x86_64.tar.gz | tar -xz goblog
+sudo install goblog /usr/local/bin/goblog
+```
+
+Archives are published for Linux and macOS on `x86_64` and `arm64`. Windows
+archives are built as well but Windows is not a supported install target.
+
+There is also a [Docker image](#docker) if you only need to serve a blog.
 
 ```bash
 # Generate static files
@@ -61,12 +79,28 @@ When `--base-url` is set, the server also exposes the generated feeds at `{root-
 | `--watch` | `-w` | `false` | Watch the posts directory and regenerate on changes |
 | `--cache-control` | | `1h` | Max-age TTL for the `Cache-Control` header (`0` disables) |
 | `--health-checks` | | `false` | Expose `/healthz/live`, `/healthz/ready`, and `/healthz/startup` endpoints (no auth required); server binds before loading content so probes observe startup state |
+| `--metrics` | | `false` | Record Prometheus metrics and serve them at `/metrics` on a separate admin listener |
+| `--metrics-port` | | `9090` | Port the admin listener binds to |
+| `--metrics-host` | | all interfaces | Host address the admin listener binds to |
+
+`/metrics` is only ever served on the admin listener, never on the blog's port,
+so operational data is not exposed to readers and is unaffected by
+`--root-path`. Nothing is bound and nothing is recorded without `--metrics`; if
+the admin port cannot be bound, `serve` exits with an error rather than starting
+a blog whose metrics are silently missing.
+
+`--metrics-host` defaults to all interfaces, matching how exporters normally
+behave and keeping container and Kubernetes deployments flag-free. On a machine
+with a public interface that means the scrape endpoint is reachable from the
+network — pass `--metrics-host 127.0.0.1` to keep it local.
 
 ### Shell completion
 
-`goblog` can generate shell completion scripts at runtime. After installing the
-binary, source the appropriate script to enable tab-completion of subcommands and
-flags.
+The Homebrew cask installs bash, zsh, and fish completions for you. Release
+archives ship the same scripts in a `completions/` directory.
+
+`goblog` can also generate them at runtime — source the appropriate script to
+enable tab-completion of subcommands and flags.
 
 **Bash** — add to `~/.bashrc`:
 
@@ -81,9 +115,15 @@ autoload -Uz compinit && compinit
 source <(goblog completion zsh)
 ```
 
+**Fish** — write the script to your completions directory:
+
+```fish
+goblog completion fish > ~/.config/fish/completions/goblog.fish
+```
+
 ## Docker
 
-The official image is [`harrydayexe/goblog`](https://hub.docker.com/repository/docker/harrydayexe/goblog/general). It runs `goblog serve --health-checks /posts` by default and exposes port `8080`. Health-check endpoints are enabled in the Docker image. File watching is off by default; pass `--watch` to enable it.
+The official image is [`harrydayexe/goblog`](https://hub.docker.com/repository/docker/harrydayexe/goblog/general). It runs `goblog serve --health-checks --metrics /posts` by default and exposes ports `8080` (the blog) and `9090` (`/metrics`). Health-check endpoints and metrics are enabled in the Docker image. File watching is off by default; pass `--watch` to enable it.
 
 Mount your Markdown posts directory to `/posts`:
 
@@ -124,6 +164,50 @@ docker run \
   harrydayexe/goblog /posts --template-dir /mytheme
 ```
 
+### Metrics
+
+The image records [OpenTelemetry HTTP server metrics](https://opentelemetry.io/docs/specs/semconv/http/http-metrics/) and serves them in Prometheus format at `/metrics` on port `9090`. That port is separate from the blog's, so the scrape endpoint is never reachable by blog readers — and it is only reachable at all if you publish it:
+
+```bash
+docker run -v ./posts:/posts -p 8080:8080 -p 9090:9090 harrydayexe/goblog
+```
+
+Leave `-p 9090:9090` off and metrics stay inside the container, where a sidecar or a Kubernetes `ServiceMonitor` on the pod IP can still reach them.
+
+| Flag | Default | Description |
+|---|---|---|
+| `--metrics` | on in the image | Record metrics and bind the admin listener |
+| `--metrics-port` | `9090` | Admin listener port |
+| `--metrics-host` | all interfaces | Admin listener bind address |
+
+To turn metrics off, override the entrypoint: `--entrypoint ./goblog` followed by `serve --health-checks /posts`.
+
+A scrape config for the container:
+
+```yaml
+scrape_configs:
+  - job_name: goblog
+    static_configs:
+      - targets: ["goblog:9090"]
+```
+
+Useful queries — there is no separate request counter, the duration histogram's `_count` series is the page-hit number:
+
+```promql
+# Page hits per route
+sum by (http_route) (rate(http_server_request_duration_seconds_count[5m]))
+
+# Error rate
+sum(rate(http_server_request_duration_seconds_count{http_response_status_code=~"5.."}[5m]))
+  / sum(rate(http_server_request_duration_seconds_count[5m]))
+
+# p95 latency by route
+histogram_quantile(0.95,
+  sum by (le, http_route) (rate(http_server_request_duration_seconds_bucket[5m])))
+```
+
+`http_route` is the route pattern that matched, so all posts aggregate under `/posts/{postName}`. Requests to `/healthz/*` are never recorded. See [Metrics](#metrics-1) under **Library** for the full instrument list.
+
 ## Library
 
 Add GoBlog as a dependency:
@@ -131,6 +215,9 @@ Add GoBlog as a dependency:
 ```bash
 go get github.com/harrydayexe/GoBlog/v2
 ```
+
+The CLI is a separate module (`cli/`) that is never published, so none of its
+dependencies reach your build.
 
 The main packages are:
 
@@ -176,6 +263,25 @@ func main() {
 }
 ```
 
+Serving the same posts over HTTP instead. `server.New` takes functional
+options; options belonging to the generator or the template renderer are
+converted with `AsServerOption`:
+
+```go
+srv, err := server.New(os.DirFS("posts/"),
+    config.WithPort(8080),
+    config.WithSiteTitle("My Blog").AsServerOption(),
+    config.WithBaseURL("https://example.com").AsServerOption(),
+)
+if err != nil {
+    panic(err)
+}
+
+if err := srv.Run(context.Background()); err != nil {
+    panic(err)
+}
+```
+
 ### Logger injection
 
 Every component accepts a structured [`log/slog`](https://pkg.go.dev/log/slog) logger via `config.WithLogger`. When not supplied, each component falls back to `slog.Default()` at construction time.
@@ -192,13 +298,10 @@ writer := outputter.NewDirectoryWriter("output/",
 )
 
 // Server
-cfg := config.ServerConfig{
-    Server: []config.BaseServerOption{
-        config.WithPort(8080),
-        config.WithLogger(logger).AsServerOption(),
-    },
-}
-srv, err := server.New(nil, postsFS, cfg)
+srv, err := server.New(postsFS,
+    config.WithPort(8080),
+    config.WithLogger(logger).AsServerOption(),
+)
 
 // Watcher
 w, err := watcher.New("posts/", config.WithLogger(logger).AsWatcherOption())
@@ -206,6 +309,59 @@ w, err := watcher.New("posts/", config.WithLogger(logger).AsWatcherOption())
 // Parser
 p := parser.New(parser.WithLogger(logger))
 ```
+
+### Metrics
+
+`pkg/server` can record HTTP request metrics through the [OpenTelemetry metrics API](https://pkg.go.dev/go.opentelemetry.io/otel/metric). Pass a meter provider with `config.WithMeterProvider`:
+
+```go
+import (
+    "go.opentelemetry.io/otel/exporters/prometheus"
+    sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+)
+
+exporter, err := prometheus.New()
+if err != nil {
+    panic(err)
+}
+provider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(exporter))
+
+srv, err := server.New(os.DirFS("posts/"),
+    config.WithPort(8080),
+    config.WithMeterProvider(provider),
+)
+```
+
+This is the library equivalent of the CLI's `--metrics` flag: library users wire
+their own exporter and scrape listener, and the `--metrics*` flags do not apply.
+
+The Prometheus exporter registers into the default `prometheus` registry, so serving the scrape endpoint is one handler — keep it on a separate port so it is not part of the blog:
+
+```go
+// github.com/prometheus/client_golang/prometheus/promhttp
+go http.ListenAndServe(":9090", promhttp.Handler())
+```
+
+GoBlog depends on the metrics **API** only. The SDK and the exporter above are your dependencies, not GoBlog's, so a project that never configures metrics pulls in neither.
+
+Three instruments are recorded, using the stable [HTTP server semantic conventions](https://opentelemetry.io/docs/specs/semconv/http/http-metrics/) so off-the-shelf Grafana dashboards work unchanged:
+
+| Instrument | Kind | Unit |
+|---|---|---|
+| `http.server.request.duration` | Histogram | seconds |
+| `http.server.active_requests` | UpDownCounter | requests |
+| `http.server.response.body.size` | Histogram | bytes |
+
+Attributes are `http.request.method`, `url.scheme`, `http.response.status_code`, `http.route`, and `error.type` on server errors. There is no separate request counter — the histogram's `http_server_request_duration_seconds_count` series is the page-hit number, and error rate is a query over the status code:
+
+```promql
+sum(rate(http_server_request_duration_seconds_count{http_response_status_code=~"5.."}[5m]))
+  / sum(rate(http_server_request_duration_seconds_count[5m]))
+```
+
+`http.route` is the route pattern that matched, not the requested path, so every post aggregates under `/posts/{postName}` and requests matching no route share one series. That keeps the number of time series bounded by your routes rather than by whatever paths a scanner tries.
+
+Metrics are off by default: with no option supplied nothing is recorded and no instrumentation is installed. GoBlog does not read the global provider implicitly; pass it if that is what you want, with `config.WithMeterProvider(otel.GetMeterProvider())`. Requests to `/healthz/*` are never recorded.
 
 ### SEO metadata
 
@@ -293,7 +449,7 @@ defer root.Close()
 
 gen := generator.New(postsFS, renderer, config.WithAssetsDir(root.FS()).AsGeneratorOption())
 writer := outputter.NewDirectoryWriter("output/", config.WithAssetsDir(root.FS()).AsGeneratorOption())
-cfg.Server = append(cfg.Server, config.WithAssetsDir(root.FS()).AsServerOption())
+srv, err := server.New(postsFS, config.WithAssetsDir(root.FS()).AsServerOption())
 ```
 
 The generator forwards the directory to the parser, which is what measures the images. Using the parser on its own, pass it directly with `parser.WithAssetsDir(root.FS())`.

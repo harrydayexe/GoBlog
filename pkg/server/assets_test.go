@@ -35,13 +35,10 @@ func testAssetsFS() fstest.MapFS {
 	}
 }
 
-func newAssetsServer(t *testing.T, opts ...config.BaseServerOption) *server.Server {
+func newAssetsServer(t *testing.T, opts ...config.ServerOption) *server.Server {
 	t.Helper()
-	cfg := config.ServerConfig{
-		Server: opts,
-		Gen:    []config.GeneratorOption{config.WithRawOutput()},
-	}
-	srv, err := server.New(slog.New(slog.DiscardHandler), createTestFS(t), cfg)
+	opts = append(opts, config.WithRawOutput().AsServerOption())
+	srv, err := server.New(createTestFS(t), opts...)
 	if err != nil {
 		t.Fatalf("failed to create server: %v", err)
 	}
@@ -139,7 +136,7 @@ func TestAssets_Traversal(t *testing.T) {
 	}
 	t.Cleanup(func() { root.Close() })
 
-	h := server.Handler(&generator.GeneratedBlog{}, nil, config.WithAssetsDir(root.FS()))
+	h := server.Handler(&generator.GeneratedBlog{}, config.WithAssetsDir(root.FS()))
 
 	for _, target := range []string{
 		"/images/../secret.txt",
@@ -169,7 +166,7 @@ func TestAssets_NoRouteWhenDisabled(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			h := server.Handler(&generator.GeneratedBlog{}, nil, tt.opts...)
+			h := server.Handler(&generator.GeneratedBlog{}, tt.opts...)
 			if w := get(h, "/images/pipeline.png"); w.Code != http.StatusNotFound {
 				t.Errorf("status %d, want 404", w.Code)
 			}
@@ -199,13 +196,10 @@ date: 2024-01-01
 ![A diagram](pipeline.png)
 		`))},
 	}
-	cfg := config.ServerConfig{
-		Server: []config.BaseServerOption{
-			config.WithAssetsDir(fstest.MapFS{"pipeline.png": {Data: buf.Bytes()}}).AsServerOption(),
-		},
-	}
-
-	srv, err := server.New(slog.New(slog.DiscardHandler), posts, cfg)
+	srv, err := server.New(posts,
+		config.WithAssetsDir(fstest.MapFS{"pipeline.png": {Data: buf.Bytes()}}).AsServerOption(),
+		config.WithLogger(slog.New(slog.DiscardHandler)).AsServerOption(),
+	)
 	if err != nil {
 		t.Fatalf("failed to create server: %v", err)
 	}

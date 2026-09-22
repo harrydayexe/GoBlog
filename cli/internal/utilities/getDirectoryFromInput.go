@@ -8,7 +8,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/harrydayexe/GoBlog/v2/internal/errors"
+	"github.com/harrydayexe/GoBlog/v2/cli/internal/errors"
 )
 
 // GetDirectoryFromInput validates a path and returns it as an fs.FS.

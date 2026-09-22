@@ -34,7 +34,7 @@ func testBlogWithSitemap() *generator.GeneratedBlog {
 func TestHandler_Sitemap(t *testing.T) {
 	t.Parallel()
 
-	h := server.Handler(testBlogWithSitemap(), nil)
+	h := server.Handler(testBlogWithSitemap())
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/sitemap.xml", nil)
@@ -56,7 +56,7 @@ func TestHandler_Sitemap(t *testing.T) {
 func TestHandler_RobotsTxt(t *testing.T) {
 	t.Parallel()
 
-	h := server.Handler(testBlogWithSitemap(), nil)
+	h := server.Handler(testBlogWithSitemap())
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/robots.txt", nil)
@@ -78,7 +78,7 @@ func TestHandler_RobotsTxt(t *testing.T) {
 func TestHandler_SitemapAndRobots_Empty(t *testing.T) {
 	t.Parallel()
 
-	h := server.Handler(generator.NewEmptyGeneratedBlog(), nil)
+	h := server.Handler(generator.NewEmptyGeneratedBlog())
 
 	for _, path := range []string{"/sitemap.xml", "/robots.txt"} {
 		rec := httptest.NewRecorder()
@@ -97,7 +97,7 @@ func TestHandler_SitemapAndRobots_Empty(t *testing.T) {
 func TestHandler_SitemapAndRobotsWithBlogRoot(t *testing.T) {
 	t.Parallel()
 
-	h := server.Handler(testBlogWithSitemap(), nil, config.WithBlogRoot("/blog/"))
+	h := server.Handler(testBlogWithSitemap(), config.WithBlogRoot("/blog/"))
 
 	tests := []struct {
 		path string

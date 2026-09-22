@@ -7,8 +7,8 @@ package utilities
 import (
 	"os"
 
-	"github.com/harrydayexe/GoBlog/v2/internal/cliflags"
-	inerrors "github.com/harrydayexe/GoBlog/v2/internal/errors"
+	"github.com/harrydayexe/GoBlog/v2/cli/internal/cliflags"
+	inerrors "github.com/harrydayexe/GoBlog/v2/cli/internal/errors"
 	"github.com/harrydayexe/GoBlog/v2/pkg/config"
 	"github.com/urfave/cli/v3"
 )

@@ -6,10 +6,8 @@ package server_test
 
 import (
 	"context"
-	"log/slog"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 	"time"
 
@@ -22,14 +20,9 @@ import (
 func TestCacheControl_Default(t *testing.T) {
 	t.Parallel()
 
-	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	postsFS := createTestFS(t)
 
-	cfg := config.ServerConfig{
-		Gen: []config.GeneratorOption{config.WithRawOutput()},
-	}
-
-	srv, err := server.New(logger, postsFS, cfg)
+	srv, err := server.New(postsFS, config.WithRawOutput().AsServerOption())
 	if err != nil {
 		t.Fatalf("failed to create server: %v", err)
 	}
@@ -54,17 +47,12 @@ func TestCacheControl_Default(t *testing.T) {
 func TestCacheControl_CustomTTL(t *testing.T) {
 	t.Parallel()
 
-	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	postsFS := createTestFS(t)
 
-	cfg := config.ServerConfig{
-		Server: []config.BaseServerOption{
-			config.WithCacheControl(30 * time.Minute),
-		},
-		Gen: []config.GeneratorOption{config.WithRawOutput()},
-	}
-
-	srv, err := server.New(logger, postsFS, cfg)
+	srv, err := server.New(postsFS,
+		config.WithCacheControl(30*time.Minute),
+		config.WithRawOutput().AsServerOption(),
+	)
 	if err != nil {
 		t.Fatalf("failed to create server: %v", err)
 	}
@@ -85,17 +73,12 @@ func TestCacheControl_CustomTTL(t *testing.T) {
 func TestCacheControl_ZeroDisablesHeader(t *testing.T) {
 	t.Parallel()
 
-	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	postsFS := createTestFS(t)
 
-	cfg := config.ServerConfig{
-		Server: []config.BaseServerOption{
-			config.WithCacheControl(0),
-		},
-		Gen: []config.GeneratorOption{config.WithRawOutput()},
-	}
-
-	srv, err := server.New(logger, postsFS, cfg)
+	srv, err := server.New(postsFS,
+		config.WithCacheControl(0),
+		config.WithRawOutput().AsServerOption(),
+	)
 	if err != nil {
 		t.Fatalf("failed to create server: %v", err)
 	}
@@ -114,17 +97,12 @@ func TestCacheControl_ZeroDisablesHeader(t *testing.T) {
 func TestCacheControl_PersistsAcrossUpdates(t *testing.T) {
 	t.Parallel()
 
-	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	postsFS := createTestFS(t)
 
-	cfg := config.ServerConfig{
-		Server: []config.BaseServerOption{
-			config.WithCacheControl(2 * time.Hour),
-		},
-		Gen: []config.GeneratorOption{config.WithRawOutput()},
-	}
-
-	srv, err := server.New(logger, postsFS, cfg)
+	srv, err := server.New(postsFS,
+		config.WithCacheControl(2*time.Hour),
+		config.WithRawOutput().AsServerOption(),
+	)
 	if err != nil {
 		t.Fatalf("failed to create server: %v", err)
 	}

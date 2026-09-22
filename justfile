@@ -4,9 +4,15 @@
 # Variables
 BINARY_NAME := "goblog"
 MODULE := "github.com/harrydayexe/GoBlog/v2"
+CLI_DIR := "cli"
 MAIN_PATH := "./cmd/goblog"
 DIST_DIR := "dist"
 COVERAGE_DIR := "coverage"
+
+# Modules covered by the unit suite. The integration module is excluded because
+# it needs Docker and is run separately by `test-integration`.
+UNIT_MODULES := ". cli"
+ALL_MODULES := ". cli integration"
 
 # Build-time version injection using git tags
 VERSION := `git describe --tags --always --dirty 2>/dev/null || echo "dev"`
@@ -18,13 +24,13 @@ LDFLAGS := '-s -w -X main.version=' + VERSION
 build:
     @echo "Building {{BINARY_NAME}}..."
     @mkdir -p {{DIST_DIR}}
-    go build -ldflags "{{LDFLAGS}}" -o {{DIST_DIR}}/{{BINARY_NAME}} {{MAIN_PATH}}
+    go -C {{CLI_DIR}} build -ldflags "{{LDFLAGS}}" -o {{justfile_directory()}}/{{DIST_DIR}}/{{BINARY_NAME}} {{MAIN_PATH}}
     @echo "✓ Binary built successfully: {{DIST_DIR}}/{{BINARY_NAME}}"
 
 # Build and install to $GOPATH/bin
 install:
     @echo "Installing {{BINARY_NAME}}..."
-    go install -ldflags "{{LDFLAGS}}" {{MAIN_PATH}}
+    go -C {{CLI_DIR}} install -ldflags "{{LDFLAGS}}" {{MAIN_PATH}}
     @echo "✓ Binary installed successfully"
 
 # Remove build artifacts
@@ -39,40 +45,61 @@ clean:
 # Run all tests
 [group("test")]
 test:
-    go test ./...
+    #!/usr/bin/env bash
+    set -euo pipefail
+    for mod in {{UNIT_MODULES}}; do
+        echo "==> $mod"
+        go -C "$mod" test ./...
+    done
 
 # Run tests with verbose output
 [group("test")]
 test-verbose:
-    go test -v ./...
+    #!/usr/bin/env bash
+    set -euo pipefail
+    for mod in {{UNIT_MODULES}}; do
+        echo "==> $mod"
+        go -C "$mod" test -v ./...
+    done
 
 # Run tests with race detector
 [group("test")]
 test-race:
-    go test -race ./...
+    #!/usr/bin/env bash
+    set -euo pipefail
+    for mod in {{UNIT_MODULES}}; do
+        echo "==> $mod"
+        go -C "$mod" test -race ./...
+    done
 
 # Run integration tests (requires Docker)
 [group("test")]
 test-integration:
-    cd integration && go test -v -timeout 10m ./...
+    go -C integration test -v -timeout 10m ./...
 
 # Run tests with coverage profile
 [group("test")]
 test-coverage:
+    # The two modules produce separate profiles: `go tool cover` resolves source
+    # files through the module it runs in, so a merged cross-module profile
+    # would not be readable.
     @echo "Running tests with coverage..."
     @mkdir -p {{COVERAGE_DIR}}
-    go test -coverprofile={{COVERAGE_DIR}}/coverage.out ./...
+    go test -coverprofile={{COVERAGE_DIR}}/library.out ./...
+    go -C {{CLI_DIR}} test -coverprofile={{justfile_directory()}}/{{COVERAGE_DIR}}/cli.out ./...
     @echo "\nCoverage summary:"
-    @go tool cover -func={{COVERAGE_DIR}}/coverage.out | tail -1
+    @printf 'library  ' && go tool cover -func={{COVERAGE_DIR}}/library.out | tail -1
+    @printf 'cli      ' && go -C {{CLI_DIR}} tool cover -func={{justfile_directory()}}/{{COVERAGE_DIR}}/cli.out | tail -1
 
-# Generate HTML coverage report
+# Generate HTML coverage reports
 [group("test")]
 coverage-html: test-coverage
-    @echo "Generating HTML coverage report..."
-    go tool cover -html={{COVERAGE_DIR}}/coverage.out -o {{COVERAGE_DIR}}/coverage.html
-    @echo "✓ Coverage report: {{COVERAGE_DIR}}/coverage.html"
+    @echo "Generating HTML coverage reports..."
+    go tool cover -html={{COVERAGE_DIR}}/library.out -o {{COVERAGE_DIR}}/library.html
+    go -C {{CLI_DIR}} tool cover -html={{justfile_directory()}}/{{COVERAGE_DIR}}/cli.out -o {{justfile_directory()}}/{{COVERAGE_DIR}}/cli.html
+    @echo "✓ Coverage reports: {{COVERAGE_DIR}}/library.html, {{COVERAGE_DIR}}/cli.html"
     @echo "Opening in browser..."
-    @open {{COVERAGE_DIR}}/coverage.html 2>/dev/null || xdg-open {{COVERAGE_DIR}}/coverage.html 2>/dev/null || echo "Please open {{COVERAGE_DIR}}/coverage.html manually"
+    @open {{COVERAGE_DIR}}/library.html 2>/dev/null || xdg-open {{COVERAGE_DIR}}/library.html 2>/dev/null || echo "Please open {{COVERAGE_DIR}}/library.html manually"
 
 # Run complete test suite (CI/CD simulation)
 [group("test")]
@@ -89,23 +116,40 @@ test-all:
 # Run go vet linter
 [group("lint")]
 vet:
-    go vet ./...
+    #!/usr/bin/env bash
+    set -euo pipefail
+    for mod in {{ALL_MODULES}}; do
+        echo "==> $mod"
+        go -C "$mod" vet ./...
+    done
 
 # Format all Go code
 [group("lint")]
 fmt:
-    go fmt ./...
+    #!/usr/bin/env bash
+    set -euo pipefail
+    for mod in {{ALL_MODULES}}; do
+        go -C "$mod" fmt ./...
+    done
 
 # Run vulncheck on codebase
 [group("lint")]
 vulncheck:
-    govulncheck ./...
+    #!/usr/bin/env bash
+    set -euo pipefail
+    for mod in {{ALL_MODULES}}; do
+        echo "==> $mod"
+        (cd "$mod" && govulncheck ./...)
+    done
 
 # Run go mod tidy
 [group("lint")]
 mod-tidy:
-    go mod tidy 
-    cd integration && go mod tidy
+    #!/usr/bin/env bash
+    set -euo pipefail
+    for mod in {{ALL_MODULES}}; do
+        go -C "$mod" mod tidy
+    done
 
 # Check if code is formatted
 [group("lint")]
@@ -128,19 +172,19 @@ check-license:
 add-license:
     addlicense -l mpl -c "GoBlog Authors" ./
 
-# Run generator command with arguments
+# Run generator command with arguments. Paths are relative to the repo root.
 [group('run')]
-run-gen *ARGS:
-    go run {{MAIN_PATH}} gen {{ARGS}}
+run-gen *ARGS: build
+    {{DIST_DIR}}/{{BINARY_NAME}} generate {{ARGS}}
 
 # Run serve command with optional arguments (defaults to example posts)
 [group('run')]
-run-serve *ARGS:
+run-serve *ARGS: build
     #!/usr/bin/env bash
     if [ -z "{{ARGS}}" ]; then
-        go run {{MAIN_PATH}} serve docs/example-posts
+        {{DIST_DIR}}/{{BINARY_NAME}} serve docs/example-posts
     else
-        go run {{MAIN_PATH}} serve {{ARGS}}
+        {{DIST_DIR}}/{{BINARY_NAME}} serve {{ARGS}}
     fi
 
 # Build the dockerfile for the current architecture
@@ -153,4 +197,4 @@ docker tag="goblog:latest":
 [group("run")]
 run-image tag="goblog:latest": docker
     @echo "Running Docker image..."
-    docker run -v ./docs/example-posts/:/posts -p 8080:8080 {{tag}}
+    docker run -v ./docs/example-posts/:/posts -p 8080:8080 -p 9090:9090 {{tag}}

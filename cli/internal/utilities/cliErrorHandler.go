@@ -10,7 +10,7 @@ import (
 	"os"
 
 	"github.com/fatih/color"
-	inerrors "github.com/harrydayexe/GoBlog/v2/internal/errors"
+	inerrors "github.com/harrydayexe/GoBlog/v2/cli/internal/errors"
 )
 
 // CliErrorHandler handles errors by printing them to stdout or stderr and exits if fatal.

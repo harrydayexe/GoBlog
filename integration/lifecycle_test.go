@@ -38,13 +38,10 @@ func TestRun_BindError(t *testing.T) {
 	dir := t.TempDir()
 	writePost(t, dir, "post.md", minimalPost("Hello World"))
 
-	cfg := config.ServerConfig{
-		Server: []config.BaseServerOption{
-			config.WithPort(port),
-			config.WithHost("127.0.0.1"),
-		},
-	}
-	srv, err := server.New(nil, os.DirFS(dir), cfg)
+	srv, err := server.New(os.DirFS(dir),
+		config.WithPort(port),
+		config.WithHost("127.0.0.1"),
+	)
 	if err != nil {
 		t.Fatalf("server.New: %v", err)
 	}
@@ -77,13 +74,10 @@ func TestRun_GracefulShutdown(t *testing.T) {
 	port := listener.Addr().(*net.TCPAddr).Port
 	listener.Close()
 
-	cfg := config.ServerConfig{
-		Server: []config.BaseServerOption{
-			config.WithPort(port),
-			config.WithHost("127.0.0.1"),
-		},
-	}
-	srv, err := server.New(nil, os.DirFS(dir), cfg)
+	srv, err := server.New(os.DirFS(dir),
+		config.WithPort(port),
+		config.WithHost("127.0.0.1"),
+	)
 	if err != nil {
 		t.Fatalf("server.New: %v", err)
 	}
@@ -181,17 +175,11 @@ func TestServe_SitemapAndRobots(t *testing.T) {
 	dir := t.TempDir()
 	writePost(t, dir, "post.md", minimalPost("Hello World"))
 
-	cfg := config.ServerConfig{
-		Server: []config.BaseServerOption{
-			config.WithPort(0),
-			config.WithBlogRoot("/blog/").AsServerOption(),
-		},
-		Gen: []config.GeneratorOption{
-			config.WithBaseURL("https://example.com"),
-			config.WithBlogRoot("/blog/").AsGeneratorOption(),
-		},
-	}
-	srv, err := server.New(nil, os.DirFS(dir), cfg)
+	srv, err := server.New(os.DirFS(dir),
+		config.WithPort(0),
+		config.WithBlogRoot("/blog/").AsServerOption(),
+		config.WithBaseURL("https://example.com").AsServerOption(),
+	)
 	if err != nil {
 		t.Fatalf("server.New: %v", err)
 	}

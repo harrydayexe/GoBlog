@@ -9,7 +9,6 @@ import (
 	"context"
 	"image"
 	"image/png"
-	"io"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -20,7 +19,7 @@ import (
 	"testing/fstest"
 	"time"
 
-	"github.com/harrydayexe/GoBlog/v2/internal/utilities"
+	"github.com/harrydayexe/GoBlog/v2/cli/internal/utilities"
 	"github.com/harrydayexe/GoBlog/v2/pkg/config"
 	pkgserver "github.com/harrydayexe/GoBlog/v2/pkg/server"
 	"github.com/harrydayexe/GoBlog/v2/pkg/watcher"
@@ -45,10 +44,6 @@ func testFS() fstest.MapFS {
 	}
 }
 
-func discardLogger() *slog.Logger {
-	return slog.New(slog.NewTextHandler(io.Discard, nil))
-}
-
 // TestRunServe_CanceledContext verifies that runServe returns nil when the context is canceled.
 func TestRunServe_CanceledContext(t *testing.T) {
 	t.Parallel()
@@ -56,11 +51,7 @@ func TestRunServe_CanceledContext(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	cfg := config.ServerConfig{
-		Server: []config.BaseServerOption{config.WithPort(0)},
-	}
-
-	err := runServe(ctx, t.TempDir(), testFS(), cfg, false)
+	err := runServe(ctx, t.TempDir(), testFS(), false, nil, config.WithPort(0))
 	if err != nil {
 		t.Errorf("runServe() with canceled context error = %v, want nil", err)
 	}
@@ -70,11 +61,7 @@ func TestRunServe_CanceledContext(t *testing.T) {
 func TestRunServe_ServesIndex(t *testing.T) {
 	t.Parallel()
 
-	cfg := config.ServerConfig{
-		Server: []config.BaseServerOption{config.WithPort(0)},
-	}
-
-	srv, err := pkgserver.New(discardLogger(), testFS(), cfg)
+	srv, err := pkgserver.New(testFS(), config.WithPort(0))
 	if err != nil {
 		t.Fatalf("server.New() error = %v", err)
 	}
@@ -92,11 +79,7 @@ func TestRunServe_ServesIndex(t *testing.T) {
 func TestRunServe_ServesPost(t *testing.T) {
 	t.Parallel()
 
-	cfg := config.ServerConfig{
-		Server: []config.BaseServerOption{config.WithPort(0)},
-	}
-
-	srv, err := pkgserver.New(discardLogger(), testFS(), cfg)
+	srv, err := pkgserver.New(testFS(), config.WithPort(0))
 	if err != nil {
 		t.Fatalf("server.New() error = %v", err)
 	}
@@ -114,14 +97,10 @@ func TestRunServe_ServesPost(t *testing.T) {
 func TestRunServe_BlogRoot(t *testing.T) {
 	t.Parallel()
 
-	cfg := config.ServerConfig{
-		Server: []config.BaseServerOption{
-			config.WithPort(0),
-			{BaseOption: config.WithBlogRoot("/blog/")},
-		},
-	}
-
-	srv, err := pkgserver.New(discardLogger(), testFS(), cfg)
+	srv, err := pkgserver.New(testFS(),
+		config.WithPort(0),
+		config.WithBlogRoot("/blog/").AsServerOption(),
+	)
 	if err != nil {
 		t.Fatalf("server.New() error = %v", err)
 	}
@@ -150,11 +129,7 @@ func TestRunServe_WatchBadPath(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	cfg := config.ServerConfig{
-		Server: []config.BaseServerOption{config.WithPort(0)},
-	}
-
-	err := runServe(ctx, "/nonexistent/goblog/watch/test", testFS(), cfg, true)
+	err := runServe(ctx, "/nonexistent/goblog/watch/test", testFS(), true, nil, config.WithPort(0))
 	if err == nil {
 		t.Error("runServe() with watch=true and bad path returned nil, want error")
 	}
@@ -173,11 +148,7 @@ func TestRunServe_WatchReloadsPost(t *testing.T) {
 		t.Fatalf("WriteFile error = %v", err)
 	}
 
-	cfg := config.ServerConfig{
-		Server: []config.BaseServerOption{config.WithPort(0)},
-	}
-
-	srv, err := pkgserver.New(discardLogger(), os.DirFS(dir), cfg)
+	srv, err := pkgserver.New(os.DirFS(dir), config.WithPort(0))
 	if err != nil {
 		t.Fatalf("server.New() error = %v", err)
 	}
@@ -231,14 +202,10 @@ This is a new post.
 func TestRunServe_ServesFeedsWithBaseURL(t *testing.T) {
 	t.Parallel()
 
-	cfg := config.ServerConfig{
-		Server: []config.BaseServerOption{config.WithPort(0)},
-		Gen: []config.GeneratorOption{
-			config.WithBaseURL("https://example.com"),
-		},
-	}
-
-	srv, err := pkgserver.New(discardLogger(), testFS(), cfg)
+	srv, err := pkgserver.New(testFS(),
+		config.WithPort(0),
+		config.WithBaseURL("https://example.com").AsServerOption(),
+	)
 	if err != nil {
 		t.Fatalf("server.New() error = %v", err)
 	}
@@ -259,12 +226,8 @@ func TestRunServe_ServesFeedsWithBaseURL(t *testing.T) {
 func TestRunServe_FeedsNotAvailableWithoutBaseURL(t *testing.T) {
 	t.Parallel()
 
-	cfg := config.ServerConfig{
-		Server: []config.BaseServerOption{config.WithPort(0)},
-		// No WithBaseURL → generator skips feed generation.
-	}
-
-	srv, err := pkgserver.New(discardLogger(), testFS(), cfg)
+	// No WithBaseURL → generator skips feed generation.
+	srv, err := pkgserver.New(testFS(), config.WithPort(0))
 	if err != nil {
 		t.Fatalf("server.New() error = %v", err)
 	}
@@ -313,14 +276,11 @@ func TestRunServe_ImageDimensions(t *testing.T) {
 	}
 	defer func() { _ = root.Close() }()
 
-	cfg := config.ServerConfig{
-		Server: []config.BaseServerOption{
-			config.WithPort(0),
-			config.WithAssetsDir(root.FS()).AsServerOption(),
-		},
-	}
-
-	srv, err := pkgserver.New(discardLogger(), os.DirFS(postsDir), cfg)
+	srv, err := pkgserver.New(os.DirFS(postsDir),
+		config.WithPort(0),
+		config.WithAssetsDir(root.FS()).AsServerOption(),
+		config.WithLogger(slog.New(slog.DiscardHandler)).AsServerOption(),
+	)
 	if err != nil {
 		t.Fatalf("server.New() error = %v", err)
 	}

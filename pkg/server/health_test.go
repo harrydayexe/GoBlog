@@ -28,10 +28,7 @@ func TestHealthChecks_Disabled(t *testing.T) {
 	t.Parallel()
 
 	postsFS := createTestFS(t)
-	cfg := config.ServerConfig{
-		Server: []config.BaseServerOption{config.WithPort(8080)},
-	}
-	srv, err := server.New(nil, postsFS, cfg)
+	srv, err := server.New(postsFS, config.WithPort(8080))
 	if err != nil {
 		t.Fatalf("server.New: %v", err)
 	}
@@ -53,14 +50,11 @@ func TestHealthChecks_Live_AlwaysOK(t *testing.T) {
 	t.Parallel()
 
 	postsFS := createTestFS(t)
-	cfg := config.ServerConfig{
-		Server: []config.BaseServerOption{
-			config.WithPort(8080),
-			config.WithHealthChecks(),
-		},
-	}
 	// New returns immediately with state=starting when health checks are on.
-	srv, err := server.New(nil, postsFS, cfg)
+	srv, err := server.New(postsFS,
+		config.WithPort(8080),
+		config.WithHealthChecks(),
+	)
 	if err != nil {
 		t.Fatalf("server.New: %v", err)
 	}
@@ -83,14 +77,11 @@ func TestHealthChecks_Ready_WhileStarting(t *testing.T) {
 	t.Parallel()
 
 	postsFS := createTestFS(t)
-	cfg := config.ServerConfig{
-		Server: []config.BaseServerOption{
-			config.WithPort(8080),
-			config.WithHealthChecks(),
-		},
-	}
 	// State is "starting" immediately after New (before Run).
-	srv, err := server.New(nil, postsFS, cfg)
+	srv, err := server.New(postsFS,
+		config.WithPort(8080),
+		config.WithHealthChecks(),
+	)
 	if err != nil {
 		t.Fatalf("server.New: %v", err)
 	}
@@ -116,13 +107,10 @@ func TestHealthChecks_NonGetMethod(t *testing.T) {
 	t.Parallel()
 
 	postsFS := createTestFS(t)
-	cfg := config.ServerConfig{
-		Server: []config.BaseServerOption{
-			config.WithPort(8080),
-			config.WithHealthChecks(),
-		},
-	}
-	srv, err := server.New(nil, postsFS, cfg)
+	srv, err := server.New(postsFS,
+		config.WithPort(8080),
+		config.WithHealthChecks(),
+	)
 	if err != nil {
 		t.Fatalf("server.New: %v", err)
 	}
@@ -156,17 +144,14 @@ func TestHealthChecks_BypassesMiddleware(t *testing.T) {
 	})
 
 	postsFS := createTestFS(t)
-	cfg := config.ServerConfig{
-		Server: []config.BaseServerOption{
-			config.WithPort(8080),
-			config.WithMiddleware(rejectAll),
-			config.WithHealthChecks(),
-		},
-	}
 	// With health checks disabled the sync path is used (middleware is applied
 	// but health routes are not intercepted). Enable health checks to get the
 	// pre-middleware interception.
-	srv, err := server.New(nil, postsFS, cfg)
+	srv, err := server.New(postsFS,
+		config.WithPort(8080),
+		config.WithMiddleware(rejectAll),
+		config.WithHealthChecks(),
+	)
 	if err != nil {
 		t.Fatalf("server.New: %v", err)
 	}
@@ -196,14 +181,11 @@ func TestHealthChecks_ReadyAfterInit(t *testing.T) {
 	port := l.Addr().(*net.TCPAddr).Port
 	l.Close()
 
-	cfg := config.ServerConfig{
-		Server: []config.BaseServerOption{
-			config.WithPort(port),
-			config.WithHost("127.0.0.1"),
-			config.WithHealthChecks(),
-		},
-	}
-	srv, err := server.New(nil, postsFS, cfg)
+	srv, err := server.New(postsFS,
+		config.WithPort(port),
+		config.WithHost("127.0.0.1"),
+		config.WithHealthChecks(),
+	)
 	if err != nil {
 		t.Fatalf("server.New: %v", err)
 	}
@@ -259,14 +241,11 @@ func TestHealthChecks_FailedInit(t *testing.T) {
 	port := l.Addr().(*net.TCPAddr).Port
 	l.Close()
 
-	cfg := config.ServerConfig{
-		Server: []config.BaseServerOption{
-			config.WithPort(port),
-			config.WithHost("127.0.0.1"),
-			config.WithHealthChecks(),
-		},
-	}
-	srv, err := server.New(nil, brokenFS, cfg)
+	srv, err := server.New(brokenFS,
+		config.WithPort(port),
+		config.WithHost("127.0.0.1"),
+		config.WithHealthChecks(),
+	)
 	if err != nil {
 		t.Fatalf("server.New: %v (want nil when health checks enabled)", err)
 	}

@@ -37,7 +37,7 @@ func TestHandler_SiteRSSFeed(t *testing.T) {
 	t.Parallel()
 
 	blog := testBlogWithFeeds("")
-	h := server.Handler(blog, nil)
+	h := server.Handler(blog)
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/rss.xml", nil)
@@ -58,7 +58,7 @@ func TestHandler_SiteAtomFeed(t *testing.T) {
 	t.Parallel()
 
 	blog := testBlogWithFeeds("")
-	h := server.Handler(blog, nil)
+	h := server.Handler(blog)
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/atom.xml", nil)
@@ -79,7 +79,7 @@ func TestHandler_SiteRSSFeed_Empty(t *testing.T) {
 	t.Parallel()
 
 	blog := generator.NewEmptyGeneratedBlog() // no feed bytes
-	h := server.Handler(blog, nil)
+	h := server.Handler(blog)
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/rss.xml", nil)
@@ -96,7 +96,7 @@ func TestHandler_SiteAtomFeed_Empty(t *testing.T) {
 	t.Parallel()
 
 	blog := generator.NewEmptyGeneratedBlog() // no feed bytes
-	h := server.Handler(blog, nil)
+	h := server.Handler(blog)
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/atom.xml", nil)
@@ -113,7 +113,7 @@ func TestHandler_TagRSSFeed(t *testing.T) {
 	t.Parallel()
 
 	blog := testBlogWithFeeds("golang")
-	h := server.Handler(blog, nil)
+	h := server.Handler(blog)
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/tags/golang.rss.xml", nil)
@@ -134,7 +134,7 @@ func TestHandler_TagAtomFeed(t *testing.T) {
 	t.Parallel()
 
 	blog := testBlogWithFeeds("golang")
-	h := server.Handler(blog, nil)
+	h := server.Handler(blog)
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/tags/golang.atom.xml", nil)
@@ -154,7 +154,7 @@ func TestHandler_TagRSSFeed_UnknownTag(t *testing.T) {
 	t.Parallel()
 
 	blog := testBlogWithFeeds("golang")
-	h := server.Handler(blog, nil)
+	h := server.Handler(blog)
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/tags/rust.rss.xml", nil)
@@ -170,7 +170,7 @@ func TestHandler_TagAtomFeed_UnknownTag(t *testing.T) {
 	t.Parallel()
 
 	blog := testBlogWithFeeds("golang")
-	h := server.Handler(blog, nil)
+	h := server.Handler(blog)
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/tags/rust.atom.xml", nil)
@@ -187,7 +187,7 @@ func TestHandler_FeedsWithBlogRoot(t *testing.T) {
 	t.Parallel()
 
 	blog := testBlogWithFeeds("golang")
-	h := server.Handler(blog, nil, config.WithBlogRoot("/blog/"))
+	h := server.Handler(blog, config.WithBlogRoot("/blog/"))
 
 	tests := []struct {
 		path string

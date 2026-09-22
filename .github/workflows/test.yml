@@ -12,24 +12,34 @@ on:
 
 jobs:
   test:
+    name: Unit tests (${{ matrix.module }})
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        # The library and the CLI are separate Go modules, so `./...` from the
+        # repo root does not reach the CLI. Each module is tested in its own job.
+        module: ['.', 'cli']
     steps:
       - uses: actions/checkout@v6
 
       - uses: actions/setup-go@v6
         with:
           go-version: '1.26'
+          cache-dependency-path: |
+            go.sum
+            cli/go.sum
 
       - name: Run go vet
-        run: go vet ./...
+        run: go -C ${{ matrix.module }} vet ./...
 
       - name: Run tests
-        run: go test -v ./...
+        run: go -C ${{ matrix.module }} test -v ./...
 
       - name: Run tests with race detector
-        run: go test -race ./...
+        run: go -C ${{ matrix.module }} test -race ./...
 
   integration:
     name: Integration tests
@@ -42,9 +52,13 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version: '1.26'
+          cache-dependency-path: integration/go.sum
+
+      - name: Run go vet
+        run: go -C integration vet ./...
 
       - name: Run integration tests
-        run: cd integration && go test -v -timeout 10m ./...
+        run: go -C integration test -race -v -timeout 15m ./...
 
   build-docker-image:
     name: Build Docker image

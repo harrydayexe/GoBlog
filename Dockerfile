@@ -7,15 +7,17 @@ FROM golang:1.26-alpine AS builder
 
 WORKDIR /build
 
-# Copy go mod files
+# Copy go mod files for both modules. The CLI module replaces the library with
+# ../, so the root go.mod must be present before `go mod download` can resolve.
 COPY go.mod go.sum ./
-RUN go mod download
+COPY cli/go.mod cli/go.sum ./cli/
+RUN go -C cli mod download
 
 # Copy source code
 COPY . .
 
-# Build the binary
-RUN CGO_ENABLED=0 GOOS=linux go build -o goblog ./cmd/goblog
+# Build the binary from the CLI module
+RUN CGO_ENABLED=0 GOOS=linux go -C cli build -o /build/goblog ./cmd/goblog
 
 # Runtime stage
 FROM alpine:latest
@@ -30,12 +32,15 @@ COPY --from=builder /build/goblog .
 # Create directory for posts
 RUN mkdir -p /posts
 
-# Expose default port
+# Expose the blog port and the admin port serving /metrics
 EXPOSE 8080
+EXPOSE 9090
 
 # Healthchecks
 HEALTHCHECK CMD wget --spider -q http://localhost:8080/healthz/startup || exit 1
 
-# Use ENTRYPOINT for the binary, CMD for default args
-ENTRYPOINT ["./goblog", "serve", "--health-checks"]
+# Use ENTRYPOINT for the binary, CMD for default args.
+# The image opts into metrics because scraping is the usual reason to run it;
+# port 9090 is only reachable if the operator publishes it.
+ENTRYPOINT ["./goblog", "serve", "--health-checks", "--metrics"]
 CMD ["/posts"]
