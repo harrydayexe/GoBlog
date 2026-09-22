@@ -207,6 +207,58 @@ w, err := watcher.New("posts/", config.WithLogger(logger).AsWatcherOption())
 p := parser.New(parser.WithLogger(logger))
 ```
 
+### Metrics
+
+`pkg/server` can record HTTP request metrics through the [OpenTelemetry metrics API](https://pkg.go.dev/go.opentelemetry.io/otel/metric). Pass a meter provider with `config.WithMeterProvider`:
+
+```go
+import (
+    "go.opentelemetry.io/otel/exporters/prometheus"
+    sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+)
+
+exporter, err := prometheus.New()
+if err != nil {
+    panic(err)
+}
+provider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(exporter))
+
+cfg := config.ServerConfig{
+    Server: []config.BaseServerOption{
+        config.WithPort(8080),
+        config.WithMeterProvider(provider),
+    },
+}
+```
+
+The Prometheus exporter registers into the default `prometheus` registry, so serving the scrape endpoint is one handler — keep it on a separate port so it is not part of the blog:
+
+```go
+// github.com/prometheus/client_golang/prometheus/promhttp
+go http.ListenAndServe(":9090", promhttp.Handler())
+```
+
+GoBlog depends on the metrics **API** only. The SDK and the exporter above are your dependencies, not GoBlog's, so a project that never configures metrics pulls in neither.
+
+Three instruments are recorded, using the stable [HTTP server semantic conventions](https://opentelemetry.io/docs/specs/semconv/http/http-metrics/) so off-the-shelf Grafana dashboards work unchanged:
+
+| Instrument | Kind | Unit |
+|---|---|---|
+| `http.server.request.duration` | Histogram | seconds |
+| `http.server.active_requests` | UpDownCounter | requests |
+| `http.server.response.body.size` | Histogram | bytes |
+
+Attributes are `http.request.method`, `url.scheme`, `http.response.status_code`, `http.route`, and `error.type` on server errors. There is no separate request counter — the histogram's `http_server_request_duration_seconds_count` series is the page-hit number, and error rate is a query over the status code:
+
+```promql
+sum(rate(http_server_request_duration_seconds_count{http_response_status_code=~"5.."}[5m]))
+  / sum(rate(http_server_request_duration_seconds_count[5m]))
+```
+
+`http.route` is the route pattern that matched, not the requested path, so every post aggregates under `/posts/{postName}` and requests matching no route share one series. That keeps the number of time series bounded by your routes rather than by whatever paths a scanner tries.
+
+Metrics are off by default: with no option supplied nothing is recorded and no instrumentation is installed. GoBlog does not read the global provider implicitly; pass it if that is what you want, with `config.WithMeterProvider(otel.GetMeterProvider())`. Requests to `/healthz/*` are never recorded.
+
 ### SEO metadata
 
 The default templates emit social and search metadata with no template work required:
