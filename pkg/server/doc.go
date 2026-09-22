@@ -116,8 +116,9 @@
 // # Middleware
 //
 // The server supports pluggable HTTP middleware for cross-cutting concerns
-// like logging, metrics, authentication, or rate limiting. Middleware uses
-// the standard pattern from github.com/harrydayexe/GoWebUtilities/middleware.
+// like logging, authentication, or rate limiting. Middleware uses the standard
+// pattern from github.com/harrydayexe/GoWebUtilities/middleware. Request
+// metrics do not need middleware; see Metrics below.
 //
 // Adding middleware to a server:
 //
@@ -218,6 +219,74 @@
 // loading posts, so probes can observe startup state. The endpoints bypass
 // middleware (including authentication) and are intercepted in ServeHTTP before
 // the content handler. The Docker image enables health checks by default.
+//
+// # Metrics
+//
+// Supply an OpenTelemetry meter provider via config.WithMeterProvider to record
+// HTTP server metrics:
+//
+//	import (
+//	    "go.opentelemetry.io/otel/exporters/prometheus"
+//	    sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+//	)
+//
+//	exporter, err := prometheus.New()
+//	if err != nil {
+//	    log.Fatal(err)
+//	}
+//	provider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(exporter))
+//
+//	cfg := config.ServerConfig{
+//	    Server: []config.BaseServerOption{
+//	        config.WithPort(8080),
+//	        config.WithMeterProvider(provider),
+//	    },
+//	}
+//
+// GoBlog depends on the OpenTelemetry metrics API only. The SDK, the exporter
+// and the endpoint that serves the scrape (commonly /metrics on a separate
+// admin port) are the caller's to wire up.
+//
+// Three instruments are recorded, named and united per the stable HTTP server
+// semantic conventions so stock dashboards and recording rules work unchanged:
+//
+//   - http.server.request.duration   — histogram, seconds
+//   - http.server.active_requests    — up/down counter, {request}
+//   - http.server.response.body.size — histogram, bytes
+//
+// Attributes are http.request.method, url.scheme, http.response.status_code,
+// http.route, and error.type on server errors. There is deliberately no
+// separate request counter: the duration histogram's count series
+// (http_server_request_duration_seconds_count under the Prometheus exporter) is
+// the page-hit number, and a parallel counter could only drift from it. Error
+// rate is likewise a query over http.response.status_code.
+//
+// http.route is the path template of the pattern the ServeMux matched, not the
+// requested path, so all posts aggregate under {root}posts/{postName} and
+// requests matching no route share a single series with no http.route
+// attribute. Mux patterns pin a method ("GET /posts/{postName}"), which the
+// attribute does not carry — semconv defines http.route as the path template
+// alone and the method is recorded separately as http.request.method — so the
+// method prefix is stripped before recording. This bounds the number of
+// time series by the routes the blog registers rather than by what clients ask
+// for; labelling by path would let a bot scanning for /wp-admin and friends grow
+// the series count without limit.
+//
+// Metrics are off by default. Without the option the no-op meter provider is
+// used, no instruments are created and the recording middleware is not installed
+// at all, so requests are unaffected. The server does not fall back to
+// otel.GetMeterProvider(); pass it explicitly to use the global provider:
+//
+//	cfg.Server = append(cfg.Server, config.WithMeterProvider(otel.GetMeterProvider()))
+//
+// Recording happens as the outermost layer of the handler stack, so the observed
+// duration covers user middleware too. Health-check requests are intercepted in
+// ServeHTTP before that stack and are never recorded, which keeps Kubernetes
+// probe traffic from swamping real page hits.
+//
+// The option lives on config.BaseServerOption, so it applies to Server only.
+// Callers mounting the exported Handler into their own mux instead should
+// instrument it themselves, for example with otelhttp.NewHandler.
 //
 // # Concurrency
 //
