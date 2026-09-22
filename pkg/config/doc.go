@@ -139,7 +139,8 @@
 // measurements are taken. The server never falls back to
 // otel.GetMeterProvider(); pass it explicitly to use the global provider.
 // Requests to /healthz/* are answered before the instrumented handler and are
-// not recorded.
+// not recorded. The goblog CLI supplies an SDK provider backed by the
+// Prometheus exporter behind its --metrics flag; library users wire their own.
 //
 // # Option types
 //
@@ -165,9 +166,7 @@
 //
 //	gen := generator.New(fsys, renderer, config.WithLogger(logger).AsGeneratorOption())
 //	w, _ := watcher.New(dir, config.WithLogger(logger).AsWatcherOption())
-//	cfg := config.ServerConfig{
-//	    Server: []config.BaseServerOption{config.WithLogger(logger).AsServerOption()},
-//	}
+//	srv, _ := server.New(fsys, config.WithLogger(logger).AsServerOption())
 //
 // # Usage Examples
 //

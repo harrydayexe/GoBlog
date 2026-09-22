@@ -245,12 +245,10 @@
 //	}
 //	provider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(exporter))
 //
-//	cfg := config.ServerConfig{
-//	    Server: []config.BaseServerOption{
-//	        config.WithPort(8080),
-//	        config.WithMeterProvider(provider),
-//	    },
-//	}
+//	srv, err := server.New(postsFS,
+//	    config.WithPort(8080),
+//	    config.WithMeterProvider(provider),
+//	)
 //
 // GoBlog depends on the OpenTelemetry metrics API only. The SDK, the exporter
 // and the endpoint that serves the scrape (commonly /metrics on a separate
@@ -286,14 +284,14 @@
 // at all, so requests are unaffected. The server does not fall back to
 // otel.GetMeterProvider(); pass it explicitly to use the global provider:
 //
-//	cfg.Server = append(cfg.Server, config.WithMeterProvider(otel.GetMeterProvider()))
+//	srv, err := server.New(postsFS, config.WithMeterProvider(otel.GetMeterProvider()))
 //
 // Recording happens as the outermost layer of the handler stack, so the observed
 // duration covers user middleware too. Health-check requests are intercepted in
 // ServeHTTP before that stack and are never recorded, which keeps Kubernetes
 // probe traffic from swamping real page hits.
 //
-// The option lives on config.BaseServerOption, so it applies to Server only.
+// The option lives on config.ServerOption, so it applies to Server only.
 // Callers mounting the exported Handler into their own mux instead should
 // instrument it themselves, for example with otelhttp.NewHandler.
 //
