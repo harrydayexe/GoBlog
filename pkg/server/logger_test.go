@@ -40,14 +40,10 @@ func TestServer_LoggerPropagatedToGenerator(t *testing.T) {
 	injected := slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelDebug}))
 
 	postsFS := makeInternalTestFS(t)
-	cfg := config.ServerConfig{
-		Server: []config.BaseServerOption{
-			config.WithLogger(injected).AsServerOption(),
-		},
-		Gen: []config.GeneratorOption{config.WithRawOutput()},
-	}
-
-	srv, err := New(nil, postsFS, cfg)
+	srv, err := New(postsFS,
+		config.WithLogger(injected).AsServerOption(),
+		config.WithRawOutput().AsServerOption(),
+	)
 	if err != nil {
 		t.Fatalf("failed to create server: %v", err)
 	}

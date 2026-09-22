@@ -36,3 +36,4 @@ output-posts/
 
 ClAUDE.local.md
 .claude/settings.local.json
+completions/

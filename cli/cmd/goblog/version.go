@@ -7,10 +7,12 @@ package main
 import "runtime/debug"
 
 // buildVersion returns the version string for the running binary.
-// When GoReleaser ldflags are present the injected value is returned as-is.
-// Otherwise the value is derived from the embedded Go module build metadata,
-// so binaries installed via go install report the module tag. It is safe to
-// call from multiple goroutines.
+// Released binaries carry the version injected by GoReleaser's ldflags, which
+// is returned as-is. The CLI module is never published to the module proxy, so
+// a locally built binary has no module tag to fall back on; the embedded Go
+// module build metadata is still consulted in case one is present, and
+// otherwise the version reads "dev". It is safe to call from multiple
+// goroutines.
 func buildVersion() string {
 	if version != "dev" {
 		return version

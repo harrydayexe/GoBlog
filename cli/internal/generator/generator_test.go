@@ -13,10 +13,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/harrydayexe/GoBlog/v2/internal/utilities"
+	"github.com/harrydayexe/GoBlog/v2/cli/internal/utilities"
 	"github.com/harrydayexe/GoBlog/v2/pkg/config"
 	"github.com/harrydayexe/GoBlog/v2/pkg/generator"
 	"github.com/harrydayexe/GoBlog/v2/pkg/outputter"
+	"github.com/harrydayexe/GoBlog/v2/pkg/templates"
 )
 
 // TestRunGenerate tests the core generate logic.
@@ -57,7 +58,7 @@ This is a test post.
 
 	// Create filesystem and renderer
 	postsFsys := os.DirFS(postsDir)
-	renderer, err := generator.NewTemplateRenderer(os.DirFS("../../pkg/templates/default"))
+	renderer, err := generator.NewTemplateRenderer(templates.Default)
 	if err != nil {
 		t.Fatalf("Failed to create renderer: %v", err)
 	}
@@ -118,7 +119,7 @@ tags: [test]
 	}
 
 	postsFsys := os.DirFS(postsDir)
-	renderer, err := generator.NewTemplateRenderer(os.DirFS("../../pkg/templates/default"))
+	renderer, err := generator.NewTemplateRenderer(templates.Default)
 	if err != nil {
 		t.Fatalf("Failed to create renderer: %v", err)
 	}
@@ -159,7 +160,7 @@ func TestRunGenerate_EmptyPosts(t *testing.T) {
 	}
 
 	postsFsys := os.DirFS(postsDir)
-	renderer, err := generator.NewTemplateRenderer(os.DirFS("../../pkg/templates/default"))
+	renderer, err := generator.NewTemplateRenderer(templates.Default)
 	if err != nil {
 		t.Fatalf("Failed to create renderer: %v", err)
 	}
@@ -207,7 +208,7 @@ No description or date.
 	}
 
 	postsFsys := os.DirFS(postsDir)
-	renderer, err := generator.NewTemplateRenderer(os.DirFS("../../pkg/templates/default"))
+	renderer, err := generator.NewTemplateRenderer(templates.Default)
 	if err != nil {
 		t.Fatalf("Failed to create renderer: %v", err)
 	}
@@ -256,7 +257,7 @@ description: A test
 	}
 
 	postsFsys := os.DirFS(postsDir)
-	renderer, err := generator.NewTemplateRenderer(os.DirFS("../../pkg/templates/default"))
+	renderer, err := generator.NewTemplateRenderer(templates.Default)
 	if err != nil {
 		t.Fatalf("Failed to create renderer: %v", err)
 	}
@@ -312,7 +313,7 @@ Testing the blog root feature.
 	}
 
 	postsFsys := os.DirFS(postsDir)
-	renderer, err := generator.NewTemplateRenderer(os.DirFS("../../pkg/templates/default"))
+	renderer, err := generator.NewTemplateRenderer(templates.Default)
 	if err != nil {
 		t.Fatalf("Failed to create renderer: %v", err)
 	}
@@ -412,7 +413,7 @@ tags: [test, go]
 	}
 
 	postsFsys := os.DirFS(postsDir)
-	renderer, err := generator.NewTemplateRenderer(os.DirFS("../../pkg/templates/default"))
+	renderer, err := generator.NewTemplateRenderer(templates.Default)
 	if err != nil {
 		t.Fatalf("Failed to create renderer: %v", err)
 	}
@@ -493,7 +494,7 @@ description: Testing images
 		t.Fatalf("Failed to create output dir: %v", err)
 	}
 
-	renderer, err := generator.NewTemplateRenderer(os.DirFS("../../pkg/templates/default"))
+	renderer, err := generator.NewTemplateRenderer(templates.Default)
 	if err != nil {
 		t.Fatalf("Failed to create renderer: %v", err)
 	}

@@ -35,16 +35,6 @@ type GeneratorOption struct {
 	WithRobotsTxtFunc          func(v *RobotsTxt)
 }
 
-// WithBaseOption wraps a BaseOption as a GeneratorOption so it can be passed
-// to generator constructors that accept GeneratorOption values.
-//
-// Deprecated: call [BaseOption.AsGeneratorOption] directly instead.
-func WithBaseOption(baseOption BaseOption) GeneratorOption {
-	return GeneratorOption{
-		BaseOption: baseOption,
-	}
-}
-
 // AsGeneratorOption returns a GeneratorOption that applies this BaseOption to a
 // generator or outputter instance, enabling a BaseOption (e.g. from [WithLogger]
 // or [WithBlogRoot]) to be passed to generator constructors alongside other
@@ -356,7 +346,7 @@ func WithCustomData(data map[string]any) GeneratorOption {
 
 // AsOption converts this CustomData value back into a GeneratorOption so it
 // can be passed to generator and server constructors that accept GeneratorOption
-// values (e.g. when round-tripping through a ServerConfig).
+// values (e.g. when round-tripping through a resolved configuration).
 func (o CustomData) AsOption() GeneratorOption {
 	return WithCustomData(o.Data)
 }

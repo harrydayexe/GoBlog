@@ -6,11 +6,21 @@ version: 2
 
 before:
   hooks:
-    # You may remove this if you don't use go modules.
     - go mod tidy
+    - go -C cli mod tidy
+    # Shell completions are generated once here and shipped in every archive,
+    # which is also where the Homebrew cask picks them up from.
+    - rm -rf completions
+    - mkdir -p completions
+    - sh -c 'go -C cli run ./cmd/goblog completion bash > completions/goblog.bash'
+    - sh -c 'go -C cli run ./cmd/goblog completion zsh > completions/goblog.zsh'
+    - sh -c 'go -C cli run ./cmd/goblog completion fish > completions/goblog.fish'
 
 builds:
   - id: goblog
+    # The CLI lives in its own leaf module so that library consumers do not
+    # inherit its dependencies. `main` is resolved relative to `dir`.
+    dir: cli
     main: ./cmd/goblog
     binary: goblog
     env:
@@ -18,6 +28,7 @@ builds:
     goos:
       - linux
       - darwin
+      # Windows binaries are built but are not a supported install target.
       - windows
     goarch:
       - amd64
@@ -41,6 +52,36 @@ archives:
     format_overrides:
       - goos: windows
         formats: [zip]
+    files:
+      - LICENSE
+      - README.md
+      - completions/*
+
+homebrew_casks:
+  - name: goblog
+    ids: [goblog]
+    binaries: [goblog]
+    repository:
+      owner: harrydayexe
+      name: homebrew-tap
+      branch: main
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    homepage: https://github.com/harrydayexe/GoBlog
+    description: Create a blog feed from posts written in Markdown
+    completions:
+      bash: completions/goblog.bash
+      zsh: completions/goblog.zsh
+      fish: completions/goblog.fish
+    # Only tag non-prerelease versions into the tap.
+    skip_upload: auto
+    hooks:
+      post:
+        install: |
+          if OS.mac?
+            system_command "/usr/bin/xattr",
+                           args: ["-dr", "com.apple.quarantine", "#{staged_path}/goblog"],
+                           must_succeed: false
+          end
 
 checksum:
   name_template: "checksums.txt"

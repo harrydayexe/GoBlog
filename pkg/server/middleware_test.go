@@ -5,9 +5,7 @@
 package server_test
 
 import (
-	"bytes"
 	"context"
-	"io"
 	"io/fs"
 	"log/slog"
 	"net/http"
@@ -24,19 +22,12 @@ import (
 // TestServerWithoutMiddleware verifies that servers without middleware work correctly
 // (backward compatibility).
 func TestServerWithoutMiddleware(t *testing.T) {
-	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	postsFS := createTestFS(t)
 
-	cfg := config.ServerConfig{
-		Server: []config.BaseServerOption{
-			config.WithPort(8080),
-		},
-		Gen: []config.GeneratorOption{
-			config.WithRawOutput(),
-		},
-	}
-
-	srv, err := server.New(logger, postsFS, cfg)
+	srv, err := server.New(postsFS,
+		config.WithPort(8080),
+		config.WithRawOutput().AsServerOption(),
+	)
 	if err != nil {
 		t.Fatalf("failed to create server: %v", err)
 	}
@@ -53,7 +44,6 @@ func TestServerWithoutMiddleware(t *testing.T) {
 
 // TestServerWithSingleMiddleware tests that a single middleware is correctly applied.
 func TestServerWithSingleMiddleware(t *testing.T) {
-	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	postsFS := createTestFS(t)
 
 	// Track if middleware was called
@@ -66,17 +56,11 @@ func TestServerWithSingleMiddleware(t *testing.T) {
 		})
 	}
 
-	cfg := config.ServerConfig{
-		Server: []config.BaseServerOption{
-			config.WithPort(8080),
-			config.WithMiddleware(testMiddleware),
-		},
-		Gen: []config.GeneratorOption{
-			config.WithRawOutput(),
-		},
-	}
-
-	srv, err := server.New(logger, postsFS, cfg)
+	srv, err := server.New(postsFS,
+		config.WithPort(8080),
+		config.WithMiddleware(testMiddleware),
+		config.WithRawOutput().AsServerOption(),
+	)
 	if err != nil {
 		t.Fatalf("failed to create server: %v", err)
 	}
@@ -97,7 +81,6 @@ func TestServerWithSingleMiddleware(t *testing.T) {
 
 // TestServerWithMultipleMiddleware tests that multiple middleware are chained correctly.
 func TestServerWithMultipleMiddleware(t *testing.T) {
-	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	postsFS := createTestFS(t)
 
 	// Track middleware execution
@@ -121,17 +104,11 @@ func TestServerWithMultipleMiddleware(t *testing.T) {
 		})
 	}
 
-	cfg := config.ServerConfig{
-		Server: []config.BaseServerOption{
-			config.WithPort(8080),
-			config.WithMiddleware(firstMiddleware, secondMiddleware),
-		},
-		Gen: []config.GeneratorOption{
-			config.WithRawOutput(),
-		},
-	}
-
-	srv, err := server.New(logger, postsFS, cfg)
+	srv, err := server.New(postsFS,
+		config.WithPort(8080),
+		config.WithMiddleware(firstMiddleware, secondMiddleware),
+		config.WithRawOutput().AsServerOption(),
+	)
 	if err != nil {
 		t.Fatalf("failed to create server: %v", err)
 	}
@@ -172,7 +149,6 @@ func TestServerWithMultipleMiddleware(t *testing.T) {
 // TestMiddlewarePersistsAcrossUpdates verifies that middleware continues to work
 // after UpdatePosts() is called.
 func TestMiddlewarePersistsAcrossUpdates(t *testing.T) {
-	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	postsFS := createTestFS(t)
 
 	var callCount int
@@ -183,17 +159,11 @@ func TestMiddlewarePersistsAcrossUpdates(t *testing.T) {
 		})
 	}
 
-	cfg := config.ServerConfig{
-		Server: []config.BaseServerOption{
-			config.WithPort(8080),
-			config.WithMiddleware(countingMiddleware),
-		},
-		Gen: []config.GeneratorOption{
-			config.WithRawOutput(),
-		},
-	}
-
-	srv, err := server.New(logger, postsFS, cfg)
+	srv, err := server.New(postsFS,
+		config.WithPort(8080),
+		config.WithMiddleware(countingMiddleware),
+		config.WithRawOutput().AsServerOption(),
+	)
 	if err != nil {
 		t.Fatalf("failed to create server: %v", err)
 	}
@@ -226,7 +196,6 @@ func TestMiddlewarePersistsAcrossUpdates(t *testing.T) {
 // TestMultipleWithMiddlewareCalls tests that multiple WithMiddleware calls
 // correctly append to the middleware chain.
 func TestMultipleWithMiddlewareCalls(t *testing.T) {
-	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	postsFS := createTestFS(t)
 
 	firstMiddleware := func(h http.Handler) http.Handler {
@@ -243,18 +212,12 @@ func TestMultipleWithMiddlewareCalls(t *testing.T) {
 		})
 	}
 
-	cfg := config.ServerConfig{
-		Server: []config.BaseServerOption{
-			config.WithPort(8080),
-			config.WithMiddleware(firstMiddleware),
-			config.WithMiddleware(secondMiddleware),
-		},
-		Gen: []config.GeneratorOption{
-			config.WithRawOutput(),
-		},
-	}
-
-	srv, err := server.New(logger, postsFS, cfg)
+	srv, err := server.New(postsFS,
+		config.WithPort(8080),
+		config.WithMiddleware(firstMiddleware),
+		config.WithMiddleware(secondMiddleware),
+		config.WithRawOutput().AsServerOption(),
+	)
 	if err != nil {
 		t.Fatalf("failed to create server: %v", err)
 	}
@@ -290,14 +253,10 @@ func ExampleServer_withMiddleware() {
 		})
 	}
 
-	cfg := config.ServerConfig{
-		Server: []config.BaseServerOption{
-			config.WithPort(8080),
-			config.WithMiddleware(customMiddleware),
-		},
-	}
-
-	srv, err := server.New(logger, postsFS, cfg)
+	srv, err := server.New(postsFS,
+		config.WithPort(8080),
+		config.WithMiddleware(customMiddleware),
+	)
 	if err != nil {
 		logger.Error("failed to create server", "error", err)
 		return
@@ -312,19 +271,12 @@ func ExampleServer_withMiddleware() {
 func TestServerDisableTags(t *testing.T) {
 	t.Parallel()
 
-	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	postsFS := createTestFS(t)
 
-	cfg := config.ServerConfig{
-		Server: []config.BaseServerOption{
-			config.WithPort(8080),
-		},
-		Gen: []config.GeneratorOption{
-			config.WithDisableTags(),
-		},
-	}
-
-	srv, err := server.New(logger, postsFS, cfg)
+	srv, err := server.New(postsFS,
+		config.WithPort(8080),
+		config.WithDisableTags().AsServerOption(),
+	)
 	if err != nil {
 		t.Fatalf("failed to create server: %v", err)
 	}
@@ -354,16 +306,9 @@ func TestServerDisableTags(t *testing.T) {
 func TestServerTagsEnabledByDefault(t *testing.T) {
 	t.Parallel()
 
-	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	postsFS := createTestFS(t)
 
-	cfg := config.ServerConfig{
-		Server: []config.BaseServerOption{
-			config.WithPort(8080),
-		},
-	}
-
-	srv, err := server.New(logger, postsFS, cfg)
+	srv, err := server.New(postsFS, config.WithPort(8080))
 	if err != nil {
 		t.Fatalf("failed to create server: %v", err)
 	}
@@ -383,16 +328,9 @@ func TestServerTagsEnabledByDefault(t *testing.T) {
 func TestServer_StripsHTMLExtension(t *testing.T) {
 	t.Parallel()
 
-	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	postsFS := createTestFS(t)
 
-	cfg := config.ServerConfig{
-		Server: []config.BaseServerOption{
-			config.WithPort(8080),
-		},
-	}
-
-	srv, err := server.New(logger, postsFS, cfg)
+	srv, err := server.New(postsFS, config.WithPort(8080))
 	if err != nil {
 		t.Fatalf("failed to create server: %v", err)
 	}
@@ -448,20 +386,12 @@ func TestServer_StripsHTMLExtension(t *testing.T) {
 func TestServer_StripsHTMLExtension_BlogRoot(t *testing.T) {
 	t.Parallel()
 
-	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	postsFS := createTestFS(t)
 
-	cfg := config.ServerConfig{
-		Server: []config.BaseServerOption{
-			config.WithPort(8080),
-			config.WithBlogRoot("/blog/").AsServerOption(),
-		},
-		Gen: []config.GeneratorOption{
-			config.WithBlogRoot("/blog/").AsGeneratorOption(),
-		},
-	}
-
-	srv, err := server.New(logger, postsFS, cfg)
+	srv, err := server.New(postsFS,
+		config.WithPort(8080),
+		config.WithBlogRoot("/blog/").AsServerOption(),
+	)
 	if err != nil {
 		t.Fatalf("failed to create server: %v", err)
 	}
@@ -489,14 +419,10 @@ func TestServer_StripsHTMLExtension_BlogRoot(t *testing.T) {
 func TestHandler_StripsHTMLExtension(t *testing.T) {
 	t.Parallel()
 
-	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	postsFS := createTestFS(t)
 
 	// Build a GeneratedBlog manually via the generator.
-	cfg := config.ServerConfig{
-		Gen: []config.GeneratorOption{config.WithRawOutput()},
-	}
-	srv, err := server.New(logger, postsFS, cfg)
+	srv, err := server.New(postsFS, config.WithRawOutput().AsServerOption())
 	if err != nil {
 		t.Fatalf("failed to create server: %v", err)
 	}
@@ -507,56 +433,6 @@ func TestHandler_StripsHTMLExtension(t *testing.T) {
 	srv.ServeHTTP(w, req)
 	if w.Code != http.StatusOK {
 		t.Errorf("GET /index.html via bare server: got %d, want 200", w.Code)
-	}
-}
-
-// TestServer_WithLoggerOptionTakesPrecedence verifies that config.WithLogger in
-// cfg.Server takes precedence over the deprecated positional logger argument.
-func TestServer_WithLoggerOptionTakesPrecedence(t *testing.T) {
-	t.Parallel()
-
-	var optionBuf bytes.Buffer
-	optionLogger := slog.New(slog.NewTextHandler(&optionBuf, &slog.HandlerOptions{Level: slog.LevelDebug}))
-
-	positionalLogger := slog.New(slog.NewTextHandler(io.Discard, nil))
-
-	postsFS := createTestFS(t)
-	cfg := config.ServerConfig{
-		Server: []config.BaseServerOption{
-			config.WithLogger(optionLogger).AsServerOption(),
-		},
-		Gen: []config.GeneratorOption{config.WithRawOutput()},
-	}
-
-	srv, err := server.New(positionalLogger, postsFS, cfg)
-	if err != nil {
-		t.Fatalf("failed to create server: %v", err)
-	}
-
-	if srv.Logger.Logger != optionLogger {
-		t.Error("expected WithLogger option to take precedence over positional logger arg")
-	}
-}
-
-// TestServer_PositionalLoggerFallback verifies that the positional logger is
-// used when no WithLogger option is provided (deprecated path still works).
-func TestServer_PositionalLoggerFallback(t *testing.T) {
-	t.Parallel()
-
-	positionalLogger := slog.New(slog.NewTextHandler(io.Discard, nil))
-
-	postsFS := createTestFS(t)
-	cfg := config.ServerConfig{
-		Gen: []config.GeneratorOption{config.WithRawOutput()},
-	}
-
-	srv, err := server.New(positionalLogger, postsFS, cfg)
-	if err != nil {
-		t.Fatalf("failed to create server: %v", err)
-	}
-
-	if srv.Logger.Logger != positionalLogger {
-		t.Error("expected positional logger to be used when no WithLogger option is provided")
 	}
 }
 

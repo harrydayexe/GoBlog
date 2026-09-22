@@ -48,16 +48,10 @@ func badFS() fs.FS {
 func canonicalBody(t *testing.T, postsFS fs.FS) string {
 	t.Helper()
 
-	cfg := config.ServerConfig{
-		Server: []config.BaseServerOption{
-			config.WithPort(8080),
-		},
-		Gen: []config.GeneratorOption{
-			config.WithRawOutput(),
-		},
-	}
-
-	srv, err := server.New(nil, postsFS, cfg)
+	srv, err := server.New(postsFS,
+		config.WithPort(8080),
+		config.WithRawOutput().AsServerOption(),
+	)
 	if err != nil {
 		t.Fatalf("canonicalBody: server.New() error = %v", err)
 	}
@@ -94,16 +88,10 @@ func TestUpdatePosts_ConcurrentSwapIsAtomic(t *testing.T) {
 	bodyA := canonicalBody(t, fsA)
 	bodyB := canonicalBody(t, fsB)
 
-	cfg := config.ServerConfig{
-		Server: []config.BaseServerOption{
-			config.WithPort(8080),
-		},
-		Gen: []config.GeneratorOption{
-			config.WithRawOutput(),
-		},
-	}
-
-	srv, err := server.New(nil, fsA, cfg)
+	srv, err := server.New(fsA,
+		config.WithPort(8080),
+		config.WithRawOutput().AsServerOption(),
+	)
 	if err != nil {
 		t.Fatalf("server.New() error = %v", err)
 	}
@@ -188,16 +176,10 @@ func TestUpdatePosts_ReloadFailureKeepsOldContent(t *testing.T) {
 	bodyA := canonicalBody(t, fsA)
 	bodyB := canonicalBody(t, fsB)
 
-	cfg := config.ServerConfig{
-		Server: []config.BaseServerOption{
-			config.WithPort(8080),
-		},
-		Gen: []config.GeneratorOption{
-			config.WithRawOutput(),
-		},
-	}
-
-	srv, err := server.New(nil, fsA, cfg)
+	srv, err := server.New(fsA,
+		config.WithPort(8080),
+		config.WithRawOutput().AsServerOption(),
+	)
 	if err != nil {
 		t.Fatalf("server.New() error = %v", err)
 	}

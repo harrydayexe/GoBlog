@@ -62,23 +62,11 @@ type Server struct {
 	mu       sync.RWMutex
 	postsDir fs.FS
 
-	config.BlogRoot
-	config.Port
-	config.Host
-	config.Logger
-	config.CacheControlTTL
-	config.HealthChecks
-	config.AssetsDir
+	config.ServerConfig
 
-	handler    atomic.Value // stores http.Handler
-	health     atomic.Pointer[healthStatus]
-	middleware []middleware.Middleware // middleware chain
-	generator  *generator.Generator
-
-	// deferred initialisation inputs — set in New, consumed by initialize.
-	templatesDir fs.FS
-	rendererOpts []config.RendererOption
-	genOpts      []config.GeneratorOption
+	handler   atomic.Value // stores http.Handler
+	health    atomic.Pointer[healthStatus]
+	generator *generator.Generator
 }
 
 // New creates a new Server instance with the specified configuration.
@@ -101,23 +89,25 @@ type Server struct {
 // Returns an error if template rendering or initial blog generation fails (only
 // in the synchronous / health-checks-disabled path).
 //
+// Generator and renderer options are forwarded to the internally created
+// generator and template renderer via [config.GeneratorOption.AsServerOption]
+// and [config.RendererOption.AsServerOption].
+//
 // # Logger
 //
-// Supply a logger via [config.WithLogger] in cfg.Server:
+// Supply a logger via [config.WithLogger]:
 //
-//	cfg.Server = append(cfg.Server, config.WithLogger(myLogger).AsServerOption())
-//
-// Deprecated: the positional logger parameter will be removed in v3.0.0.
-// Pass nil and supply the logger via config.WithLogger in cfg.Server instead.
-// When both are provided, the config.WithLogger option takes precedence.
-func New(logger *slog.Logger, posts fs.FS, opts config.ServerConfig) (*Server, error) {
+//	srv, err := server.New(postsFS, config.WithLogger(myLogger).AsServerOption())
+func New(posts fs.FS, opts ...config.ServerOption) (*Server, error) {
 	srv := &Server{
-		postsDir:        posts,
-		Port:            8080,
-		CacheControlTTL: config.CacheControlTTL{TTL: time.Hour},
+		postsDir: posts,
+		ServerConfig: config.ServerConfig{
+			Port:            8080,
+			CacheControlTTL: config.CacheControlTTL{TTL: time.Hour},
+		},
 	}
 
-	for _, opt := range opts.Server {
+	for _, opt := range opts {
 		if opt.WithPortFunc != nil {
 			opt.WithPortFunc(&srv.Port)
 		} else if opt.WithHostFunc != nil {
@@ -125,7 +115,7 @@ func New(logger *slog.Logger, posts fs.FS, opts config.ServerConfig) (*Server, e
 		} else if opt.WithBlogRootFunc != nil {
 			opt.WithBlogRootFunc(&srv.BlogRoot)
 		} else if opt.WithMiddlewareFunc != nil {
-			opt.WithMiddlewareFunc(&srv.middleware)
+			opt.WithMiddlewareFunc(&srv.Middleware)
 		} else if opt.WithCacheControlFunc != nil {
 			opt.WithCacheControlFunc(&srv.CacheControlTTL)
 		} else if opt.WithLoggerFunc != nil {
@@ -134,42 +124,34 @@ func New(logger *slog.Logger, posts fs.FS, opts config.ServerConfig) (*Server, e
 			opt.WithHealthChecksFunc(&srv.HealthChecks)
 		} else if opt.WithAssetsDirFunc != nil {
 			opt.WithAssetsDirFunc(&srv.AssetsDir)
+		} else if opt.WithTemplateDirFunc != nil {
+			opt.WithTemplateDirFunc(&srv.TemplateDir)
+		} else if opt.WithGeneratorOptionFunc != nil {
+			opt.WithGeneratorOptionFunc(&srv.GeneratorOpts)
+		} else if opt.WithRendererOptionFunc != nil {
+			opt.WithRendererOptionFunc(&srv.RendererOpts)
 		}
 	}
 
-	// Precedence: WithLogger option > positional logger arg > slog.Default().
 	if srv.Logger.Logger == nil {
-		if logger != nil {
-			srv.Logger.Logger = logger
-		} else {
-			srv.Logger.Logger = slog.Default()
-		}
+		srv.Logger.Logger = slog.Default()
 	}
 
 	// Resolve the template filesystem.
-	var templatesDir fs.FS
-	if opts.TemplateDir != nil {
+	if srv.TemplateDir.FS != nil {
 		srv.Logger.Logger.Debug("Using custom templates")
-		templatesDir = opts.TemplateDir
 	} else {
 		srv.Logger.Logger.Debug("Using default templates")
-		templatesDir = templates.Default
+		srv.TemplateDir.FS = templates.Default
 	}
 
-	// Build the generator option slice (merging caller options with logger).
-	genOpts := make([]config.GeneratorOption, 0, len(opts.Gen)+1)
-	genOpts = append(genOpts, opts.Gen...)
-	genOpts = append(genOpts, srv.Logger.AsOption().AsGeneratorOption())
+	// The server's logger is shared with the generator it builds.
+	srv.GeneratorOpts = append(srv.GeneratorOpts, srv.Logger.AsOption().AsGeneratorOption())
 	if srv.AssetsDir.FS != nil {
 		// The parser reads image dimensions from the same assets filesystem
 		// the server serves images from.
-		genOpts = append(genOpts, srv.AssetsDir.AsOption().AsGeneratorOption())
+		srv.GeneratorOpts = append(srv.GeneratorOpts, srv.AssetsDir.AsOption().AsGeneratorOption())
 	}
-
-	// Store inputs needed by initialize (both sync and async paths use them).
-	srv.templatesDir = templatesDir
-	srv.rendererOpts = opts.RendererOpts
-	srv.genOpts = genOpts
 
 	if srv.HealthChecks.Enabled {
 		// Async path: bind first, generate in Run. Mark as starting.
@@ -195,14 +177,14 @@ func New(logger *slog.Logger, posts fs.FS, opts config.ServerConfig) (*Server, e
 // this concurrently with an already-published server, so the critical section
 // that touches s.generator and calls refreshHandler is protected by s.mu.
 func (s *Server) initialize(ctx context.Context) error {
-	renderer, err := generator.NewTemplateRenderer(s.templatesDir, s.rendererOpts...)
+	renderer, err := generator.NewTemplateRenderer(s.TemplateDir.FS, s.RendererOpts...)
 	if err != nil {
 		return fmt.Errorf("failed to create template renderer: %w", err)
 	}
 
 	s.mu.Lock()
 	posts := s.postsDir
-	gen := generator.New(posts, renderer, s.genOpts...)
+	gen := generator.New(posts, renderer, s.GeneratorOpts...)
 	s.generator = gen
 	s.generator.BlogRoot = s.BlogRoot
 	err = s.refreshHandler(ctx)
@@ -407,11 +389,11 @@ func (s *Server) refreshHandler(ctx context.Context) error {
 
 	s.Logger.Logger.DebugContext(ctx, "Creating New Handler for Server")
 
-	handler := Handler(blog, nil, s.BlogRoot.AsOption(), s.Logger.AsOption(), s.AssetsDir.AsOption())
+	handler := Handler(blog, s.BlogRoot.AsOption(), s.Logger.AsOption(), s.AssetsDir.AsOption())
 
 	// Apply middleware stack if configured
-	if len(s.middleware) > 0 {
-		stack := middleware.CreateStack(s.middleware...)
+	if len(s.Middleware) > 0 {
+		stack := middleware.CreateStack(s.Middleware...)
 		handler = stack(handler)
 	}
 
