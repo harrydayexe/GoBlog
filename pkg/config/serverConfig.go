@@ -27,6 +27,7 @@ type ServerConfig struct {
 	Logger          Logger
 	CacheControlTTL CacheControlTTL
 	HealthChecks    HealthChecks
+	MeterProvider   MeterProvider
 	AssetsDir       AssetsDir
 	TemplateDir     TemplateDir
 	Middleware      []middleware.Middleware

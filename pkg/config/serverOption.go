@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"github.com/harrydayexe/GoWebUtilities/middleware"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/noop"
 )
 
 // ServerOption represents a configuration option for the HTTP server.
@@ -21,10 +23,10 @@ import (
 //
 // This type should not be constructed directly. Use the provided option
 // functions: [WithPort], [WithHost], [WithMiddleware], [WithCacheControl],
-// [WithHealthChecks], [WithTemplateDir], or convert an option of another kind
-// with [BaseOption.AsServerOption] (e.g. from [WithLogger]),
-// [GeneratorOption.AsServerOption] (e.g. from [WithSiteTitle]), or
-// [RendererOption.AsServerOption] (e.g. from [WithFuncs]).
+// [WithHealthChecks], [WithMeterProvider], [WithTemplateDir], or convert an
+// option of another kind with [BaseOption.AsServerOption] (e.g. from
+// [WithLogger]), [GeneratorOption.AsServerOption] (e.g. from [WithSiteTitle]),
+// or [RendererOption.AsServerOption] (e.g. from [WithFuncs]).
 type ServerOption struct {
 	BaseOption
 
@@ -33,6 +35,7 @@ type ServerOption struct {
 	WithMiddlewareFunc      func(mw *[]middleware.Middleware)
 	WithCacheControlFunc    func(v *CacheControlTTL)
 	WithHealthChecksFunc    func(v *HealthChecks)
+	WithMeterProviderFunc   func(v *MeterProvider)
 	WithTemplateDirFunc     func(v *TemplateDir)
 	WithGeneratorOptionFunc func(v *[]GeneratorOption)
 	WithRendererOptionFunc  func(v *[]RendererOption)
@@ -241,4 +244,67 @@ func WithHealthChecks() ServerOption {
 			v.Enabled = true
 		},
 	}
+}
+
+// MeterProvider holds the OpenTelemetry meter provider the HTTP server records
+// its request metrics against.
+//
+// The default (applied when no [WithMeterProvider] option is supplied) is the
+// no-op provider from go.opentelemetry.io/otel/metric/noop, which records
+// nothing. The server does not fall back to [go.opentelemetry.io/otel.GetMeterProvider],
+// so instrumentation is off until a provider is passed explicitly.
+//
+// This type is typically embedded in the server struct and set via
+// [WithMeterProvider].
+type MeterProvider struct{ MeterProvider metric.MeterProvider }
+
+// WithMeterProvider returns a [ServerOption] that sets the OpenTelemetry
+// meter provider used to record HTTP server metrics.
+//
+// GoBlog depends on the OpenTelemetry metrics API only; the SDK and any
+// exporter (Prometheus, OTLP, …) are the caller's dependency. Three
+// instruments are recorded, following the stable HTTP server semantic
+// conventions:
+//
+//   - http.server.request.duration  (histogram, seconds)
+//   - http.server.active_requests   (up/down counter, requests)
+//   - http.server.response.body.size (histogram, bytes)
+//
+// Metrics are off by default. Passing nil, or omitting the option, leaves the
+// no-op provider in place and installs no instrumentation, so requests pay no
+// cost. Health-check requests to /healthz/* are never recorded.
+//
+// Example usage, exporting to Prometheus:
+//
+//	import (
+//	    "go.opentelemetry.io/otel/exporters/prometheus"
+//	    sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+//	)
+//
+//	exporter, err := prometheus.New()
+//	if err != nil {
+//	    return err
+//	}
+//	provider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(exporter))
+//
+//	srv, err := server.New(postsFS, config.WithMeterProvider(provider))
+//
+// To use the globally registered provider instead, pass it explicitly:
+//
+//	srv, err := server.New(postsFS, config.WithMeterProvider(otel.GetMeterProvider()))
+func WithMeterProvider(mp metric.MeterProvider) ServerOption {
+	return ServerOption{
+		WithMeterProviderFunc: func(v *MeterProvider) { v.MeterProvider = mp },
+	}
+}
+
+// Enabled reports whether a provider that can actually record measurements has
+// been supplied. A nil provider, or the no-op provider used as the default,
+// reports false so callers can skip instrumentation entirely.
+func (o MeterProvider) Enabled() bool {
+	if o.MeterProvider == nil {
+		return false
+	}
+	_, isNoop := o.MeterProvider.(noop.MeterProvider)
+	return !isNoop
 }

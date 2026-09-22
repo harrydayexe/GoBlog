@@ -126,6 +126,21 @@
 // initialising content so probes can observe the startup state. Health checks
 // are disabled by default; the Docker image enables them via --health-checks.
 //
+// WithMeterProvider(mp metric.MeterProvider) is a ServerOption that sets
+// the OpenTelemetry meter provider the HTTP server records its request metrics
+// against. GoBlog depends on the OpenTelemetry metrics API only, so the SDK and
+// any exporter are the caller's dependency. Three instruments are recorded
+// following the stable HTTP server semantic conventions:
+// http.server.request.duration, http.server.active_requests and
+// http.server.response.body.size, labelled with http.request.method,
+// url.scheme, http.response.status_code, the matched route as http.route, and
+// error.type on server errors. Metrics are off by default: with no option (or a
+// nil provider) the no-op provider is used, no instruments are created and no
+// measurements are taken. The server never falls back to
+// otel.GetMeterProvider(); pass it explicitly to use the global provider.
+// Requests to /healthz/* are answered before the instrumented handler and are
+// not recorded.
+//
 // # Option types
 //
 // GeneratorOption carries options for generator.New and outputter.NewDirectoryWriter,
@@ -133,10 +148,10 @@
 // WithEnvironment, WithCustomData, WithHTMLPaths, and (via the embedded BaseOption)
 // WithLogger, WithBlogRoot and WithAssetsDir.
 // ServerOption carries options for the HTTP server (port, host, middleware,
-// cache-control TTL, health-check endpoints, template directory, and via the
-// embedded BaseOption: WithLogger, WithBlogRoot, WithAssetsDir). Generator and
-// renderer options are converted for it with GeneratorOption.AsServerOption and
-// RendererOption.AsServerOption.
+// cache-control TTL, health-check endpoints, meter provider, template
+// directory, and via the embedded BaseOption: WithLogger, WithBlogRoot,
+// WithAssetsDir). Generator and renderer options are converted for it with
+// GeneratorOption.AsServerOption and RendererOption.AsServerOption.
 // WatcherOption carries options for watcher.New (debounce, and via the embedded
 // BaseOption: WithLogger, WithBlogRoot).
 // RendererOption carries options for generator.NewTemplateRenderer (custom funcs).

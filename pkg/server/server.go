@@ -21,6 +21,7 @@ import (
 	"github.com/harrydayexe/GoBlog/v2/pkg/generator"
 	"github.com/harrydayexe/GoBlog/v2/pkg/templates"
 	"github.com/harrydayexe/GoWebUtilities/middleware"
+	"go.opentelemetry.io/otel/metric/noop"
 )
 
 // probeState describes the current lifecycle state of the server, used to
@@ -55,6 +56,10 @@ type healthStatus struct {
 // health-check endpoints (/healthz/live, /healthz/ready, /healthz/startup) are
 // intercepted before the middleware stack and always available without auth.
 //
+// When a meter provider is supplied via [config.WithMeterProvider], the server
+// records OpenTelemetry HTTP server metrics as the outermost layer of its
+// handler stack. Health-check requests bypass that stack and are not recorded.
+//
 // All methods are safe for concurrent use by multiple goroutines.
 type Server struct {
 	// mu protects postsDir, generator, and generator fields during initialize
@@ -67,6 +72,7 @@ type Server struct {
 	handler   atomic.Value // stores http.Handler
 	health    atomic.Pointer[healthStatus]
 	generator *generator.Generator
+	metrics   *metrics // OpenTelemetry instruments; nil when metrics are off
 }
 
 // New creates a new Server instance with the specified configuration.
@@ -87,7 +93,17 @@ type Server struct {
 // the /healthz/ready endpoint.
 //
 // Returns an error if template rendering or initial blog generation fails (only
-// in the synchronous / health-checks-disabled path).
+// in the synchronous / health-checks-disabled path), or if the instruments
+// cannot be created from a supplied meter provider.
+//
+// # Metrics
+//
+// Supply an OpenTelemetry meter provider via [config.WithMeterProvider] in
+// cfg.Server to record HTTP server metrics:
+//
+//	cfg.Server = append(cfg.Server, config.WithMeterProvider(provider))
+//
+// Without the option no instruments are created and no measurements are taken.
 //
 // Generator and renderer options are forwarded to the internally created
 // generator and template renderer via [config.GeneratorOption.AsServerOption]
@@ -124,6 +140,8 @@ func New(posts fs.FS, opts ...config.ServerOption) (*Server, error) {
 			opt.WithHealthChecksFunc(&srv.HealthChecks)
 		} else if opt.WithAssetsDirFunc != nil {
 			opt.WithAssetsDirFunc(&srv.AssetsDir)
+		} else if opt.WithMeterProviderFunc != nil {
+			opt.WithMeterProviderFunc(&srv.MeterProvider)
 		} else if opt.WithTemplateDirFunc != nil {
 			opt.WithTemplateDirFunc(&srv.TemplateDir)
 		} else if opt.WithGeneratorOptionFunc != nil {
@@ -135,6 +153,18 @@ func New(posts fs.FS, opts ...config.ServerOption) (*Server, error) {
 
 	if srv.Logger.Logger == nil {
 		srv.Logger.Logger = slog.Default()
+	}
+
+	// Metrics are opt-in: without an explicit provider the no-op one is used and
+	// no instruments are created, so requests are not wrapped at all.
+	if srv.MeterProvider.Enabled() {
+		m, err := newMetrics(srv.MeterProvider.MeterProvider)
+		if err != nil {
+			return nil, err
+		}
+		srv.metrics = m
+	} else {
+		srv.MeterProvider.MeterProvider = noop.NewMeterProvider()
 	}
 
 	// Resolve the template filesystem.
@@ -400,6 +430,12 @@ func (s *Server) refreshHandler(ctx context.Context) error {
 	// Apply cache-control as the outermost layer so it covers every route.
 	if s.CacheControlTTL.TTL > 0 {
 		handler = middleware.NewCacheControl(s.CacheControlTTL.TTL)(handler)
+	}
+
+	// Record metrics outside everything else, so the observed duration and
+	// response size cover the full response including user middleware.
+	if s.metrics != nil {
+		handler = s.metrics.middleware(handler)
 	}
 
 	s.handler.Store(handler)
