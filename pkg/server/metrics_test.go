@@ -13,6 +13,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"testing/fstest"
 
@@ -129,6 +130,21 @@ func durationPoints(t *testing.T, ms []metricdata.Metrics) []metricdata.Histogra
 	return hist.DataPoints
 }
 
+// responseSizeSum returns the sum of the single response body size data point,
+// failing the test if the instrument recorded anything but one time series.
+func responseSizeSum(t *testing.T, ms []metricdata.Metrics) int64 {
+	t.Helper()
+	m := findMetric(t, ms, responseSizeMetric)
+	hist, ok := m.Data.(metricdata.Histogram[int64])
+	if !ok {
+		t.Fatalf("%s: data is %T, want Histogram[int64]", responseSizeMetric, m.Data)
+	}
+	if len(hist.DataPoints) != 1 {
+		t.Fatalf("%s: got %d data points, want 1", responseSizeMetric, len(hist.DataPoints))
+	}
+	return hist.DataPoints[0].Sum
+}
+
 // attrs renders an attribute set as a map for readable comparisons.
 func attrs(set attribute.Set) map[string]string {
 	out := make(map[string]string, set.Len())
@@ -172,7 +188,9 @@ func TestMetrics_InstrumentsRecorded(t *testing.T) {
 }
 
 // TestMetrics_Attributes verifies the attributes recorded for each kind of
-// route, including that the http.route label is the matched mux pattern.
+// route, including that the http.route label is the matched mux pattern with
+// its method prefix stripped: semconv defines http.route as the path template
+// alone, and the method is already recorded as http.request.method.
 func TestMetrics_Attributes(t *testing.T) {
 	t.Parallel()
 
@@ -188,7 +206,7 @@ func TestMetrics_Attributes(t *testing.T) {
 				"http.request.method":       "GET",
 				"url.scheme":                "http",
 				"http.response.status_code": "200",
-				"http.route":                "GET /{$}",
+				"http.route":                "/{$}",
 			},
 		},
 		{
@@ -198,7 +216,7 @@ func TestMetrics_Attributes(t *testing.T) {
 				"http.request.method":       "GET",
 				"url.scheme":                "http",
 				"http.response.status_code": "200",
-				"http.route":                "GET /posts/{postName}",
+				"http.route":                "/posts/{postName}",
 			},
 		},
 		{
@@ -208,7 +226,7 @@ func TestMetrics_Attributes(t *testing.T) {
 				"http.request.method":       "GET",
 				"url.scheme":                "http",
 				"http.response.status_code": "404",
-				"http.route":                "GET /posts/{postName}",
+				"http.route":                "/posts/{postName}",
 			},
 		},
 		{
@@ -218,7 +236,7 @@ func TestMetrics_Attributes(t *testing.T) {
 				"http.request.method":       "GET",
 				"url.scheme":                "http",
 				"http.response.status_code": "200",
-				"http.route":                "GET /tags/{tagName}",
+				"http.route":                "/tags/{tagName}",
 			},
 		},
 		{
@@ -228,7 +246,7 @@ func TestMetrics_Attributes(t *testing.T) {
 				"http.request.method":       "GET",
 				"url.scheme":                "http",
 				"http.response.status_code": "404",
-				"http.route":                "GET /rss.xml",
+				"http.route":                "/rss.xml",
 			},
 		},
 		{
@@ -238,7 +256,7 @@ func TestMetrics_Attributes(t *testing.T) {
 				"http.request.method":       "GET",
 				"url.scheme":                "http",
 				"http.response.status_code": "200",
-				"http.route":                "GET /images/",
+				"http.route":                "/images/",
 			},
 		},
 		{
@@ -294,22 +312,18 @@ func TestMetrics_ResponseBodySize(t *testing.T) {
 	}
 	want := int64(w.Body.Len())
 
-	m := findMetric(t, collected(t), responseSizeMetric)
-	hist, ok := m.Data.(metricdata.Histogram[int64])
-	if !ok {
-		t.Fatalf("%s: data is %T, want Histogram[int64]", responseSizeMetric, m.Data)
-	}
-	if len(hist.DataPoints) != 1 {
-		t.Fatalf("%s: got %d data points, want 1", responseSizeMetric, len(hist.DataPoints))
-	}
-	if got := hist.DataPoints[0].Sum; got != want {
+	if got := responseSizeSum(t, collected(t)); got != want {
 		t.Errorf("%s: recorded %d bytes, want %d", responseSizeMetric, got, want)
 	}
 }
 
-// TestMetrics_AssetBodySize verifies that bytes copied through the wrapper's
-// ReadFrom path — which is how net/http writes static file bodies — are counted
-// exactly once.
+// TestMetrics_AssetBodySize verifies that the bytes of a static file body are
+// counted exactly once when the wrapper's ReadFrom falls back to io.Copy.
+//
+// http.ServeContent copies file bodies with io.Copy, which finds the wrapper's
+// [io.ReaderFrom]; httptest.ResponseRecorder does not implement it, so this
+// drives the fallback branch where the copy goes through Write and counts its
+// own bytes. [TestMetrics_AssetBodySizeOverConnection] covers the other branch.
 func TestMetrics_AssetBodySize(t *testing.T) {
 	t.Parallel()
 
@@ -319,16 +333,71 @@ func TestMetrics_AssetBodySize(t *testing.T) {
 		t.Fatalf("GET /images/pipeline.png: status %d, want 200", w.Code)
 	}
 
-	m := findMetric(t, collected(t), responseSizeMetric)
-	hist, ok := m.Data.(metricdata.Histogram[int64])
-	if !ok {
-		t.Fatalf("%s: data is %T, want Histogram[int64]", responseSizeMetric, m.Data)
-	}
-	if len(hist.DataPoints) != 1 {
-		t.Fatalf("%s: got %d data points, want 1", responseSizeMetric, len(hist.DataPoints))
-	}
-	if got, want := hist.DataPoints[0].Sum, int64(len(pngBytes)); got != want {
+	if got, want := responseSizeSum(t, collected(t)), int64(len(pngBytes)); got != want {
 		t.Errorf("%s: recorded %d bytes, want %d", responseSizeMetric, got, want)
+	}
+}
+
+// TestMetrics_AssetBodySizeOverConnection makes the same assertion as
+// [TestMetrics_AssetBodySize] over a real connection, which is the only way to
+// reach the branch of the wrapper's ReadFrom that delegates to the underlying
+// writer.
+//
+// net/http's own ResponseWriter implements [io.ReaderFrom] while
+// httptest.ResponseRecorder does not, so in production that delegating branch
+// is where every static file body is accounted for, and no recorder-driven test
+// ever runs it. Counting the bytes there *and* through Write would double
+// http.server.response.body.size for every asset the blog serves.
+func TestMetrics_AssetBodySizeOverConnection(t *testing.T) {
+	t.Parallel()
+
+	// Installed inside the metrics middleware, so w is the wrapper itself and
+	// unwrapping it reaches the writer whose ReadFrom the wrapper delegates to.
+	var sawReaderFrom atomic.Bool
+	probe := func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if u, ok := w.(interface{ Unwrap() http.ResponseWriter }); ok {
+				_, isReaderFrom := u.Unwrap().(io.ReaderFrom)
+				sawReaderFrom.Store(isReaderFrom)
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
+
+	srv, collected := newMetricsServer(t,
+		config.WithAssetsDir(testAssetsFS()).AsServerOption(),
+		config.WithMiddleware(probe),
+	)
+
+	ts := httptest.NewServer(srv)
+	defer ts.Close()
+
+	resp, err := http.Get(ts.URL + "/images/pipeline.png")
+	if err != nil {
+		t.Fatalf("GET /images/pipeline.png: %v", err)
+	}
+	body, err := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if err != nil {
+		t.Fatalf("GET /images/pipeline.png: reading body: %v", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("GET /images/pipeline.png: status %d, want 200", resp.StatusCode)
+	}
+	if string(body) != string(pngBytes) {
+		t.Fatalf("GET /images/pipeline.png: body %q, want %q", body, pngBytes)
+	}
+	if !sawReaderFrom.Load() {
+		t.Fatal("the writer beneath the wrapper does not implement io.ReaderFrom; this test no longer covers the delegating branch")
+	}
+
+	// Close blocks until outstanding handlers return, so the measurement is
+	// recorded before it is collected; the client having the body in hand is
+	// not on its own enough.
+	ts.Close()
+
+	if got, want := responseSizeSum(t, collected(t)), int64(len(pngBytes)); got != want {
+		t.Errorf("%s: recorded %d bytes, want %d counted exactly once", responseSizeMetric, got, want)
 	}
 }
 

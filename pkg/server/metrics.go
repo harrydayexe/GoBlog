@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -87,7 +88,7 @@ func (m *metrics) middleware(next http.Handler) http.Handler {
 		// unbounded time series; every unmatched request shares one series
 		// with no http.route attribute.
 		if r.Pattern != "" {
-			attrs = append(attrs, semconv.HTTPRoute(r.Pattern))
+			attrs = append(attrs, semconv.HTTPRoute(routeTemplate(r.Pattern)))
 		}
 		// Semantic conventions ask for error.type to carry the status code as a
 		// string when a server error ended the request and nothing more
@@ -99,6 +100,28 @@ func (m *metrics) middleware(next http.Handler) http.Handler {
 		m.duration.Record(ctx, elapsed.Seconds(), method, scheme, attrs...)
 		m.responseSize.Record(ctx, recorder.written, method, scheme, attrs...)
 	})
+}
+
+// routeTemplate reduces a [http.ServeMux] pattern to the route template the
+// http.route attribute is defined as.
+//
+// Mux patterns are "[METHOD ][HOST]/[PATH]", so the pattern the mux records on
+// a matched request carries the method as a prefix: "GET /posts/{postName}".
+// The semantic conventions define http.route as the matched path template —
+// static segments plus placeholders — and record the method separately as
+// http.request.method, so leaving the prefix in place would produce a label
+// that stock queries such as
+// http_server_request_duration_seconds_count{http_route="/posts/{postName}"}
+// never match. Anything the mux registers without a method is already a route
+// template and is returned unchanged.
+func routeTemplate(pattern string) string {
+	// Split the method off exactly as ServeMux itself parses the pattern: the
+	// first space or tab ends the method, and any further whitespace before
+	// the host and path is insignificant.
+	if i := strings.IndexAny(pattern, " \t"); i >= 0 {
+		return strings.TrimLeft(pattern[i+1:], " \t")
+	}
+	return pattern
 }
 
 // requestMethod maps an HTTP method onto its http.request.method attribute

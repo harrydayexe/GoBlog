@@ -261,9 +261,13 @@
 // the page-hit number, and a parallel counter could only drift from it. Error
 // rate is likewise a query over http.response.status_code.
 //
-// http.route is the pattern the ServeMux matched, not the requested path, so all
-// posts aggregate under {root}posts/{postName} and requests matching no route
-// share a single series with no http.route attribute. This bounds the number of
+// http.route is the path template of the pattern the ServeMux matched, not the
+// requested path, so all posts aggregate under {root}posts/{postName} and
+// requests matching no route share a single series with no http.route
+// attribute. Mux patterns pin a method ("GET /posts/{postName}"), which the
+// attribute does not carry — semconv defines http.route as the path template
+// alone and the method is recorded separately as http.request.method — so the
+// method prefix is stripped before recording. This bounds the number of
 // time series by the routes the blog registers rather than by what clients ask
 // for; labelling by path would let a bot scanning for /wp-admin and friends grow
 // the series count without limit.
