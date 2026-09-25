@@ -204,7 +204,7 @@ func TestPost_GenerateSlug(t *testing.T) {
 	}
 }
 
-// TestSlugify tests the slugify helper function
+// TestSlugify tests the Slugify helper function
 func TestSlugify(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -228,9 +228,9 @@ func TestSlugify(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.input, func(t *testing.T) {
 			t.Parallel()
-			result := slugify(tt.input)
+			result := Slugify(tt.input)
 			if result != tt.expected {
-				t.Errorf("slugify(%q) = %q, want %q", tt.input, result, tt.expected)
+				t.Errorf("Slugify(%q) = %q, want %q", tt.input, result, tt.expected)
 			}
 		})
 	}

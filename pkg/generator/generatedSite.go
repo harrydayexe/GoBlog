@@ -60,11 +60,27 @@ package generator
 //   - config.WithDisableFeeds() was applied
 //   - config.WithRawOutput() was applied (raw mode skips all template rendering)
 //   - config.WithDisableTags() was applied (tag feeds are additionally empty in this mode)
+//
+// # Series Mode
+//
+// Series are opt-in. When the generator is configured with
+// config.WithSeriesFile(), the series named by that file are rendered as well:
+//   - Series: one rendered page per series, keyed by series slug
+//   - SeriesIndex: the page listing every series, in the order the file declares
+//     them
+//
+// Both are empty when no series file is configured, or under
+// config.WithRawOutput() since raw mode bypasses templates. SeriesIndex is still
+// rendered for a file declaring an empty list, so an author can enable the
+// feature before writing their first series.
 type GeneratedBlog struct {
 	Posts     map[string][]byte // Posts maps a slug to raw HTML bytes for each post
 	Index     []byte            // Index contains the raw HTML for the blog index page
 	Tags      map[string][]byte // Tags maps each tag name to its tag page HTML
 	TagsIndex []byte            // TagsIndex contains the raw HTML for the tags index page
+
+	Series      map[string][]byte // Series maps each series slug to its series page HTML; empty unless series are enabled
+	SeriesIndex []byte            // SeriesIndex contains the raw HTML for the series index page, or nil unless series are enabled
 
 	RSSFeed      []byte            // RSSFeed contains the site-wide RSS 2.0 feed XML, or nil if feeds are disabled/skipped
 	AtomFeed     []byte            // AtomFeed contains the site-wide Atom feed XML, or nil if feeds are disabled/skipped
@@ -76,6 +92,7 @@ func NewEmptyGeneratedBlog() *GeneratedBlog {
 	return &GeneratedBlog{
 		Posts:        make(map[string][]byte),
 		Tags:         make(map[string][]byte),
+		Series:       make(map[string][]byte),
 		TagRSSFeeds:  make(map[string][]byte),
 		TagAtomFeeds: make(map[string][]byte),
 	}

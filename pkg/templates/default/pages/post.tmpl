@@ -42,6 +42,37 @@
                 {{end}}
             </header>
 
+            {{- with .Series}}
+
+            <!-- Series Box -->
+            <aside class="mb-8 p-6 bg-blue-50 border border-blue-200 rounded-lg">
+                <p class="text-gray-700">
+                    Part {{.Position}} of {{.Total}} in
+                    <a href="{{.Path}}" class="font-semibold text-blue-700 hover:text-blue-900 underline">{{.Name}}</a>
+                </p>
+                {{if or .Prev .Next}}
+                <div class="mt-4 flex flex-wrap gap-3">
+                    {{with .Prev}}
+                    <a href="{{.BlogRoot}}posts/{{.Slug}}.html" class="inline-flex items-center px-4 py-2 text-sm font-medium text-blue-700 bg-white border border-blue-200 rounded-md hover:bg-blue-100 transition-colors">
+                        <svg class="mr-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                        </svg>
+                        Previous: {{.Title}}
+                    </a>
+                    {{end}}
+                    {{with .Next}}
+                    <a href="{{.BlogRoot}}posts/{{.Slug}}.html" class="inline-flex items-center px-4 py-2 text-sm font-medium text-blue-700 bg-white border border-blue-200 rounded-md hover:bg-blue-100 transition-colors">
+                        Next: {{.Title}}
+                        <svg class="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                        </svg>
+                    </a>
+                    {{end}}
+                </div>
+                {{end}}
+            </aside>
+            {{- end}}
+
             <!-- Post Content -->
             <div class="prose prose-lg max-w-none">
                 {{.Post.HTMLContent}}

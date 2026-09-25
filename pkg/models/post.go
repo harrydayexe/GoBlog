@@ -85,19 +85,30 @@ func (p *Post) GenerateSlug() {
 
 	// If we have a title, use it
 	if p.Title != "" {
-		p.Slug = slugify(p.Title)
+		p.Slug = Slugify(p.Title)
 		return
 	}
 
 	// Fall back to filename without extension
 	if p.SourcePath != "" {
 		filename := filepath.Base(p.SourcePath)
-		p.Slug = slugify(strings.TrimSuffix(filename, filepath.Ext(filename)))
+		p.Slug = Slugify(strings.TrimSuffix(filename, filepath.Ext(filename)))
 	}
 }
 
-// slugify converts a string to a URL-friendly slug
-func slugify(s string) string {
+// Slugify converts a string to a URL-friendly slug, the same way post slugs are
+// derived from post titles by [Post.GenerateSlug]:
+//
+//  1. Converts to lowercase
+//  2. Replaces spaces and underscores with hyphens
+//  3. Removes all non-alphanumeric characters except hyphens
+//  4. Removes consecutive and leading/trailing hyphens
+//
+// A string with no alphanumeric characters slugifies to the empty string, which
+// callers deriving a URL segment must treat as a failure.
+//
+// Example: "Building a Blog in Go" becomes "building-a-blog-in-go".
+func Slugify(s string) string {
 	s = strings.ToLower(s)
 
 	// Replace common separators with hyphens

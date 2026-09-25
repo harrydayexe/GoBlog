@@ -24,13 +24,21 @@ import (
 
 // NewServeCommand handles the serve command by starting an HTTP server from a directory of markdown posts.
 func NewServeCommand(ctx context.Context, c *cli.Command) error {
+	// Validate the series file first: a path that cannot be read is an error,
+	// not a silent fallback to "series disabled", and it should fail before any
+	// directories are touched or posts are parsed.
+	seriesOpts, seriesFile, err := utilities.SeriesOptions(c)
+	if err != nil {
+		return err
+	}
+
 	healthChecksEnabled := c.Bool(HealthChecksFlagName)
 
 	inputPostsDir := c.StringArg(InputPostsDirArgName)
 	// When health checks are enabled the posts directory may not exist yet
 	// (e.g. the volume is not mounted). Allow a non-existent path so the server
 	// can start and surface the failure via /healthz/ready rather than exiting.
-	inputPostsDir, err := utilities.GetDirectoryFromInput(inputPostsDir, healthChecksEnabled)
+	inputPostsDir, err = utilities.GetDirectoryFromInput(inputPostsDir, healthChecksEnabled)
 	if err != nil {
 		return err
 	}
@@ -62,6 +70,10 @@ func NewServeCommand(ctx context.Context, c *cli.Command) error {
 	}
 
 	opts = append(opts, config.WithFeedPostLimit(c.Int(cliflags.FeedLimitFlagName)).AsServerOption())
+
+	for _, seriesOpt := range seriesOpts {
+		opts = append(opts, seriesOpt.AsServerOption())
+	}
 
 	opts = append(opts, config.WithPort(c.Int(PortFlagName)))
 	opts = append(opts, config.WithCacheControl(c.Duration(CacheControlFlagName)))
@@ -113,17 +125,24 @@ func NewServeCommand(ctx context.Context, c *cli.Command) error {
 		opts = append(opts, config.WithHealthChecks())
 	}
 
-	return runServe(ctx, inputPostsDir, postsFsys, c.Bool(WatchFlagName), opts...)
+	return runServe(ctx, inputPostsDir, postsFsys, c.Bool(WatchFlagName), seriesFile, opts...)
 }
 
-func runServe(ctx context.Context, postsPath string, posts fs.FS, watch bool, opts ...config.ServerOption) error {
+func runServe(ctx context.Context, postsPath string, posts fs.FS, watch bool, seriesFile string, opts ...config.ServerOption) error {
 	srv, err := server.New(posts, opts...)
 	if err != nil {
 		return err
 	}
 
 	if watch {
-		w, err := watcher.New(postsPath, srv.Logger.AsOption().AsWatcherOption())
+		watchOpts := []config.WatcherOption{srv.Logger.AsOption().AsWatcherOption()}
+		if seriesFile != "" {
+			// The series file is neither markdown nor necessarily inside the
+			// posts directory, so it has to be watched explicitly.
+			watchOpts = append(watchOpts, config.WithWatchFile(seriesFile))
+		}
+
+		w, err := watcher.New(postsPath, watchOpts...)
 		if err != nil {
 			return err
 		}

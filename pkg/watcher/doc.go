@@ -66,9 +66,11 @@
 // Subdirectories created after the Watcher is constructed are automatically
 // picked up by Run when the parent directory fires a Create event.
 //
-// Only changes to files with a .md extension trigger the onChange callback.
-// All other file types (images, CSS, YAML, etc.) are silently ignored, as
-// are common editor temporary files (dotfiles, *.swp, *~, etc.).
+// Only changes to files with a .md extension, plus any individual files
+// registered with [github.com/harrydayexe/GoBlog/v2/pkg/config.WithWatchFile],
+// trigger the onChange callback. All other file types (images, CSS, YAML, etc.)
+// are silently ignored, as are common editor temporary files (dotfiles, *.swp,
+// *~, etc.).
 // Ignoring images is deliberate: the HTTP server serves them live from the
 // assets directory and rendered posts do not depend on image contents, so
 // adding or replacing an image needs no regeneration. For the same reason an

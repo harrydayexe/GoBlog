@@ -24,8 +24,16 @@ import (
 
 // NewGeneratorCommand handles the generate command by processing markdown posts into HTML.
 func NewGeneratorCommand(ctx context.Context, c *cli.Command) error {
+	// Validate the series file first: a path that cannot be read is an error,
+	// not a silent fallback to "series disabled", and it should fail before any
+	// directories are touched or posts are parsed.
+	seriesOpts, _, err := utilities.SeriesOptions(c)
+	if err != nil {
+		return err
+	}
+
 	inputPostsDir := c.StringArg(InputPostsDirArgName)
-	inputPostsDir, err := utilities.GetDirectoryFromInput(inputPostsDir, false)
+	inputPostsDir, err = utilities.GetDirectoryFromInput(inputPostsDir, false)
 	if err != nil {
 		return err
 	}
@@ -69,6 +77,8 @@ func NewGeneratorCommand(ctx context.Context, c *cli.Command) error {
 	}
 
 	opts = append(opts, config.WithFeedPostLimit(c.Int(cliflags.FeedLimitFlagName)))
+
+	opts = append(opts, seriesOpts...)
 
 	templateDirPath := c.String(cliflags.TemplateDirFlagName)
 	var templateDir fs.FS

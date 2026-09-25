@@ -38,6 +38,11 @@ const FeedLimitFlagName = "feed-limit"
 // served and copied from.
 const AssetsDirFlagName = "assets-dir"
 
+// SeriesFileFlagName is the CLI flag name for supplying the site-wide series
+// definition file. Supplying it enables series pages; series are disabled when
+// it is unset.
+const SeriesFileFlagName = "series-file"
+
 // Shared returns the CLI flag definitions that apply to both the generate and
 // serve subcommands. They are registered on the top-level goblog command so that
 // urfave/cli v3's default persistence makes them available in both subcommand
@@ -83,6 +88,10 @@ func Shared() []cli.Flag {
 		&cli.StringFlag{
 			Name:  AssetsDirFlagName,
 			Usage: "directory of images served at {root-path}images/ and copied to <output>/images/; defaults to '<posts>/images', ignored if missing",
+		},
+		&cli.StringFlag{
+			Name:  SeriesFileFlagName,
+			Usage: "path to a YAML file defining post series; supplying it enables series pages, series are disabled without it",
 		},
 	}
 }
