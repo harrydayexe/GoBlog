@@ -184,13 +184,7 @@ func New(posts fs.FS, renderer *TemplateRenderer, opts ...config.GeneratorOption
 // It returns an error if markdown files cannot be read, parsing fails, or
 // template rendering encounters an error.
 func (g *Generator) Generate(ctx context.Context) (*GeneratedBlog, error) {
-	g.Logger.Logger.DebugContext(ctx, "Creating parser for generate call")
-	parserCfg := g.ParserConfig
-	parserCfg.Logger = g.Logger.Logger
-	parserCfg.BlogRoot = string(g.BlogRoot)
-	p := parser.NewWithConfig(&parserCfg)
-
-	posts, err := p.ParseDirectory(ctx, g.PostsDir)
+	posts, err := g.parsePosts(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -203,6 +197,18 @@ func (g *Generator) Generate(ctx context.Context) (*GeneratedBlog, error) {
 
 	// Step 3: Apply templates
 	return g.assembleBlogWithTemplates(ctx, posts)
+}
+
+// parsePosts parses every markdown file in the posts filesystem, configuring the
+// parser from the generator's own configuration.
+func (g *Generator) parsePosts(ctx context.Context) (models.PostList, error) {
+	g.Logger.Logger.DebugContext(ctx, "Creating parser for generate call")
+	parserCfg := g.ParserConfig
+	parserCfg.Logger = g.Logger.Logger
+	parserCfg.BlogRoot = string(g.BlogRoot)
+	p := parser.NewWithConfig(&parserCfg)
+
+	return p.ParseDirectory(ctx, g.PostsDir)
 }
 
 // DebugConfig logs the current generator configuration at the debug level.

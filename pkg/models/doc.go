@@ -45,8 +45,8 @@
 // # Template Data
 //
 // Each page type has a data struct (IndexPageData, PostPageData, TagPageData,
-// TagsIndexPageData) embedding BaseData, the fields available to every
-// template. Alongside the site title, blog root, and page path, BaseData
+// TagsIndexPageData, SeriesPageData, SeriesIndexPageData) embedding BaseData,
+// the fields available to every template. Alongside the site title, blog root, and page path, BaseData
 // carries the metadata the default templates use for SEO:
 //
 //   - CanonicalURL — the page's fully-qualified URL, empty unless a base URL
@@ -58,6 +58,10 @@
 // Each is documented with the template guard it expects. Templates must honour
 // those guards: the fields are deliberately empty or nil when the underlying
 // value is unknown, so that pages omit a tag rather than emit an empty one.
+//
+// PostPageData.Series ([PostSeries]) follows the same rule. It carries the
+// series a post belongs to, its position within it and the parts either side,
+// and is nil both for a post in no series and whenever series are disabled.
 //
 // # Concurrency Safety
 //

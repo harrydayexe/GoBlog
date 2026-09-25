@@ -95,6 +95,27 @@
 // later values overwriting earlier ones for duplicate keys. The field is nil
 // when no WithCustomData option is supplied.
 //
+// WithSeriesFile(fsys fs.FS, path string) is a GeneratorOption that enables
+// series pages, reading their definitions from path within fsys. Series are
+// named, ordered collections of posts — a multi-part tutorial, say — defined in
+// one site-wide YAML file rather than in post front matter. They are opt-in, the
+// reverse of tags: without this option no series pages are generated,
+// models.PostPageData.Series is always nil, and models.BaseData.SeriesEnabled is
+// false. A post belongs to at most one series, and the file's post order is the
+// reading order. Every rule the file must satisfy is a hard error rather than a
+// silently dropped series. The generator, the outputter (which writes series/)
+// and the HTTP server (which registers /series routes) all accept it.
+//
+//	gen := generator.New(fsys, renderer,
+//	    config.WithSeriesFile(os.DirFS("posts/"), "series.yml"),
+//	)
+//
+// WithWatchFile(path string) is a WatcherOption that adds one file to the set
+// the watcher reacts to, alongside the markdown files under its root directory.
+// The goblog serve command uses it for the series file, which is neither
+// markdown nor necessarily inside the posts directory. Multiple calls
+// accumulate; the file's parent directory must exist when watcher.New is called.
+//
 // WithHealthChecks() is a ServerOption that enables health-check endpoints
 // on the HTTP server. When enabled, GET /healthz/live always returns 200 OK,
 // while GET /healthz/ready and GET /healthz/startup return 200 OK once posts
@@ -108,15 +129,15 @@
 //
 // GeneratorOption carries options for generator.New and outputter.NewDirectoryWriter,
 // including WithRawOutput, WithDisableTags, WithDisableReadingTime, WithSiteTitle,
-// WithEnvironment, WithCustomData, WithHTMLPaths, and (via the embedded BaseOption)
-// WithLogger, WithBlogRoot and WithAssetsDir.
+// WithEnvironment, WithCustomData, WithHTMLPaths, WithSeriesFile, and (via the
+// embedded BaseOption) WithLogger, WithBlogRoot and WithAssetsDir.
 // ServerOption carries options for the HTTP server (port, host, middleware,
 // cache-control TTL, health-check endpoints, template directory, and via the
 // embedded BaseOption: WithLogger, WithBlogRoot, WithAssetsDir). Generator and
 // renderer options are converted for it with GeneratorOption.AsServerOption and
 // RendererOption.AsServerOption.
-// WatcherOption carries options for watcher.New (debounce, and via the embedded
-// BaseOption: WithLogger, WithBlogRoot).
+// WatcherOption carries options for watcher.New (debounce, extra watched files,
+// and via the embedded BaseOption: WithLogger, WithBlogRoot).
 // RendererOption carries options for generator.NewTemplateRenderer (custom funcs).
 // ServerConfig holds the configuration server.New resolves from the
 // ServerOption values it is given; the server embeds it.

@@ -177,12 +177,12 @@ add-license:
 run-gen *ARGS: build
     {{DIST_DIR}}/{{BINARY_NAME}} generate {{ARGS}}
 
-# Run serve command with optional arguments (defaults to example posts)
+# Run serve command with optional arguments (defaults to example posts and their series)
 [group('run')]
 run-serve *ARGS: build
     #!/usr/bin/env bash
     if [ -z "{{ARGS}}" ]; then
-        {{DIST_DIR}}/{{BINARY_NAME}} serve docs/example-posts
+        {{DIST_DIR}}/{{BINARY_NAME}} serve docs/example-posts --series-file docs/example-posts/series.yml
     else
         {{DIST_DIR}}/{{BINARY_NAME}} serve {{ARGS}}
     fi
@@ -197,4 +197,4 @@ docker tag="goblog:latest":
 [group("run")]
 run-image tag="goblog:latest": docker
     @echo "Running Docker image..."
-    docker run -v ./docs/example-posts/:/posts -p 8080:8080 {{tag}}
+    docker run -v ./docs/example-posts/:/posts -p 8080:8080 {{tag}} /posts --series-file /posts/series.yml
