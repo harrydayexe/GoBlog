@@ -122,7 +122,7 @@
 //   - Tag page:          /tags/<tag>.html
 //   - Tags index page:   /tags.html
 //   - Series page:       /series/<slug>.html
-//   - Series index page: /series.html
+//   - Series index page: /series/index.html
 //
 // The pkg/server package accepts both clean URLs and .html URLs via its
 // built-in StripHTMLExtension middleware, so the server always uses clean-URL

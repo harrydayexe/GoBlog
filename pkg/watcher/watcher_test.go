@@ -302,3 +302,62 @@ func TestRun_NoiseIgnored(t *testing.T) {
 		t.Errorf("onChange called %d time(s) for noise files, want 0", got)
 	}
 }
+
+// TestRun_WatchedFileChange verifies that a file registered with
+// config.WithWatchFile triggers onChange even though it is not markdown, while
+// its neighbours in the same directory are still ignored.
+func TestRun_WatchedFileChange(t *testing.T) {
+	t.Parallel()
+
+	postsDir := t.TempDir()
+	seriesDir := t.TempDir()
+	seriesFile := filepath.Join(seriesDir, "series.yml")
+	if err := os.WriteFile(seriesFile, []byte("series: []\n"), 0o644); err != nil {
+		t.Fatalf("WriteFile error = %v", err)
+	}
+
+	w, err := watcher.New(postsDir,
+		config.WithDebounce(shortDebounce),
+		config.WithWatchFile(seriesFile),
+	)
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+
+	var count atomic.Int64
+	go w.Run(ctx, func(context.Context) { count.Add(1) }) //nolint:errcheck
+
+	// Give the watcher time to start listening before writing.
+	time.Sleep(50 * time.Millisecond)
+
+	// A different file in the same directory must not trigger a regeneration.
+	if err := os.WriteFile(filepath.Join(seriesDir, "other.yml"), []byte("ignored"), 0o644); err != nil {
+		t.Fatalf("WriteFile other.yml error = %v", err)
+	}
+	time.Sleep(shortDebounce + 100*time.Millisecond)
+	if got := count.Load(); got != 0 {
+		t.Fatalf("onChange called %d time(s) for an unwatched neighbouring file, want 0", got)
+	}
+
+	if err := os.WriteFile(seriesFile, []byte("series: []\n# edited\n"), 0o644); err != nil {
+		t.Fatalf("WriteFile series.yml error = %v", err)
+	}
+
+	waitForCount(t, &count, 1, 3*time.Second)
+}
+
+// TestNew_WatchFileMissingDirectory verifies that New fails when a watched
+// file's parent directory does not exist, rather than silently not watching it.
+func TestNew_WatchFileMissingDirectory(t *testing.T) {
+	t.Parallel()
+
+	_, err := watcher.New(t.TempDir(),
+		config.WithWatchFile("/nonexistent/goblog/watcher/series.yml"),
+	)
+	if err == nil {
+		t.Error("New() with a watched file in a missing directory returned nil error, want error")
+	}
+}

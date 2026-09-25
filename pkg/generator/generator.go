@@ -249,6 +249,12 @@ func (g *Generator) pagePath(kind, name string) string {
 	case "series":
 		base = root + "series/" + name
 	case "seriesIndex":
+		// The series index is a directory index: the outputter writes
+		// series/index.html, so with HTML paths enabled the path has to name
+		// that file rather than "series.html", which is never written.
+		if g.HTMLPaths.Enable {
+			return root + "series/index.html"
+		}
 		base = root + "series"
 	}
 
