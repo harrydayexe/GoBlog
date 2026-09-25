@@ -11,6 +11,7 @@ require (
 	github.com/yuin/goldmark-highlighting/v2 v2.0.0-20230729083705-37449abec8cc
 	go.abhg.dev/goldmark/frontmatter v0.3.0
 	go.abhg.dev/goldmark/wikilink v0.6.0
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
@@ -18,5 +19,4 @@ require (
 	github.com/caarlos0/env/v11 v11.3.1 // indirect
 	github.com/dlclark/regexp2 v1.11.5 // indirect
 	golang.org/x/sys v0.25.0 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

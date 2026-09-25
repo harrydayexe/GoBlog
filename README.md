@@ -56,6 +56,7 @@ These flags apply to both `generate` and `serve` and may be passed before or aft
 | `--disable-feeds` | | `false` | Disable RSS and Atom feed generation |
 | `--feed-limit` | | `10` | Maximum number of posts to include in each feed (`0` = unlimited) |
 | `--assets-dir` | | `<posts>/images` | Directory of images, served at `{root-path}images/` and copied to `<output>/images/`. Ignored if it does not exist |
+| `--series-file` | | _(none)_ | Path to a YAML file defining post [series](#series). Supplying it enables series pages; series are off without it. A path that cannot be read is an error |
 
 ### `generate` flags
 
@@ -261,6 +262,89 @@ Canonical URLs need to know the site's domain, so set `--base-url` (or `config.W
 Custom templates can read the same values from the page data: `{{.CanonicalURL}}`, `{{.OGType}}`, and `{{with .Article}}` for the post's publish date, author, and tags. `og:image` is not emitted — posts have no image field.
 
 Full API documentation, including all config options and template data types, is at [pkg.go.dev/github.com/harrydayexe/GoBlog/v2](https://pkg.go.dev/github.com/harrydayexe/GoBlog/v2).
+
+## Series
+
+A series is a named, ordered collection of posts, such as a multi-part tutorial.
+Series work like tags, with two differences: a post belongs to at most one
+series, and the parts have an explicit order rather than a date order.
+
+Series are defined in one site-wide YAML file, not in post front matter, so
+renaming a series or reordering its parts is a one-file edit and the posts
+themselves need no changes. They are opt-in: nothing is generated unless you
+point GoBlog at a series file.
+
+```yaml
+series:
+  - name: "Building a Blog in Go"
+    description: "A step-by-step guide to building a static blog generator."  # optional
+    posts:                       # ordered — the first entry is part 1
+      - building-blog-part-1.md
+      - building-blog-part-2.md
+      - building-blog-part-3.md
+
+  - name: "Docker for Go Developers"
+    slug: docker-go              # optional, overrides the slug derived from the name
+    posts:
+      - docker-basics.md
+      - multi-stage-builds.md
+```
+
+Posts are named by their **filename relative to the posts directory** rather than
+their slug, because slugs are derived from titles and a slug reference would
+break whenever a post was retitled. Only `name` and `posts` are required; the
+slug defaults to a slugified `name` (`"Building a Blog in Go"` →
+`building-a-blog-in-go`).
+
+The file is validated strictly, and any problem fails generation with an error
+naming the series and the offending value: a missing name or post list, a
+filename that matches no post, a post listed twice or in two series, two series
+sharing a slug, a series whose slug is `index` (that page belongs to the series
+index), or an unknown key (so `post:` for `posts:` does not pass silently).
+
+Series pages are served at `{root-path}series` and `{root-path}series/{slug}`,
+and written by `generate` as `series/index.html` and `series/{slug}.html`. Each
+post in a series gets a "Part N of M" box with previous/next links, and the
+header gains a "Series" nav link. Posts in no series render exactly as before.
+Series are independent of tags — `--disable-tags` does not affect them — and the
+main index still lists every post in date order.
+
+Enable them with the CLI:
+
+```bash
+goblog serve posts/ --series-file posts/series.yml
+goblog generate posts/ output/ --series-file posts/series.yml
+```
+
+With Docker, mount the file (or keep it in the posts directory) and pass the flag:
+
+```bash
+docker run -v ./posts:/posts -p 8080:8080 harrydayexe/goblog /posts --series-file /posts/series.yml
+```
+
+From the library, use `config.WithSeriesFile`, which reads the file from an
+`fs.FS` just as the generator reads posts:
+
+```go
+gen := generator.New(postsFS, renderer,
+    config.WithSeriesFile(postsFS, "series.yml"),
+)
+writer := outputter.NewDirectoryWriter("output/",
+    config.WithSeriesFile(postsFS, "series.yml"),
+)
+srv, err := server.New(postsFS,
+    config.WithSeriesFile(postsFS, "series.yml").AsServerOption(),
+)
+```
+
+Custom templates need `pages/series.tmpl` and `pages/series-index.tmpl` once
+series are enabled; generation fails with an error naming the missing template
+otherwise. Post templates read the series context from `{{with .Series}}`, and
+every page can gate a nav link on `{{if .SeriesEnabled}}`.
+
+Under `serve --watch` the series file is watched alongside the posts, so editing
+it regenerates the site. An invalid edit leaves the last good site being served
+and logs the error, exactly as an invalid post does.
 
 ## Heading anchor links
 

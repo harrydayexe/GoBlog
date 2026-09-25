@@ -107,18 +107,22 @@
 //	<a href="{{.Path}}">this page</a>
 //
 // By default (clean-URL mode) the value includes BlogRoot and no .html suffix:
-//   - Index page:      /  (or /blog/ when BlogRoot = "/blog/")
-//   - Post page:       /posts/<slug>
-//   - Tag page:        /tags/<tag>
-//   - Tags index page: /tags
+//   - Index page:        /  (or /blog/ when BlogRoot = "/blog/")
+//   - Post page:         /posts/<slug>
+//   - Tag page:          /tags/<tag>
+//   - Tags index page:   /tags
+//   - Series page:       /series/<slug>
+//   - Series index page: /series
 //
 // When [config.WithHTMLPaths] is applied (automatically set by the goblog
 // generate CLI), paths include the .html extension to match the files written
 // to disk:
-//   - Index page:      /index.html  (or /blog.html when BlogRoot = "/blog/")
-//   - Post page:       /posts/<slug>.html
-//   - Tag page:        /tags/<tag>.html
-//   - Tags index page: /tags.html
+//   - Index page:        /index.html  (or /blog.html when BlogRoot = "/blog/")
+//   - Post page:         /posts/<slug>.html
+//   - Tag page:          /tags/<tag>.html
+//   - Tags index page:   /tags.html
+//   - Series page:       /series/<slug>.html
+//   - Series index page: /series/index.html
 //
 // The pkg/server package accepts both clean URLs and .html URLs via its
 // built-in StripHTMLExtension middleware, so the server always uses clean-URL
@@ -161,6 +165,47 @@
 // The values a post may not have — the last-edited date, the author, the tags,
 // and the reading time when disabled — are empty rather than absent, so
 // templates gate each tag on its own value.
+//
+// # Series
+//
+// Series are named, ordered collections of posts — a multi-part tutorial, say —
+// defined in one site-wide YAML file rather than in post front matter. They are
+// opt-in: supply [config.WithSeriesFile] to enable them.
+//
+//	gen := generator.New(fsys, renderer,
+//	    config.WithSeriesFile(fsys, "series.yml"),
+//	)
+//
+// The file lists each series with a name, an optional slug and description, and
+// the posts it contains, named by their filename relative to the posts directory
+// and listed in reading order:
+//
+//	series:
+//	  - name: "Building a Blog in Go"
+//	    description: "A step-by-step guide."
+//	    posts:
+//	      - building-blog-part-1.md
+//	      - building-blog-part-2.md
+//
+// When series are enabled, GeneratedBlog.Series holds one rendered page per
+// series (keyed by slug) and GeneratedBlog.SeriesIndex the page listing them all
+// in file order. Post pages additionally receive a Series field
+// ([models.PostSeries]) naming the series, the post's 1-based position in it, and
+// the previous and next parts; it is nil for a post in no series. Every page
+// receives BaseData.SeriesEnabled so shared layouts can show a "Series" nav link.
+//
+// Validation is strict, because a silently dropped series is worse than a failed
+// build: Generate returns an error — naming the series and the offending value —
+// when the YAML is malformed or has no top-level "series" key, a series has no
+// name or no posts, a listed filename matches no post, a post appears twice in a
+// series or in two series, two series share a slug, a series takes the slug
+// "index" (which is reserved for the series index page), or the file contains an
+// unknown key. Series are independent of tags, so [config.WithDisableTags] does
+// not affect them, and a series post keeps its tags. The index page is
+// unaffected: series posts still appear there in date order.
+//
+// Series are not generated under [config.WithRawOutput], which bypasses
+// templates entirely.
 //
 // # Output
 //

@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+{{template "head" .}}
+<body class="h-full flex flex-col bg-gray-50">
+    {{template "header" .}}
+
+    <main class="flex-grow">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+            <!-- Series Header -->
+            <section class="mb-12">
+                <p class="text-sm font-medium text-blue-600 uppercase tracking-wide">Series</p>
+                <h1 class="mt-2 text-4xl font-bold text-gray-900">
+                    {{.Name}}
+                </h1>
+                {{if .SeriesDescription}}
+                <p class="mt-4 text-xl text-gray-600">
+                    {{.SeriesDescription}}
+                </p>
+                {{end}}
+                <p class="mt-4 text-gray-500">
+                    {{.PostCount}} {{if eq .PostCount 1}}part{{else}}parts{{end}}
+                </p>
+            </section>
+
+            <!-- Parts, in reading order. The browser numbers the list, so the
+                 parts stay numbered without the template doing arithmetic. -->
+            <ol class="space-y-4 list-decimal list-outside ml-8 marker:font-semibold marker:text-blue-600">
+                {{range .Posts}}
+                <li class="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 border border-gray-200">
+                    <a href="{{.BlogRoot}}posts/{{.Slug}}.html" class="group block p-6">
+                        <span class="block text-xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
+                            {{.Title}}
+                        </span>
+                        <time datetime="{{.ShortDate}}" class="block mt-1 text-sm text-gray-500">
+                            {{.FormattedDate}}{{if .ReadingTimeMinutes}} · {{.ReadingTimeMinutes}} min read{{end}}
+                        </time>
+                        <span class="block mt-3 text-gray-600">
+                            {{.Description}}
+                        </span>
+                    </a>
+                </li>
+                {{end}}
+            </ol>
+
+            <!-- Back Navigation -->
+            <div class="mt-12 pt-8 border-t border-gray-200">
+                <a href="{{.BlogRoot}}series" class="text-blue-600 hover:text-blue-800 font-medium inline-flex items-center">
+                    <svg class="mr-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                    </svg>
+                    All Series
+                </a>
+            </div>
+        </div>
+    </main>
+
+    {{template "footer" .}}
+</body>
+</html>

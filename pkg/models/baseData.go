@@ -42,6 +42,18 @@ type BaseData struct {
 	//   {{if .TagsEnabled}}<a href="{{.BlogRoot}}tags">Tags</a>{{end}}
 	TagsEnabled bool
 
+	// SeriesEnabled indicates whether series features are active for this blog.
+	// When true, the default templates render a "Series" navigation link.
+	// Custom templates should also gate series UI on this field.
+	//
+	// Series are opt-in, the reverse of tags: the Go zero value is false and the
+	// Generator sets this to true only when a series file is configured via
+	// config.WithSeriesFile.
+	//
+	// Custom templates should gate series UI on this field:
+	//   {{if .SeriesEnabled}}<a href="{{.BlogRoot}}series">Series</a>{{end}}
+	SeriesEnabled bool
+
 	// FeedsEnabled indicates whether RSS and Atom feeds are available for this blog.
 	// When true, the default templates render feed discovery <link> tags in the
 	// <head> and a visible RSS navigation link. Custom templates should also gate

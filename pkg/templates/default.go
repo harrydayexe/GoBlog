@@ -30,6 +30,8 @@ var rawDefault embed.FS
 //	  index.tmpl         executed by TemplateRenderer.RenderIndex
 //	  tag.tmpl           executed by TemplateRenderer.RenderTag
 //	  tags-index.tmpl    executed by TemplateRenderer.RenderTagsIndex
+//	  series.tmpl        executed by TemplateRenderer.RenderSeries
+//	  series-index.tmpl  executed by TemplateRenderer.RenderSeriesIndex
 //	partials/
 //	  head.tmpl          {{define "head"}}
 //	  header.tmpl        {{define "header"}}
@@ -42,6 +44,11 @@ var rawDefault embed.FS
 // {{template "head" .}}, {{template "header" .}}, etc. Custom templates must
 // follow the same convention: define the four named blocks in their partials/
 // directory and reference them from each page template.
+//
+// series.tmpl and series-index.tmpl are only executed when series are enabled
+// via [github.com/harrydayexe/GoBlog/v2/pkg/config.WithSeriesFile]; a custom
+// template tree that omits them works fine until series are turned on, at which
+// point generation fails with an error naming the missing template.
 var Default fs.FS = func() fs.FS {
 	sub, err := fs.Sub(rawDefault, "default")
 	if err != nil {

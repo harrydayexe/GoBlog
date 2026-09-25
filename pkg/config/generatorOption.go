@@ -4,6 +4,8 @@
 
 package config
 
+import "io/fs"
+
 // GeneratorOption represents a configuration option that can be applied to
 // generator or outputter instances during construction.
 //
@@ -14,7 +16,7 @@ package config
 // This type should not be constructed directly by users. Instead, use the
 // provided option functions like WithRawOutput(), WithDisableTags(),
 // WithDisableReadingTime(), WithSiteTitle(), WithEnvironment(), WithCustomData(),
-// WithBaseURL(), WithDisableFeeds(), WithFeedPostLimit(),
+// WithBaseURL(), WithDisableFeeds(), WithFeedPostLimit(), WithSeriesFile(),
 // or call [BaseOption.AsGeneratorOption] on a [BaseOption] value.
 type GeneratorOption struct {
 	BaseOption
@@ -29,6 +31,7 @@ type GeneratorOption struct {
 	WithBaseURLFunc            func(v *BaseURL)
 	WithDisableFeedsFunc       func(v *DisableFeeds)
 	WithFeedPostLimitFunc      func(v *FeedPostLimit)
+	WithSeriesFileFunc         func(v *SeriesFile)
 }
 
 // AsGeneratorOption returns a GeneratorOption that applies this BaseOption to a
@@ -489,4 +492,82 @@ func WithFeedPostLimit(limit int) GeneratorOption {
 // AsOption converts this FeedPostLimit value back into a GeneratorOption.
 func (o FeedPostLimit) AsOption() GeneratorOption {
 	return WithFeedPostLimit(o.Limit)
+}
+
+// SeriesFile is a configuration type that holds the location of the site-wide
+// series definition file: the filesystem to read it from and the path within
+// that filesystem.
+//
+// Series are opt-in, the reverse of tags. When FS is nil or Path is empty the
+// feature is off entirely: no series pages are generated,
+// [github.com/harrydayexe/GoBlog/v2/pkg/models.PostPageData].Series is always
+// nil, and BaseData.SeriesEnabled is false.
+//
+// This type is typically embedded in generator and outputter configuration
+// structs and should be set using the [WithSeriesFile] option function.
+type SeriesFile struct {
+	FS   fs.FS
+	Path string
+}
+
+// WithSeriesFile returns a GeneratorOption that enables series pages, reading
+// their definitions from path within fsys.
+//
+// The file is a single site-wide YAML document listing every series in the
+// order it should appear on the series index:
+//
+//	series:
+//	  - name: "Building a Blog in Go"
+//	    description: "A step-by-step guide."  # optional
+//	    posts:                                # ordered: part 1 first
+//	      - building-blog-part-1.md
+//	      - building-blog-part-2.md
+//	  - name: "Docker for Go Developers"
+//	    slug: docker-go                       # optional, overrides the derived slug
+//	    posts:
+//	      - docker-basics.md
+//
+// Posts are named by their filename relative to the posts directory, not by
+// their slug, so retitling a post does not break the series. Every rule the
+// file must satisfy — a non-empty name, a non-empty posts list, filenames that
+// resolve to real posts, no post in two series, no duplicate slugs and no
+// unknown keys — is a hard error: [github.com/harrydayexe/GoBlog/v2/pkg/generator.Generator.Generate]
+// fails rather than silently dropping a series.
+//
+// When series are enabled, a custom template filesystem must provide
+// pages/series.tmpl and pages/series-index.tmpl; rendering fails with an error
+// naming the missing template otherwise.
+//
+// Reading through an fs.FS rather than a plain path matches how the generator
+// already reads posts and lets tests supply an [testing/fstest.MapFS].
+//
+// Example usage:
+//
+//	gen := generator.New(fsys, renderer,
+//	    config.WithSeriesFile(os.DirFS("posts/"), "series.yml"),
+//	)
+//	writer := outputter.NewDirectoryWriter("output/",
+//	    config.WithSeriesFile(os.DirFS("posts/"), "series.yml"),
+//	)
+//	srv, err := server.New(fsys,
+//	    config.WithSeriesFile(os.DirFS("posts/"), "series.yml").AsServerOption(),
+//	)
+func WithSeriesFile(fsys fs.FS, path string) GeneratorOption {
+	return GeneratorOption{
+		WithSeriesFileFunc: func(v *SeriesFile) {
+			v.FS = fsys
+			v.Path = path
+		},
+	}
+}
+
+// AsOption converts this SeriesFile value back into a GeneratorOption.
+func (o SeriesFile) AsOption() GeneratorOption {
+	return WithSeriesFile(o.FS, o.Path)
+}
+
+// Enabled reports whether a series file was configured, and therefore whether
+// series pages are generated at all.
+func (o SeriesFile) Enabled() bool {
+	return o.FS != nil && o.Path != ""
 }

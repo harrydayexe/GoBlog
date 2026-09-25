@@ -35,6 +35,8 @@ type HandlerConfig struct {
 //   - GET /posts/{postName} - serves individual blog posts
 //   - GET /tags - serves the tags index page (only if blog.TagsIndex is non-empty)
 //   - GET /tags/{tagName} - serves tag-specific pages (only if blog.Tags is non-empty)
+//   - GET /series - serves the series index page (only if the generator produced series content)
+//   - GET /series/{seriesName} - serves a single series page (only if the generator produced series content)
 //   - GET /rss.xml - serves the site-wide RSS 2.0 feed (404 when feeds are disabled)
 //   - GET /atom.xml - serves the site-wide Atom feed (404 when feeds are disabled)
 //   - GET /tags/{tagName}.rss.xml - serves a per-tag RSS 2.0 feed (only if blog.Tags is non-empty)
@@ -50,6 +52,11 @@ type HandlerConfig struct {
 // Tag routes are registered only when the blog contains tag content. When the
 // generator is configured with config.WithDisableTags(), blog.Tags and
 // blog.TagsIndex will be empty and the tag routes will not be registered.
+//
+// Series routes follow the same rule from the opposite default: series are
+// opt-in, so the /series routes exist only when the generator was configured
+// with config.WithSeriesFile() and therefore produced series content. Without
+// it, GET /series returns 404.
 //
 // Feed routes are always registered, but return 404 when the generator did not
 // produce feed content (i.e. when config.WithBaseURL was not set, or
@@ -111,6 +118,13 @@ func generateHandler(cfg HandlerConfig, blog *generator.GeneratedBlog) http.Hand
 	if len(blog.Tags) > 0 || len(blog.TagsIndex) > 0 {
 		mux.Handle(root+"tags", handleTagsIndex(cfg, blog))
 		mux.Handle(root+"tags/{tagName}", handleTag(cfg, blog))
+	}
+
+	// Series are opt-in, so their routes exist only when the generator produced
+	// series content.
+	if len(blog.Series) > 0 || len(blog.SeriesIndex) > 0 {
+		mux.Handle(root+"series", handleSeriesIndex(cfg, blog))
+		mux.Handle(root+"series/{seriesName}", handleSeries(cfg, blog))
 	}
 
 	mux.Handle(root+"rss.xml", handleRSSFeed(cfg, blog))
@@ -235,6 +249,39 @@ func handleTag(cfg HandlerConfig, blog *generator.GeneratedBlog) http.Handler {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		if _, err := w.Write(bits); err != nil {
 			cfg.Logger.Logger.ErrorContext(r.Context(), "failed to write tag page", "error", err, "tag", tagName)
+			return
+		}
+	})
+}
+
+func handleSeriesIndex(cfg HandlerConfig, blog *generator.GeneratedBlog) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		cfg.Logger.Logger.DebugContext(r.Context(), "handling series index")
+
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		if _, err := w.Write(blog.SeriesIndex); err != nil {
+			cfg.Logger.Logger.ErrorContext(r.Context(), "failed to write series index", "error", err)
+			return
+		}
+	})
+}
+
+func handleSeries(cfg HandlerConfig, blog *generator.GeneratedBlog) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		cfg.Logger.Logger.DebugContext(r.Context(), "handling series page")
+
+		seriesName := strings.TrimSuffix(r.PathValue("seriesName"), ".html")
+		bits, prs := blog.Series[seriesName]
+		if !prs {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+
+		cfg.Logger.Logger.DebugContext(r.Context(), "resolved series name", slog.String("seriesName", seriesName))
+
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		if _, err := w.Write(bits); err != nil {
+			cfg.Logger.Logger.ErrorContext(r.Context(), "failed to write series page", "error", err, "series", seriesName)
 			return
 		}
 	})

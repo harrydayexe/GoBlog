@@ -10,6 +10,7 @@ import (
 	"html/template"
 	"os"
 	"strings"
+	"testing/fstest"
 
 	"github.com/harrydayexe/GoBlog/v2/pkg/config"
 	"github.com/harrydayexe/GoBlog/v2/pkg/generator"
@@ -195,4 +196,34 @@ func ExampleWithCustomData() {
 
 	fmt.Printf("Generated %d post(s)\n", len(blog.Posts))
 	// Output: Generated 3 post(s)
+}
+
+// ExampleWithSeriesFile demonstrates enabling series pages. The file is read
+// from the supplied filesystem, so it can live alongside the posts.
+func ExampleWithSeriesFile() {
+	fsys := fstest.MapFS{
+		"part-1.md": &fstest.MapFile{Data: []byte(
+			"---\ntitle: Part One\ndate: 2024-01-01\ndescription: The first part\n---\n\nBody.")},
+		"part-2.md": &fstest.MapFile{Data: []byte(
+			"---\ntitle: Part Two\ndate: 2024-02-01\ndescription: The second part\n---\n\nBody.")},
+		"series.yml": &fstest.MapFile{Data: []byte(
+			"series:\n  - name: Building a Blog in Go\n    posts:\n      - part-1.md\n      - part-2.md\n")},
+	}
+
+	renderer, err := generator.NewTemplateRenderer(templates.Default)
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
+
+	gen := generator.New(fsys, renderer, config.WithSeriesFile(fsys, "series.yml"))
+
+	blog, err := gen.Generate(context.Background())
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
+
+	fmt.Printf("Generated %d series page(s)\n", len(blog.Series))
+	// Output: Generated 1 series page(s)
 }

@@ -25,6 +25,7 @@ type Watcher struct {
 
 	config.WatcherDebounce
 	config.Logger
+	config.WatchFiles
 
 	fw *fsnotify.Watcher
 }
@@ -33,6 +34,10 @@ type Watcher struct {
 // subdirectories that exist at creation time. Subdirectories created after
 // New returns are picked up automatically inside Run when their parent fires
 // a Create event.
+//
+// Individual files outside the tree, or of a non-markdown type, can be added
+// with [config.WithWatchFile]; the goblog serve command uses it for the series
+// file. Their parent directory must exist.
 //
 // New fails immediately if any part of setup fails — including the root path
 // being missing, fsnotify initialisation failing, or any subdirectory failing
@@ -55,6 +60,8 @@ func New(path string, opts ...config.WatcherOption) (*Watcher, error) {
 	for _, opt := range opts {
 		if opt.WithDebounceFunc != nil {
 			opt.WithDebounceFunc(&w.WatcherDebounce)
+		} else if opt.WithWatchFileFunc != nil {
+			opt.WithWatchFileFunc(&w.WatchFiles)
 		} else if opt.WithLoggerFunc != nil {
 			opt.WithLoggerFunc(&w.Logger)
 		}
@@ -65,6 +72,11 @@ func New(path string, opts ...config.WatcherOption) (*Watcher, error) {
 	}
 
 	if err := w.addDirs(path); err != nil {
+		fw.Close()
+		return nil, err
+	}
+
+	if err := w.addFiles(); err != nil {
 		fw.Close()
 		return nil, err
 	}
@@ -129,8 +141,9 @@ func (w *Watcher) Run(ctx context.Context, onChange func(context.Context)) error
 				}
 			}
 
-			// Only regenerate for markdown file changes.
-			if filepath.Ext(event.Name) != ".md" {
+			// Only regenerate for markdown file changes and for the individual
+			// files registered with config.WithWatchFile.
+			if filepath.Ext(event.Name) != ".md" && !w.isWatchedFile(event.Name) {
 				continue
 			}
 
@@ -178,6 +191,34 @@ func (w *Watcher) addDirs(path string) error {
 		w.Logger.Logger.Debug("watcher: watching directory", slog.String("path", p))
 		return nil
 	})
+}
+
+// addFiles watches the parent directory of every file registered with
+// config.WithWatchFile, and normalises the recorded paths so events can be
+// matched against them.
+//
+// The parent directory is watched rather than the file itself: editors commonly
+// save by writing a temporary file and renaming it over the original, which
+// destroys a watch on the file but not on its directory. Adding a directory that
+// is already watched (e.g. a series file inside the posts directory) is a no-op.
+func (w *Watcher) addFiles() error {
+	for i, p := range w.WatchFiles.Paths {
+		clean := filepath.Clean(p)
+		w.WatchFiles.Paths[i] = clean
+
+		dir := filepath.Dir(clean)
+		if err := w.fw.Add(dir); err != nil {
+			return fmt.Errorf("watcher: failed to watch directory %q of file %q: %w", dir, clean, err)
+		}
+		w.Logger.Logger.Debug("watcher: watching file", slog.String("path", clean))
+	}
+	return nil
+}
+
+// isWatchedFile reports whether name is one of the individual files registered
+// with config.WithWatchFile.
+func (w *Watcher) isWatchedFile(name string) bool {
+	return slicesContains(w.WatchFiles.Paths, filepath.Clean(name))
 }
 
 // slicesContains reports whether s contains target.

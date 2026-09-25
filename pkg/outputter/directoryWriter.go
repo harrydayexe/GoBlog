@@ -21,7 +21,8 @@ import (
 //
 // It creates an index.html file, individual post HTML files, (unless
 // RawOutput or DisableTags is enabled) a tags subdirectory with tag pages
-// and a tags index, and (when an assets directory is configured) an images
+// and a tags index, (when the generator produced series pages) a series
+// subdirectory, and (when an assets directory is configured) an images
 // subdirectory containing a copy of the assets.
 //
 // DirectoryWriter is safe for concurrent use, though concurrent writes to
@@ -31,6 +32,11 @@ type DirectoryWriter struct {
 	config.DisableTags
 	config.Logger
 	config.AssetsDir
+	// SeriesFile records the series file the blog was generated with, so the
+	// writer's debug output shows the same configuration the generator saw.
+	// Whether series/ is written is decided by the generated content, not by
+	// this field: the writer simply writes whatever the generator produced.
+	config.SeriesFile
 	outputDir string
 }
 
@@ -68,6 +74,8 @@ func NewDirectoryWriter(outputDir string, opts ...config.GeneratorOption) Direct
 			opt.WithLoggerFunc(&dw.Logger)
 		} else if opt.WithAssetsDirFunc != nil {
 			opt.WithAssetsDirFunc(&dw.AssetsDir)
+		} else if opt.WithSeriesFileFunc != nil {
+			opt.WithSeriesFileFunc(&dw.SeriesFile)
 		}
 	}
 
@@ -75,7 +83,10 @@ func NewDirectoryWriter(outputDir string, opts ...config.GeneratorOption) Direct
 		dw.Logger.Logger = slog.Default()
 	}
 
-	dw.Logger.Logger.Debug("Directory Writer created", slog.String("output directory", outputDir))
+	dw.Logger.Logger.Debug("Directory Writer created",
+		slog.String("output directory", outputDir),
+		slog.Bool("series enabled", dw.SeriesFile.Enabled()),
+	)
 
 	return dw
 }
@@ -88,6 +99,8 @@ func NewDirectoryWriter(outputDir string, opts ...config.GeneratorOption) Direct
 //   - posts/{slug}.html: individual post files, one per post
 //   - tags/{tag}.html: tag pages (only if RawOutput and DisableTags are false)
 //   - tags/index.html: tags index page (only if RawOutput and DisableTags are false)
+//   - series/{slug}.html: series pages (only when the generator produced them)
+//   - series/index.html: series index page (only when the generator produced it)
 //   - rss.xml: site-wide RSS 2.0 feed (only when the generator produced one)
 //   - atom.xml: site-wide Atom feed (only when the generator produced one)
 //   - tags/{tag}.rss.xml: per-tag RSS 2.0 feed (only when the generator produced them)
@@ -110,6 +123,11 @@ func NewDirectoryWriter(outputDir string, opts ...config.GeneratorOption) Direct
 // When DisableTags mode is enabled (via config.WithDisableTags()), the tags/
 // directory is not created. Posts and the index page are still written with
 // full templates.
+//
+// The series/ directory is created only when the generator produced series
+// pages, i.e. when it was configured with config.WithSeriesFile(). It is never
+// created in RawOutput mode. Series are independent of tags, so
+// config.WithDisableTags() does not suppress them.
 //
 // Feed files are written only when the generator has populated them (i.e. when
 // config.WithBaseURL was set and config.WithDisableFeeds was not applied). The
@@ -150,6 +168,19 @@ func (dw DirectoryWriter) HandleGeneratedBlog(ctx context.Context, blog *generat
 		// Write tags index page if it has content
 		if len(blog.TagsIndex) > 0 {
 			if err := os.WriteFile(filepath.Join(dw.outputDir, "tags", "index.html"), blog.TagsIndex, 0644); err != nil {
+				return err
+			}
+		}
+	}
+
+	// Only write series pages when the generator produced them, which happens
+	// only when a series file was configured and templates were applied.
+	if !dw.RawOutput.RawOutput && (len(blog.Series) > 0 || len(blog.SeriesIndex) > 0) {
+		if err := writeMapToFiles(blog.Series, filepath.Join(dw.outputDir, "series")); err != nil {
+			return err
+		}
+		if len(blog.SeriesIndex) > 0 {
+			if err := os.WriteFile(filepath.Join(dw.outputDir, "series", "index.html"), blog.SeriesIndex, 0644); err != nil {
 				return err
 			}
 		}

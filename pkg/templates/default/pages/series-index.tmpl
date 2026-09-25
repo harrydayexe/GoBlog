@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+{{template "head" .}}
+<body class="h-full flex flex-col bg-gray-50">
+    {{template "header" .}}
+
+    <main class="flex-grow">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+            <!-- Series Header -->
+            <section class="text-center mb-16">
+                <h1 class="text-5xl font-bold text-gray-900 mb-4">
+                    All Series
+                </h1>
+                <p class="text-xl text-gray-600 max-w-2xl mx-auto mb-6">
+                    {{.Description}}
+                </p>
+                <p class="text-gray-500">
+                    {{.TotalSeries}} series available
+                </p>
+            </section>
+
+            <!-- Series Grid -->
+            {{if .Series}}
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {{range .Series}}
+                <a href="{{.Path}}" class="group block bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 p-6 border border-gray-200 hover:border-blue-300">
+                    <div class="flex items-center mb-2">
+                        <svg class="w-5 h-5 text-blue-600 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7"></path>
+                        </svg>
+                        <h2 class="text-lg font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
+                            {{.Name}}
+                        </h2>
+                    </div>
+                    {{if .Description}}
+                    <p class="text-gray-600 line-clamp-3">
+                        {{.Description}}
+                    </p>
+                    {{end}}
+                    <p class="mt-3 text-sm text-gray-500">
+                        {{.PostCount}} {{if eq .PostCount 1}}part{{else}}parts{{end}}
+                    </p>
+                </a>
+                {{end}}
+            </div>
+            {{else}}
+            <!-- Empty State -->
+            <div class="text-center py-16">
+                <svg class="mx-auto h-24 w-24 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7"></path>
+                </svg>
+                <h3 class="mt-4 text-lg font-medium text-gray-900">No series found</h3>
+                <p class="mt-2 text-gray-500">There are no series yet. Series are created by listing posts in the series file.</p>
+                <div class="mt-6">
+                    <a href="{{.BlogRoot}}" class="text-blue-600 hover:text-blue-800 font-medium inline-flex items-center">
+                        <svg class="mr-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                        </svg>
+                        Back to Home
+                    </a>
+                </div>
+            </div>
+            {{end}}
+
+            <!-- Back Navigation -->
+            {{if .Series}}
+            <div class="mt-12 pt-8 border-t border-gray-200">
+                <a href="{{.BlogRoot}}" class="text-blue-600 hover:text-blue-800 font-medium inline-flex items-center">
+                    <svg class="mr-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                    </svg>
+                    Back to Home
+                </a>
+            </div>
+            {{end}}
+        </div>
+    </main>
+
+    {{template "footer" .}}
+</body>
+</html>

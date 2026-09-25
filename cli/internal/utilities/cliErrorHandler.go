@@ -16,12 +16,21 @@ import (
 // CliErrorHandler handles errors by printing them to stdout or stderr and exits if fatal.
 func CliErrorHandler(err error) {
 	var inputDirectoryError *inerrors.InputDirectoryError
+	var flagError *inerrors.FlagError
 	if errors.As(err, &inputDirectoryError) {
 		if inputDirectoryError.Type.IsFatalError() {
 			fmt.Fprintln(os.Stderr, inputDirectoryError.HandlerString())
 			os.Exit(1)
 		} else {
 			fmt.Fprintln(os.Stdout, inputDirectoryError.HandlerString())
+			fmt.Fprintln(os.Stdout, "Use --help for more info")
+		}
+	} else if errors.As(err, &flagError) {
+		if flagError.Type.IsFatalError() {
+			fmt.Fprintln(os.Stderr, flagError.HandlerString())
+			os.Exit(1)
+		} else {
+			fmt.Fprintln(os.Stdout, flagError.HandlerString())
 			fmt.Fprintln(os.Stdout, "Use --help for more info")
 		}
 	} else {

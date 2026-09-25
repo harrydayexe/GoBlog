@@ -16,7 +16,7 @@ import (
 )
 
 // TemplateRenderer parses a tree of HTML templates from an fs.FS and renders
-// each page type (post, index, tag, tags-index) into HTML.
+// each page type (post, index, tag, tags-index, series, series-index) into HTML.
 //
 // Create a renderer once via [NewTemplateRenderer]; the resulting value is
 // safe for concurrent use by multiple goroutines. The internal
@@ -32,7 +32,9 @@ type TemplateRenderer struct {
 // templatesFS must contain the following top-level directories:
 //
 //	pages/    required — must contain post.tmpl, index.tmpl, tag.tmpl,
-//	          and tags-index.tmpl
+//	          and tags-index.tmpl; series.tmpl and series-index.tmpl are
+//	          additionally required when series are enabled via
+//	          config.WithSeriesFile
 //	partials/ required — each file must {{define}} one named block;
 //	          the default templates expect "head", "header", "footer",
 //	          and "post-card"
@@ -188,5 +190,27 @@ func (tr *TemplateRenderer) RenderTagsIndex(data models.TagsIndexPageData) ([]by
 	var buf bytes.Buffer
 	err := tr.templates.ExecuteTemplate(&buf, "pages/tags-index.tmpl", data)
 	slog.Debug("Rendered tags index page", slog.Int("total tags", data.TotalTags))
+	return buf.Bytes(), err
+}
+
+// RenderSeries renders a series page by executing pages/series.tmpl with the
+// supplied [models.SeriesPageData]. Returns the rendered HTML or any error from
+// template execution, including the error a template filesystem without a
+// pages/series.tmpl produces.
+func (tr *TemplateRenderer) RenderSeries(data models.SeriesPageData) ([]byte, error) {
+	var buf bytes.Buffer
+	err := tr.templates.ExecuteTemplate(&buf, "pages/series.tmpl", data)
+	slog.Debug("Rendered series page " + data.Slug)
+	return buf.Bytes(), err
+}
+
+// RenderSeriesIndex renders the series index page by executing
+// pages/series-index.tmpl with the supplied [models.SeriesIndexPageData].
+// Returns the rendered HTML or any error from template execution, including the
+// error a template filesystem without a pages/series-index.tmpl produces.
+func (tr *TemplateRenderer) RenderSeriesIndex(data models.SeriesIndexPageData) ([]byte, error) {
+	var buf bytes.Buffer
+	err := tr.templates.ExecuteTemplate(&buf, "pages/series-index.tmpl", data)
+	slog.Debug("Rendered series index page", slog.Int("total series", data.TotalSeries))
 	return buf.Bytes(), err
 }

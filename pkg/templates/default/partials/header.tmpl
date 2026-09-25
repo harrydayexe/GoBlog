@@ -17,6 +17,10 @@
                 {{if .TagsEnabled}}<a href="{{.BlogRoot}}tags" class="text-gray-700 hover:text-blue-600 font-medium transition-colors">
                     Tags
                 </a>{{end}}
+                {{- if .SeriesEnabled}}
+                <a href="{{.BlogRoot}}series" class="text-gray-700 hover:text-blue-600 font-medium transition-colors">
+                    Series
+                </a>{{end}}
                 {{if .FeedsEnabled}}<a href="{{.BlogRoot}}rss.xml" class="text-gray-700 hover:text-blue-600 font-medium transition-colors" title="RSS Feed">
                     RSS
                 </a>{{end}}
