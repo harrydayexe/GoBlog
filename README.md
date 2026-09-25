@@ -299,8 +299,8 @@ slug defaults to a slugified `name` (`"Building a Blog in Go"` →
 The file is validated strictly, and any problem fails generation with an error
 naming the series and the offending value: a missing name or post list, a
 filename that matches no post, a post listed twice or in two series, two series
-sharing a slug, or an unknown key (so `post:` for `posts:` does not pass
-silently).
+sharing a slug, a series whose slug is `index` (that page belongs to the series
+index), or an unknown key (so `post:` for `posts:` does not pass silently).
 
 Series pages are served at `{root-path}series` and `{root-path}series/{slug}`,
 and written by `generate` as `series/index.html` and `series/{slug}.html`. Each

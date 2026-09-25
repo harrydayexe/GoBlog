@@ -553,11 +553,11 @@ func (g *Generator) assembleBlogWithTemplates(ctx context.Context, posts models.
 					CanonicalURL:  g.canonicalURL(seriesPath),
 					OGType:        ogTypeWebsite,
 				},
-				Name:        s.Name,
-				Slug:        s.Slug,
-				Description: s.Description,
-				Posts:       s.Posts,
-				PostCount:   len(s.Posts),
+				Name:              s.Name,
+				Slug:              s.Slug,
+				SeriesDescription: s.Description,
+				Posts:             s.Posts,
+				PostCount:         len(s.Posts),
 			}
 
 			rendered, err := g.renderer.RenderSeries(seriesData)

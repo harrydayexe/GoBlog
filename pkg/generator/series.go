@@ -50,9 +50,9 @@ type resolvedSeries struct {
 // offending value, so a typo is reported rather than silently dropping content:
 // the YAML must parse and declare a top-level "series" key, each series needs a
 // non-empty name and a non-empty posts list, every listed filename must match a
-// post, no post may appear twice in a series or in two series, and no two series
-// may share a slug. Unknown keys are rejected so that "post:" for "posts:" fails
-// loudly.
+// post, no post may appear twice in a series or in two series, no two series may
+// share a slug, and no series may take the slug reserved for the series index.
+// Unknown keys are rejected so that "post:" for "posts:" fails loudly.
 //
 // Posts are matched on their source filename relative to the posts directory
 // rather than on their slug: slugs are derived from titles, so a slug reference
@@ -139,29 +139,43 @@ func (g *Generator) loadSeries(posts models.PostList) ([]resolvedSeries, error) 
 	return resolved, nil
 }
 
+// reservedSeriesSlug is the one slug a series may not use. The series index
+// page is written to series/index.html and served at series/index, so a series
+// page with this slug would be overwritten by the index and never reachable.
+const reservedSeriesSlug = "index"
+
 // seriesSlug returns the URL segment for a series: the explicit slug when the
 // series declares one, otherwise one derived from its name with the same rules
 // post slugs use. Either form is an error when it slugifies to nothing, since a
-// series page needs a path.
+// series page needs a path, or when it slugifies to [reservedSeriesSlug], since
+// that page belongs to the series index.
 func seriesSlug(file, name, explicit string) (string, error) {
+	var slug string
 	if explicit != "" {
-		slug := models.Slugify(explicit)
+		slug = models.Slugify(explicit)
 		if slug == "" {
 			return "", fmt.Errorf("series file %q: series %q has slug %q, which is empty once slugified", file, name, explicit)
 		}
-		return slug, nil
+	} else {
+		slug = models.Slugify(name)
+		if slug == "" {
+			return "", fmt.Errorf("series file %q: series %q has a name that is empty once slugified; give the series an explicit slug", file, name)
+		}
 	}
 
-	slug := models.Slugify(name)
-	if slug == "" {
-		return "", fmt.Errorf("series file %q: series %q has a name that is empty once slugified; give the series an explicit slug", file, name)
+	if slug == reservedSeriesSlug {
+		return "", fmt.Errorf("series file %q: series %q uses the slug %q, which is reserved for the series index page; give the series an explicit slug", file, name, reservedSeriesSlug)
 	}
+
 	return slug, nil
 }
 
-// seriesDescription returns the meta description for a series page: the
-// author's description when the series file declares one, and a generated
-// sentence otherwise, so the page never emits an empty meta description.
+// seriesDescription returns the meta description for a series page, which the
+// generator puts in the page's BaseData: the author's description when the
+// series file declares one, and a generated sentence otherwise, so the page
+// never emits an empty meta description. The page body reads
+// [models.SeriesPageData].SeriesDescription instead, which stays empty when the
+// author declared none.
 func seriesDescription(s resolvedSeries) string {
 	if s.Description != "" {
 		return s.Description

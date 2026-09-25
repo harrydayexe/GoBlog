@@ -198,7 +198,8 @@
 // build: Generate returns an error — naming the series and the offending value —
 // when the YAML is malformed or has no top-level "series" key, a series has no
 // name or no posts, a listed filename matches no post, a post appears twice in a
-// series or in two series, two series share a slug, or the file contains an
+// series or in two series, two series share a slug, a series takes the slug
+// "index" (which is reserved for the series index page), or the file contains an
 // unknown key. Series are independent of tags, so [config.WithDisableTags] does
 // not affect them, and a series post keeps its tags. The index page is
 // unaffected: series posts still appear there in date order.

@@ -332,9 +332,23 @@ func TestSeries_ValidationErrors(t *testing.T) {
 			wantMsgs: []string{"!!!", "slug"},
 		},
 		{
+			// Asserting on the decoder's "field post not found" wording rather
+			// than on "post" alone: a series with no posts is also an error
+			// mentioning "post", so a looser assertion would still pass if
+			// KnownFields(true) were dropped and "post:" silently ignored.
 			name:     "unknown key",
 			yaml:     "series:\n  - name: Typo\n    post:\n      - part-1.md\n",
-			wantMsgs: []string{"post"},
+			wantMsgs: []string{"field post", "not found", "series.yml"},
+		},
+		{
+			name:     "derived slug is the reserved index slug",
+			yaml:     "series:\n  - name: Index\n    posts:\n      - part-1.md\n",
+			wantMsgs: []string{"Index", "index", "reserved"},
+		},
+		{
+			name:     "explicit slug is the reserved index slug",
+			yaml:     "series:\n  - name: Overview\n    slug: index\n    posts:\n      - part-1.md\n",
+			wantMsgs: []string{"Overview", "index", "reserved"},
 		},
 	}
 
@@ -519,6 +533,67 @@ func TestSeries_CanonicalURL(t *testing.T) {
 	}
 	if !strings.Contains(string(blog.SeriesIndex), `href="https://example.com/series"`) {
 		t.Error("series index page has no canonical URL")
+	}
+}
+
+// ---- descriptions -----------------------------------------------------------
+
+// TestSeries_Description asserts the series page's meta description is the
+// author's description when the series file declares one and a generated
+// sentence otherwise, and that the page body only shows the author's.
+func TestSeries_Description(t *testing.T) {
+	t.Parallel()
+
+	const noDescription = `series:
+  - name: "Building a Blog in Go"
+    posts:
+      - part-1.md
+      - part-2.md
+`
+
+	tests := []struct {
+		name     string
+		yaml     string
+		wantMeta string
+		wantBody bool
+	}{
+		{
+			name:     "declared description",
+			yaml:     threePartSeries,
+			wantMeta: "A step-by-step guide.",
+			wantBody: true,
+		},
+		{
+			name:     "no description",
+			yaml:     noDescription,
+			wantMeta: "Posts in the Building a Blog in Go series",
+			wantBody: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			blog := generateWithSeries(t, seriesFS(tt.yaml), "series.yml")
+			page := string(blog.Series["building-a-blog-in-go"])
+
+			for _, want := range []string{
+				fmt.Sprintf(`<meta name="description" content="%s">`, tt.wantMeta),
+				fmt.Sprintf(`<meta property="og:description" content="%s">`, tt.wantMeta),
+			} {
+				if !strings.Contains(page, want) {
+					t.Errorf("series page does not contain %q", want)
+				}
+			}
+
+			// The generated sentence is a meta-only fallback: the body shows a
+			// description only when the author wrote one.
+			body := page[strings.Index(page, "<body"):]
+			if got := strings.Contains(body, tt.wantMeta); got != tt.wantBody {
+				t.Errorf("body contains %q = %t, want %t", tt.wantMeta, got, tt.wantBody)
+			}
+		})
 	}
 }
 

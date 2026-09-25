@@ -46,9 +46,14 @@ type SeriesPageData struct {
 	// Slug is the URL segment for the series.
 	Slug string
 
-	// Description is the free text from the series file, empty when the series
-	// declares none.
-	Description string
+	// SeriesDescription is the free text from the series file, empty when the
+	// series declares none, so a template can leave the description out of the
+	// page body entirely rather than render a generated stand-in.
+	//
+	// It is deliberately not called Description: that name belongs to the
+	// embedded BaseData, which partials/head.tmpl reads for the page's meta
+	// description, and a field of the same name here would shadow it.
+	SeriesDescription string
 
 	// Posts are the posts in the series in reading order: the first entry is
 	// part 1. The order comes from the series file, not from the post dates.
