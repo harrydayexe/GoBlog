@@ -10,6 +10,7 @@ tools:
   - mcp__gopls__go_file_context
   - mcp__gopls__go_search
   - mcp__gopls__go_diagnostics
+  - mcp__gopls__go_vulncheck
 model: opus
 ---
 
