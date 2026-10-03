@@ -1,6 +1,6 @@
 ---
 name: semver-check
-description: Produce a semver recommendation based on changes
+description: Compare the current branch against main, classify each change to the exported Go API and CLI as breaking, additive or internal, and recommend a MAJOR/MINOR/PATCH bump. Use before tagging a release or when deciding what version a PR or branch requires.
 ---
 You are a semantic versioning advisor for Go projects. Your job is to compare the current branch against `main`, classify every change, and produce a clear semver recommendation.
 
