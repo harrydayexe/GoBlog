@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 
+	figureast "github.com/mangoumbrella/goldmark-figure/ast"
 	"github.com/yuin/goldmark/ast"
 	"github.com/yuin/goldmark/parser"
 	"github.com/yuin/goldmark/text"
@@ -29,19 +30,37 @@ const assetsURLDir = "images/"
 // width and height, loading="lazy" and decoding="async".
 //
 // Wikilink image embeds, ![[path]], are converted to markdown image nodes
-// first so both syntaxes share this one code path.
+// first so both syntaxes share this one code path. When captions is set,
+// embeds are then given the same <figure> treatment goldmark-figure gives
+// markdown images, and every figure's image is kept free of the line break
+// that would otherwise render as <br /> before its caption.
 type imageTransformer struct {
 	blogRoot string
+	captions bool
 	logger   *slog.Logger
 	measurer *imageMeasurer
 }
 
 func (t imageTransformer) Transform(doc *ast.Document, reader text.Reader, _ parser.Context) {
-	replaceImageEmbeds(doc, reader.Source())
+	embeds := replaceImageEmbeds(doc, reader.Source())
+	if t.captions {
+		captionEmbeds(embeds)
+	}
 
 	_ = ast.Walk(doc, func(node ast.Node, entering bool) (ast.WalkStatus, error) {
+		if !entering {
+			return ast.WalkContinue, nil
+		}
+		if figImg, ok := node.(*figureast.FigureImage); ok {
+			// With hard wraps on, the line break between the image and
+			// its caption would render as <br /> inside the figure.
+			if br, ok := figImg.LastChild().(*ast.Text); ok {
+				br.SetSoftLineBreak(false)
+			}
+			return ast.WalkContinue, nil
+		}
 		img, ok := node.(*ast.Image)
-		if !entering || !ok {
+		if !ok {
 			return ast.WalkContinue, nil
 		}
 		if ref, ok := resolveAsset(t.blogRoot, string(img.Destination)); ok {
@@ -67,7 +86,9 @@ func (t imageTransformer) Transform(doc *ast.Document, reader text.Reader, _ par
 // A bare ![[foo.png]] is left without alt text, rendering as alt="", because
 // the wikilink parser uses the target as the label when none is given and a
 // file name is not a description.
-func replaceImageEmbeds(doc *ast.Document, src []byte) {
+//
+// It returns the image nodes that replaced the embeds.
+func replaceImageEmbeds(doc *ast.Document, src []byte) []*ast.Image {
 	var embeds []*wikilink.Node
 	_ = ast.Walk(doc, func(node ast.Node, entering bool) (ast.WalkStatus, error) {
 		n, ok := node.(*wikilink.Node)
@@ -77,6 +98,7 @@ func replaceImageEmbeds(doc *ast.Document, src []byte) {
 		return ast.WalkContinue, nil
 	})
 
+	images := make([]*ast.Image, 0, len(embeds))
 	for _, n := range embeds {
 		link := ast.NewLink()
 		link.Destination = n.Target
@@ -86,6 +108,41 @@ func replaceImageEmbeds(doc *ast.Document, src []byte) {
 			img.AppendChild(img, ast.NewTextSegment(label.Segment))
 		}
 		n.Parent().ReplaceChild(n.Parent(), n, img)
+		images = append(images, img)
+	}
+	return images
+}
+
+// captionEmbeds rebuilds each paragraph that starts with an image embed alone
+// on its line, and continues onto further lines, as the figure nodes
+// goldmark-figure produces for markdown images. The extension recognises
+// images by matching the raw "![alt](path)" syntax before inline parsing, so
+// it never sees an embed and ![[foo.png]] would otherwise get no caption.
+func captionEmbeds(images []*ast.Image) {
+	for _, img := range images {
+		para, ok := img.Parent().(*ast.Paragraph)
+		if !ok || para.FirstChild() != img {
+			continue
+		}
+		br, ok := img.NextSibling().(*ast.Text)
+		if !ok || !br.SoftLineBreak() || !br.Segment.IsEmpty() || br.NextSibling() == nil {
+			continue
+		}
+		para.RemoveChild(para, br)
+
+		figImg := figureast.NewFigureImage()
+		figImg.AppendChild(figImg, img)
+
+		caption := figureast.NewFigureCaption()
+		for c := para.FirstChild(); c != nil; c = para.FirstChild() {
+			caption.AppendChild(caption, c)
+		}
+
+		fig := figureast.NewFigure()
+		fig.SetBlankPreviousLines(para.HasBlankPreviousLines())
+		fig.AppendChild(fig, figImg)
+		fig.AppendChild(fig, caption)
+		para.Parent().ReplaceChild(para.Parent(), para, fig)
 	}
 }
 

@@ -16,23 +16,23 @@ LDFLAGS := '-s -w -X main.version=' + VERSION
 [default]
 [group("build")]
 build:
-    @echo "Building {{BINARY_NAME}}..."
-    @mkdir -p {{DIST_DIR}}
-    go build -ldflags "{{LDFLAGS}}" -o {{DIST_DIR}}/{{BINARY_NAME}} {{MAIN_PATH}}
-    @echo "✓ Binary built successfully: {{DIST_DIR}}/{{BINARY_NAME}}"
+    @echo "Building {{ BINARY_NAME }}..."
+    @mkdir -p {{ DIST_DIR }}
+    go build -ldflags "{{ LDFLAGS }}" -o {{ DIST_DIR }}/{{ BINARY_NAME }} {{ MAIN_PATH }}
+    @echo "✓ Binary built successfully: {{ DIST_DIR }}/{{ BINARY_NAME }}"
 
 # Build and install to $GOPATH/bin
 install:
-    @echo "Installing {{BINARY_NAME}}..."
-    go install -ldflags "{{LDFLAGS}}" {{MAIN_PATH}}
+    @echo "Installing {{ BINARY_NAME }}..."
+    go install -ldflags "{{ LDFLAGS }}" {{ MAIN_PATH }}
     @echo "✓ Binary installed successfully"
 
 # Remove build artifacts
 [group("dev")]
 clean:
     @echo "Cleaning build artifacts..."
-    rm -rf {{DIST_DIR}}
-    rm -rf {{COVERAGE_DIR}}
+    rm -rf {{ DIST_DIR }}
+    rm -rf {{ COVERAGE_DIR }}
     go clean -cache
     @echo "✓ Clean complete"
 
@@ -60,19 +60,19 @@ test-integration:
 [group("test")]
 test-coverage:
     @echo "Running tests with coverage..."
-    @mkdir -p {{COVERAGE_DIR}}
-    go test -coverprofile={{COVERAGE_DIR}}/coverage.out ./...
+    @mkdir -p {{ COVERAGE_DIR }}
+    go test -coverprofile={{ COVERAGE_DIR }}/coverage.out ./...
     @echo "\nCoverage summary:"
-    @go tool cover -func={{COVERAGE_DIR}}/coverage.out | tail -1
+    @go tool cover -func={{ COVERAGE_DIR }}/coverage.out | tail -1
 
 # Generate HTML coverage report
 [group("test")]
 coverage-html: test-coverage
     @echo "Generating HTML coverage report..."
-    go tool cover -html={{COVERAGE_DIR}}/coverage.out -o {{COVERAGE_DIR}}/coverage.html
-    @echo "✓ Coverage report: {{COVERAGE_DIR}}/coverage.html"
+    go tool cover -html={{ COVERAGE_DIR }}/coverage.out -o {{ COVERAGE_DIR }}/coverage.html
+    @echo "✓ Coverage report: {{ COVERAGE_DIR }}/coverage.html"
     @echo "Opening in browser..."
-    @open {{COVERAGE_DIR}}/coverage.html 2>/dev/null || xdg-open {{COVERAGE_DIR}}/coverage.html 2>/dev/null || echo "Please open {{COVERAGE_DIR}}/coverage.html manually"
+    @open {{ COVERAGE_DIR }}/coverage.html 2>/dev/null || xdg-open {{ COVERAGE_DIR }}/coverage.html 2>/dev/null || echo "Please open {{ COVERAGE_DIR }}/coverage.html manually"
 
 # Run complete test suite (CI/CD simulation)
 [group("test")]
@@ -131,26 +131,26 @@ add-license:
 # Run generator command with arguments
 [group('run')]
 run-gen *ARGS:
-    go run {{MAIN_PATH}} gen {{ARGS}}
+    go run {{ MAIN_PATH }} generate {{ ARGS }}
 
 # Run serve command with optional arguments (defaults to example posts)
 [group('run')]
 run-serve *ARGS:
     #!/usr/bin/env bash
-    if [ -z "{{ARGS}}" ]; then
-        go run {{MAIN_PATH}} serve docs/example-posts
+    if [ -z "{{ ARGS }}" ]; then
+        go run {{ MAIN_PATH }} serve docs/example-posts
     else
-        go run {{MAIN_PATH}} serve {{ARGS}}
+        go run {{ MAIN_PATH }} serve {{ ARGS }}
     fi
 
 # Build the dockerfile for the current architecture
 [group("build")]
 docker tag="goblog:latest":
     @echo "Building Docker image..."
-    docker build -t {{tag}} .
+    docker build -t {{ tag }} .
     @echo "✓ Docker image built successfully"
 
 [group("run")]
 run-image tag="goblog:latest": docker
     @echo "Running Docker image..."
-    docker run -v ./docs/example-posts/:/posts -p 8080:8080 {{tag}}
+    docker run -v ./docs/example-posts/:/posts -p 8080:8080 {{ tag }}

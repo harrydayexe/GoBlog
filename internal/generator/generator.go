@@ -75,6 +75,10 @@ func NewGeneratorCommand(ctx context.Context, c *cli.Command) error {
 		opts = append(opts, config.WithDisableFeeds())
 	}
 
+	if c.Bool(cliflags.DisableImageCaptionsFlagName) {
+		opts = append(opts, config.WithDisableImageCaptions())
+	}
+
 	opts = append(opts, config.WithFeedPostLimit(c.Int(cliflags.FeedLimitFlagName)))
 
 	opts = append(opts, robotsOpts...)

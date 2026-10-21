@@ -20,6 +20,11 @@ type Config struct {
 	// Markdown Extra Footnotes.
 	EnableFootnote bool
 
+	// DisableImageCaptions turns off rendering an image paragraph as a
+	// <figure>, with any text on the lines directly below the image as its
+	// <figcaption>. Captions are enabled when false, the zero value.
+	DisableImageCaptions bool
+
 	// Logger is the structured logger used by the parser. When nil,
 	// [log/slog.Default] is used.
 	Logger *slog.Logger

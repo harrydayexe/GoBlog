@@ -51,6 +51,28 @@ func WithFootnote() Option {
 	}
 }
 
+// WithDisableImageCaptions turns off image captions, which are enabled by
+// default.
+//
+// With captions enabled, an image alone on the first line of a paragraph, in
+// either ![alt](path) or ![[path]] form, followed directly by one or more
+// lines of text renders as a <figure> with that text as its <figcaption>:
+//
+//	![A diagram of the pipeline](pipeline.png)
+//	The pipeline, from parse to publish.
+//
+// Images without a caption are unaffected. With captions disabled, the
+// caption lines stay in the same paragraph as the image.
+//
+// Example usage:
+//
+//	p := parser.New(parser.WithDisableImageCaptions())
+func WithDisableImageCaptions() Option {
+	return func(c *Config) {
+		c.DisableImageCaptions = true
+	}
+}
+
 // WithBlogRoot sets the root path the blog is served under, such as "/" or
 // "/blog/". It is used to rewrite relative image paths to root-absolute asset
 // URLs: ![alt](images/foo.png), ![alt](foo.png) and ![[foo.png]] all render

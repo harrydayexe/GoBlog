@@ -41,6 +41,7 @@ These flags apply to both `generate` and `serve` and may be passed before or aft
 | `--disable-sitemap` | | `false` | Disable `sitemap.xml` generation |
 | `--disable-robots` | | `false` | Disable `robots.txt` generation |
 | `--robots-file` | | _(none)_ | Path to a custom `robots.txt` whose contents replace the default rules. The `Sitemap:` line is still appended when a sitemap is generated. Cannot be combined with `--disable-robots` |
+| `--disable-image-captions` | | `false` | Disable rendering captioned images as `<figure>` elements (see [Image captions](#image-captions)) |
 
 `--base-url` also enables `sitemap.xml` and `robots.txt`. With `generate`, both are written to the top of the output directory; when `--root-path` is not `/`, move `robots.txt` to your domain root on deploy, since crawlers only read `/robots.txt`.
 
@@ -297,6 +298,25 @@ cfg.Server = append(cfg.Server, config.WithAssetsDir(root.FS()).AsServerOption()
 ```
 
 The generator forwards the directory to the parser, which is what measures the images. Using the parser on its own, pass it directly with `parser.WithAssetsDir(root.FS())`.
+
+### Image captions
+
+Put an image on its own line with the caption directly below it, in either syntax:
+
+```md
+![A diagram of the pipeline](pipeline.png)
+The pipeline, from parse to publish.
+```
+
+This renders as a `<figure>`, which the default templates style with a centred, muted caption:
+
+```html
+<figure>
+<img src="{root-path}images/pipeline.png" alt="A diagram of the pipeline" ... /><figcaption><p>The pipeline, from parse to publish.</p></figcaption>
+</figure>
+```
+
+Images with no text below them, or with text on the same line, render as before. Captions are on by default; turn them off with `--disable-image-captions`, `config.WithDisableImageCaptions()`, or `parser.WithDisableImageCaptions()`, and the caption text stays in the same paragraph as the image. Custom templates can style the output with `figure` and `figcaption` selectors.
 
 ## Contributing
 

@@ -285,6 +285,42 @@ func TestDebugConfig(t *testing.T) {
 	gen.DebugConfig(ctx)
 }
 
+// TestGenerate_ImageCaptions tests that captions render as figures by default
+// and that config.WithDisableImageCaptions reaches the parser.
+func TestGenerate_ImageCaptions(t *testing.T) {
+	t.Parallel()
+
+	postsFS := fstest.MapFS{
+		"post.md": {Data: []byte("---\ntitle: Captioned\ndate: 2024-01-01T00:00:00Z\ndescription: d\n---\n\n![A diagram](a.png)\nThe caption\n")},
+	}
+
+	tests := []struct {
+		name       string
+		opts       []config.GeneratorOption
+		wantFigure bool
+	}{
+		{name: "enabled by default", wantFigure: true},
+		{name: "disabled", opts: []config.GeneratorOption{config.WithDisableImageCaptions()}, wantFigure: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			gen := New(postsFS, nil, append([]config.GeneratorOption{config.WithRawOutput()}, tt.opts...)...)
+			blog, err := gen.Generate(context.Background())
+			if err != nil {
+				t.Fatalf("Generate() error = %v, want nil", err)
+			}
+
+			got := string(blog.Posts["captioned"])
+			if gotFigure := strings.Contains(got, "<figcaption><p>The caption</p></figcaption>"); gotFigure != tt.wantFigure {
+				t.Errorf("figure with caption rendered = %v, want %v; output:\n%s", gotFigure, tt.wantFigure, got)
+			}
+		})
+	}
+}
+
 // TestWithRawOutput tests that the WithRawOutput option is applied correctly.
 func TestWithRawOutput(t *testing.T) {
 	t.Parallel()

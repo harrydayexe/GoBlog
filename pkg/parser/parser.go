@@ -17,6 +17,7 @@ import (
 	"github.com/alecthomas/chroma/v2/formatters/html"
 	goblogconfig "github.com/harrydayexe/GoBlog/v2/pkg/config"
 	"github.com/harrydayexe/GoBlog/v2/pkg/models"
+	figure "github.com/mangoumbrella/goldmark-figure"
 	"github.com/yuin/goldmark"
 	highlighting "github.com/yuin/goldmark-highlighting/v2"
 	"github.com/yuin/goldmark/extension"
@@ -46,6 +47,9 @@ type Parser struct {
 //   - Images rendered with loading="lazy", decoding="async" and, when the
 //     asset can be measured, their intrinsic width and height (see
 //     WithAssetsDir)
+//   - Image captions: an image on its own line followed directly by text
+//     renders as a <figure> with that text as its <figcaption> (enabled by
+//     default, use WithDisableImageCaptions to disable)
 //   - HTML sanitization (unsafe HTML disabled by default)
 func New(opts ...Option) *Parser {
 	config := &Config{
@@ -76,6 +80,12 @@ func NewWithConfig(config *Config) *Parser {
 	if config.EnableFootnote {
 		extensions = append(extensions, extension.Footnote)
 	}
+	if !config.DisableImageCaptions {
+		// figure.Figure is a package-level pointer and its option methods
+		// mutate it, so configure a copy rather than the shared value.
+		captions := *figure.Figure
+		extensions = append(extensions, captions.WithSkipNoCaption())
+	}
 	if config.EnableCodeHighlighting {
 		extensions = append(extensions, highlighting.NewHighlighting(
 			highlighting.WithFormatOptions(
@@ -94,6 +104,7 @@ func NewWithConfig(config *Config) *Parser {
 			parser.WithASTTransformers(util.Prioritized(
 				imageTransformer{
 					blogRoot: config.BlogRoot,
+					captions: !config.DisableImageCaptions,
 					logger:   p.Logger.Logger,
 					measurer: &imageMeasurer{fsys: config.AssetsDir, logger: p.Logger.Logger},
 				}, 999,
@@ -133,6 +144,11 @@ func NewWithConfig(config *Config) *Parser {
 // attribute, which is empty for a bare ![[path]] embed. Rewritten images also
 // carry their intrinsic width and height when the asset can be measured; see
 // WithAssetsDir.
+//
+// Unless captions are disabled, an image alone on the first line of a
+// paragraph, in either syntax, with text on the lines directly below renders
+// as <figure><img .../><figcaption><p>text</p></figcaption></figure>. Images
+// without a caption render as before.
 //
 // Returns an error if the file cannot be read, frontmatter is invalid,
 // required fields are missing, or markdown rendering fails.

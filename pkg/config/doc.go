@@ -117,6 +117,11 @@
 // goblog CLI reads --robots-file from disk and passes the contents through.
 // It has no effect when WithDisableRobotsTxt() is also applied.
 //
+// WithDisableImageCaptions() is a GeneratorOption that disables image
+// captions. By default, an image alone on the first line of a paragraph
+// followed directly by text renders as a <figure> with that text as its
+// <figcaption>; when disabled, the image and text stay in one paragraph.
+//
 // WithHealthChecks() is a BaseServerOption that enables health-check endpoints
 // on the HTTP server. When enabled, GET /healthz/live always returns 200 OK,
 // while GET /healthz/ready and GET /healthz/startup return 200 OK once posts
@@ -130,7 +135,7 @@
 //
 // GeneratorOption carries options for generator.New and outputter.NewDirectoryWriter,
 // including WithRawOutput, WithDisableTags, WithDisableReadingTime, WithSiteTitle,
-// WithEnvironment, WithCustomData, WithHTMLPaths, and (via the embedded BaseOption)
+// WithEnvironment, WithCustomData, WithHTMLPaths, WithDisableImageCaptions, and (via the embedded BaseOption)
 // WithLogger, WithBlogRoot and WithAssetsDir.
 // BaseServerOption carries options for the HTTP server (port, host, middleware,
 // cache-control TTL, health-check endpoints, and via the embedded BaseOption:

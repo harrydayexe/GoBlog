@@ -51,6 +51,7 @@ type Generator struct {
 	config.DisableSitemap
 	config.DisableRobotsTxt
 	config.RobotsTxt
+	config.DisableImageCaptions
 	ParserConfig parser.Config // The config to use when parsing
 
 	renderer *TemplateRenderer
@@ -71,7 +72,8 @@ func (c Generator) String() string {
 - FeedPostLimit       %d,
 - DisableSitemap      %t,
 - DisableRobotsTxt    %t,
-- Custom robots.txt   %t`,
+- Custom robots.txt   %t,
+- DisableImageCaptions %t`,
 		c.RawOutput,
 		c.DisableTags.Disable,
 		c.DisableReadingTime.Disable,
@@ -86,6 +88,7 @@ func (c Generator) String() string {
 		c.DisableSitemap.Disable,
 		c.DisableRobotsTxt.Disable,
 		c.RobotsTxt.Body != "",
+		c.DisableImageCaptions.Disable,
 	)
 }
 
@@ -98,7 +101,7 @@ func (c Generator) String() string {
 // config.WithBlogRoot, config.WithEnvironment, config.WithCustomData,
 // config.WithBaseURL, config.WithDisableFeeds, config.WithFeedPostLimit,
 // config.WithAssetsDir, config.WithDisableSitemap, config.WithDisableRobotsTxt,
-// config.WithRobotsTxt.
+// config.WithRobotsTxt, config.WithDisableImageCaptions.
 // The template renderer is supplied as a positional argument, not an option.
 func New(posts fs.FS, renderer *TemplateRenderer, opts ...config.GeneratorOption) *Generator {
 	gen := Generator{
@@ -137,6 +140,8 @@ func New(posts fs.FS, renderer *TemplateRenderer, opts ...config.GeneratorOption
 			opt.WithDisableRobotsTxtFunc(&gen.DisableRobotsTxt)
 		} else if opt.WithRobotsTxtFunc != nil {
 			opt.WithRobotsTxtFunc(&gen.RobotsTxt)
+		} else if opt.WithDisableImageCaptionsFunc != nil {
+			opt.WithDisableImageCaptionsFunc(&gen.DisableImageCaptions)
 		} else if opt.WithLoggerFunc != nil {
 			opt.WithLoggerFunc(&gen.Logger)
 		} else if opt.WithAssetsDirFunc != nil {
@@ -194,6 +199,7 @@ func (g *Generator) Generate(ctx context.Context) (*GeneratedBlog, error) {
 	parserCfg.Logger = g.Logger.Logger
 	parserCfg.BlogRoot = string(g.BlogRoot)
 	parserCfg.AssetsDir = g.AssetsDir.FS
+	parserCfg.DisableImageCaptions = parserCfg.DisableImageCaptions || g.DisableImageCaptions.Disable
 	p := parser.NewWithConfig(&parserCfg)
 
 	posts, err := p.ParseDirectory(ctx, g.PostsDir)

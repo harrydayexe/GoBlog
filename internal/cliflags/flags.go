@@ -48,6 +48,9 @@ const DisableRobotsFlagName = "disable-robots"
 // whose contents replace GoBlog's default rules.
 const RobotsFileFlagName = "robots-file"
 
+// DisableImageCaptionsFlagName is the CLI flag name for disabling image captions.
+const DisableImageCaptionsFlagName = "disable-image-captions"
+
 // Shared returns the CLI flag definitions that apply to both the generate and
 // serve subcommands. They are registered on the top-level goblog command so that
 // urfave/cli v3's default persistence makes them available in both subcommand
@@ -107,6 +110,11 @@ func Shared() []cli.Flag {
 		&cli.StringFlag{
 			Name:  RobotsFileFlagName,
 			Usage: "path to a custom robots.txt whose contents replace the default rules; cannot be combined with --" + DisableRobotsFlagName,
+		},
+		&cli.BoolFlag{
+			Name:  DisableImageCaptionsFlagName,
+			Usage: "disable rendering an image followed by a line of text as a <figure> with that text as its caption",
+			Value: false,
 		},
 	}
 }
