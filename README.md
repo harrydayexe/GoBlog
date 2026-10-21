@@ -3,7 +3,7 @@
 [![Go Reference](https://pkg.go.dev/badge/github.com/harrydayexe/GoBlog.svg)](https://pkg.go.dev/github.com/harrydayexe/GoBlog/v2)
 [![Go Report Card](https://goreportcard.com/badge/github.com/harrydayexe/GoBlog/v2)](https://goreportcard.com/report/github.com/harrydayexe/GoBlog/v2)
 [![Test](https://github.com/harrydayexe/GoBlog/actions/workflows/test.yml/badge.svg?event=push)](https://github.com/harrydayexe/GoBlog/actions/workflows/test.yml)
-[![License: MIT](https://img.shields.io/badge/License-GPL3-yellow.svg)](LICENSE)
+[![License: MPLv2](https://img.shields.io/badge/License-MPLv2-yellow.svg)](LICENSE)
 [![DockerHub](https://img.shields.io/docker/v/harrydayexe/goblog?sort=semver)](https://hub.docker.com/repository/docker/harrydayexe/goblog/general)
 
 GoBlog is a blog generation and serving system for creating static blog feeds from Markdown files. It is available as a CLI tool, a Docker image, and an embeddable Go library.
@@ -304,4 +304,4 @@ Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for how to set
 
 ## License
 
-GNU General Public License v3.0 — see [LICENSE](LICENSE) for details.
+Mozilla Public License v2.0 — see [LICENSE](LICENSE) for details.
