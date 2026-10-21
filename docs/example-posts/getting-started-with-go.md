@@ -63,5 +63,6 @@ Once you're comfortable with the basics, explore:
 For inspiration, browse open source Go projects on GitHub. This blog itself is built with GoBlog, which is available as a CLI tool, a Docker image, and an embeddable Go library:
 
 ![The GoBlog README on GitHub](images/github.png)
+The GoBlog repository on GitHub.
 
 Happy coding!

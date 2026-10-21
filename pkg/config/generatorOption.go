@@ -15,24 +15,25 @@ package config
 // provided option functions like WithRawOutput(), WithDisableTags(),
 // WithDisableReadingTime(), WithSiteTitle(), WithEnvironment(), WithCustomData(),
 // WithBaseURL(), WithDisableFeeds(), WithFeedPostLimit(), WithDisableSitemap(),
-// WithDisableRobotsTxt(), WithRobotsTxt(),
+// WithDisableRobotsTxt(), WithRobotsTxt(), WithDisableImageCaptions(),
 // or call [BaseOption.AsGeneratorOption] on a [BaseOption] value.
 type GeneratorOption struct {
 	BaseOption
 
-	WithRawOutputFunc          func(v *RawOutput)
-	WithDisableTagsFunc        func(v *DisableTags)
-	WithDisableReadingTimeFunc func(v *DisableReadingTime)
-	WithSiteTitleFunc          func(v *SiteTitle)
-	WithEnvironmentFunc        func(v *Environment)
-	WithCustomDataFunc         func(v *CustomData)
-	WithHTMLPathsFunc          func(v *HTMLPaths)
-	WithBaseURLFunc            func(v *BaseURL)
-	WithDisableFeedsFunc       func(v *DisableFeeds)
-	WithFeedPostLimitFunc      func(v *FeedPostLimit)
-	WithDisableSitemapFunc     func(v *DisableSitemap)
-	WithDisableRobotsTxtFunc   func(v *DisableRobotsTxt)
-	WithRobotsTxtFunc          func(v *RobotsTxt)
+	WithRawOutputFunc            func(v *RawOutput)
+	WithDisableTagsFunc          func(v *DisableTags)
+	WithDisableReadingTimeFunc   func(v *DisableReadingTime)
+	WithSiteTitleFunc            func(v *SiteTitle)
+	WithEnvironmentFunc          func(v *Environment)
+	WithCustomDataFunc           func(v *CustomData)
+	WithHTMLPathsFunc            func(v *HTMLPaths)
+	WithBaseURLFunc              func(v *BaseURL)
+	WithDisableFeedsFunc         func(v *DisableFeeds)
+	WithFeedPostLimitFunc        func(v *FeedPostLimit)
+	WithDisableSitemapFunc       func(v *DisableSitemap)
+	WithDisableRobotsTxtFunc     func(v *DisableRobotsTxt)
+	WithRobotsTxtFunc            func(v *RobotsTxt)
+	WithDisableImageCaptionsFunc func(v *DisableImageCaptions)
 }
 
 // WithBaseOption wraps a BaseOption as a GeneratorOption so it can be passed
@@ -589,6 +590,55 @@ func (o DisableRobotsTxt) AsOption() GeneratorOption {
 	}
 	return GeneratorOption{
 		WithDisableRobotsTxtFunc: func(v *DisableRobotsTxt) {
+			v.Disable = false
+		},
+	}
+}
+
+// DisableImageCaptions is a configuration type that controls whether images
+// followed by a caption are rendered as <figure> elements.
+//
+// When Disable is true:
+//   - An image on its own line followed directly by text renders as a plain
+//     <img> in a paragraph with that text, instead of a <figure> with the text
+//     as its <figcaption>
+//
+// This type is typically embedded in generator configuration structs and
+// should be set using the [WithDisableImageCaptions] option function.
+type DisableImageCaptions struct{ Disable bool }
+
+// WithDisableImageCaptions returns a GeneratorOption that disables image
+// captions.
+//
+// By default, an image alone on the first line of a paragraph followed
+// directly by one or more lines of text renders as a <figure>, with the text
+// as its <figcaption>:
+//
+//	![A diagram of the pipeline](pipeline.png)
+//	The pipeline, from parse to publish.
+//
+// Applying this option keeps such images and their text in a single
+// paragraph instead. The generator forwards the setting to
+// [github.com/harrydayexe/GoBlog/v2/pkg/parser.Config].DisableImageCaptions.
+//
+// Example usage:
+//
+//	gen := generator.New(fsys, renderer, config.WithDisableImageCaptions())
+func WithDisableImageCaptions() GeneratorOption {
+	return GeneratorOption{
+		WithDisableImageCaptionsFunc: func(v *DisableImageCaptions) {
+			v.Disable = true
+		},
+	}
+}
+
+// AsOption converts this DisableImageCaptions value back into a GeneratorOption.
+func (o DisableImageCaptions) AsOption() GeneratorOption {
+	if o.Disable {
+		return WithDisableImageCaptions()
+	}
+	return GeneratorOption{
+		WithDisableImageCaptionsFunc: func(v *DisableImageCaptions) {
 			v.Disable = false
 		},
 	}

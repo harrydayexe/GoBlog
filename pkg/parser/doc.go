@@ -12,6 +12,7 @@
 //   - Auto-generated heading IDs
 //   - Wikilink-style heading anchors
 //   - Images with alt text, intrinsic dimensions and lazy loading
+//   - Image captions, rendered as <figure> and <figcaption>
 //   - HTML sanitization
 //
 // # Heading Anchor Links
@@ -61,6 +62,25 @@
 // As with heading links, image paths are not validated: an image missing from
 // the assets directory still renders, without error.
 //
+// # Image Captions
+//
+// An image alone on the first line of a paragraph, in either syntax, followed
+// directly by one or more lines of text is rendered as a figure, with that
+// text as its caption (via github.com/mangoumbrella/goldmark-figure):
+//
+//	![A diagram](pipeline.png)
+//	The pipeline, from parse to publish.
+//
+// renders as:
+//
+//	<figure>
+//	<img src="/images/pipeline.png" alt="A diagram" loading="lazy" decoding="async" /><figcaption><p>The pipeline, from parse to publish.</p></figcaption>
+//	</figure>
+//
+// Images without a caption, and images sharing their line with other text,
+// render as before. Captions are enabled by default; WithDisableImageCaptions
+// turns them off, leaving the image and text in a single paragraph.
+//
 // Basic usage:
 //
 //	import (
@@ -100,6 +120,9 @@
 //
 //	// Measure images so they render with width and height
 //	p := parser.New(parser.WithAssetsDir(os.DirFS("posts/images")))
+//
+//	// Render captioned images as plain paragraphs instead of figures
+//	p := parser.New(parser.WithDisableImageCaptions())
 //
 //	// Combine multiple options
 //	p := parser.New(

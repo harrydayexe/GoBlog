@@ -68,6 +68,10 @@ func NewServeCommand(ctx context.Context, c *cli.Command) error {
 		cfg.Gen = append(cfg.Gen, config.WithDisableFeeds())
 	}
 
+	if c.Bool(cliflags.DisableImageCaptionsFlagName) {
+		cfg.Gen = append(cfg.Gen, config.WithDisableImageCaptions())
+	}
+
 	cfg.Gen = append(cfg.Gen, config.WithFeedPostLimit(c.Int(cliflags.FeedLimitFlagName)))
 
 	cfg.Gen = append(cfg.Gen, robotsOpts...)
